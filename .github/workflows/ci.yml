@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     # Die App muss unter Windows und Linux laufen: beide Systeme bauen, testen und fahren den
