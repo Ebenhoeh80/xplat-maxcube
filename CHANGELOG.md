@@ -7,7 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-11-25
+## [0.5.0] - 2026-11-25
+
+Eindeutige Datenherkunft: Der Cube-Reiter zeigt „nicht vom Cube gelesen“ oder liest
+beim Aktivieren automatisch. Nie wird ein Default- oder Cache-Wert als Live ausgegeben.
+
+### Added
+
+- Einheitlicher Datenstatus pro Bereich (`NotRead`, `Loading`, `Live`, `Cached`,
+  `Stale`, `Failed`) mit Symbol **und** lokalisiertem Text plus Leszeitpunkt in
+  allen sechs Sprachen (DE/EN/FR/IT/NL/PL).
+- Auto-Read des Cube-Reiters bei Aktivierung, sofern verbunden; leise ohne
+  modales „Beschäftigt“. Einzelne Abschnitte (Zeitzone, NTP, Netzwerk) können
+  unabhängig voneinander scheitern.
+- Reiter „Über“ mit Autor `Ebenhoeh80`, MIT-Lizenz, GitHub-Projekt und dem
+  ausdrücklichen Hinweis „inoffiziell, nicht von eQ-3“. Der Link öffnet nur nach
+  Benutzerklick; kein Update-Download.
+- Wochenprofil-Platzhalter sind als „nicht gelesen“ markiert und nicht sendbar.
+
+### Changed
+
+- Schreibbefehle für Räume, Haus, Struktur, Konfiguration, Zeitzone, NTP und
+  Netzwerk setzen eine echte Lesung voraus; `Stale` und Offline sperren zusätzlich.
+- `CubeSnapshot.CapturedAt` wird als Cache-Zeitpunkt in der Anzeige verwendet.
+
+### Fixed
+
+- Verbindungsabbruch setzt alle Bereichsstatus auf „nicht gelesen“ und leert
+  Firmware-, Funkauslastungs- und Diagnosetext.
+- Lesende Hardwareverifikation gegen `192.168.10.60:62910` bestätigt unveränderte
+  Baseline (Serial `JEQ0355273`, FW `275`, 6 Räume, 9 Geräte).
+
+### Security / scope
+
+- Weiterhin keine Cloud, kein Jetty, kein Browser, kein HTTP-Update-Check und
+  keine Firmware-Schreibfunktion. UDP-Broadcast nur über „Cube suchen“.
+
+[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.5.0
+[0.4.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.4.0
 
 First public release under the name **xplat-maxcube**.
 
@@ -46,5 +84,3 @@ First public release under the name **xplat-maxcube**.
   No Cube or network write access without an explicit user action.
   UDP broadcast is only sent when the user chooses "Cube suchen".
 
-[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.4.0...HEAD
-[0.4.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.4.0

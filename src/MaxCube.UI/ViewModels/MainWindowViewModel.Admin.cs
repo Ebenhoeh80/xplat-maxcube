@@ -32,6 +32,7 @@ public static class TabIndex
     public const int Status = 6;
     public const int Help = 7;
     public const int Settings = 8;
+    public const int About = 9;
 }
 
 /// <summary>
@@ -136,16 +137,17 @@ public partial class MainWindowViewModel
 
     // --- Gemeinsame Zustandslogik ----------------------------------------------------
 
-    private bool CanAdminRoom
-        => IsConnected && !IsBusy && SelectedRoom is not null && _service.SupportsAdministration;
-
+    /// <summary>Lesen bleibt immer möglich; Schreiben setzt eine echte Lesung voraus.</summary>
     private bool CanAdmin => IsConnected && !IsBusy && _service.SupportsAdministration;
 
+    private bool CanWriteAdmin => CanAdmin && !IsStale && !_service.IsOffline && ConfigStatus.HasRead;
+
     private bool CanSetDisplay
-        => CanAdmin && SelectedDevice is { Type: nameof(DeviceType.WallMountedThermostat) };
+        => CanWriteAdmin && SelectedDevice is { Type: nameof(DeviceType.WallMountedThermostat) };
 
     private bool CanCopyToRooms
-        => CanAdminRoom && Rooms.Count(room => room.IsHouseSelected && room.Id != SelectedRoom?.Id) > 0;
+        => CanWriteAdmin && Rooms.Count(room => room.IsHouseSelected && room.Id != SelectedRoom?.Id) > 0;
+
 
     private void InitializeAdminState()
     {
@@ -165,6 +167,7 @@ public partial class MainWindowViewModel
 
     private void LoadAdminStateFor(Cube cube, RoomViewModel? roomViewModel, bool keepEdited)
     {
+        ConfigStatus.Update(DisplayState, DisplayTime);
         FirmwareText = FirmwareDescription(cube.FirmwareVersion);
         var room = roomViewModel is null ? null : cube.GetRoom(roomViewModel.Id);
         if (room is null)
@@ -231,6 +234,13 @@ public partial class MainWindowViewModel
         OnUiThread(() =>
         {
             WindowTitle = $"{L("AppTitle")} {AppVersion}";
+            AppVersionText = L("AppVersion", AppVersion);
+            OnPropertyChanged(nameof(AboutVersionText));
+            OnPropertyChanged(nameof(AboutAuthorText));
+            OnPropertyChanged(nameof(AboutLicenseTextLine));
+            OnPropertyChanged(nameof(AboutProjectText));
+            OnPropertyChanged(nameof(AboutDisclaimerText));
+            OnPropertyChanged(nameof(AboutPrivacyText));
             BuildHelpTopics();
             if (_service.Current is { } cube)
             {
@@ -280,12 +290,15 @@ public partial class MainWindowViewModel
         yield return ExportDiagnosticsCommand;
     }
 
-    private void OnAirtimeChanged(object? sender, AirtimeStatus status)
-        => OnUiThread(() => AirtimeText = L("AirtimeInfo", status.DutyCycle, status.FreeMemorySlots));
+    private void OnAirtimeChanged(object? sender, AirtimeStatus status) => OnUiThread(() =>
+    {
+        AirtimeText = L("AirtimeInfo", status.DutyCycle, status.FreeMemorySlots);
+        CubeInfoStatus.Update(DisplayState, DisplayTime);
+    });
 
     // --- Befehle: Konfiguration ------------------------------------------------------
 
-    [RelayCommand(CanExecute = nameof(CanAdminRoom))]
+    [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task ApplyRoomConfigurationAsync()
     {
         var room = SelectedRoom;
@@ -301,7 +314,7 @@ public partial class MainWindowViewModel
         }, L("ErrConfig"), L("OkConfig"));
     }
 
-    [RelayCommand(CanExecute = nameof(CanAdminRoom))]
+    [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task ApplyBoostAndDecalcificationAsync()
     {
         var room = SelectedRoom;
@@ -318,7 +331,7 @@ public partial class MainWindowViewModel
         }, L("ErrBoost"), L("OkBoost"));
     }
 
-    [RelayCommand(CanExecute = nameof(CanAdminRoom))]
+    [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task ApplyValveOffsetAsync()
     {
         var room = SelectedRoom;
@@ -402,10 +415,11 @@ public partial class MainWindowViewModel
             PushUpperTemperature = configuration.Upper.Temperature?.Value ?? PushUpperTemperature;
             PushLowerMode = configuration.Lower.Mode;
             PushLowerTemperature = configuration.Lower.Temperature?.Value ?? PushLowerTemperature;
-        }, L("ErrPushButton"), L("OkPushButtonRead"));
+            ConfigStatus.Update(DisplayState, DisplayTime);
+        }, L("ErrPushButton"), L("OkPushButtonRead"), status: ConfigStatus);
     }
 
-    [RelayCommand(CanExecute = nameof(CanAdmin))]
+    [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task SendPushButtonAsync()
     {
         await RunAsync(async token =>

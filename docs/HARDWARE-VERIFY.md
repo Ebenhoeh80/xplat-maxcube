@@ -181,3 +181,18 @@ Selfcheck: SELFCHECK OK: MAX! Cube - Aplikacja lokalna 0.3.0 | Microsoft Windows
 - Soll das Ergebnis zusätzlich in `wiki/projekte/app-maxcube.md` und `wiki/log.md` übernommen werden? Dafür ist die Nutzerentscheidung aus [SECOND_BRAIN.md](SECOND_BRAIN.md) §7 erforderlich; dieses Dokument ist zunächst nur Projekt-dokumentation.
 - Soll die Wartezeit nach Konfigurationssendung in der UI explizit angezeigt werden? Derzeitige `0x11`-Sende-Logik ist hardwarewirksam, das Read-back-Verhalten ist `BEOBACHTUNG`.
 - Weitere Räume, Bootloader-Antwort und Delphi-/Firmware-Abweichungen wurden nicht geprüft.
+
+## 8. Lesende Verifikation für 0.5.0 (25.11.2026)
+
+**FAKT:** Nur-Lese-Capture (`state`, kein gesendeter Befehl) gegen `192.168.10.60:62910`:
+
+```text
+H:JEQ0355273,0469f5,0113,00000000,0d8074dd,17,32,1a0b19,0824,03,0000
+CUBE serial=JEQ0355273 fw=275 rooms=6 devices=9
+Räume: Esszimmer/Wohnzimmer/Bad/Kinderzimmer 21.5/16.5, Büro/Schlafzimmer 21.0/17.0,
+       Boost 5 min/80°, Entkalkung Saturday/12, Valve 255/0
+C: 11 Konfigurationsblöcke (238/207/211 Byte), M: 1 Block (536 Byte Base64)
+NUR-LESE-MODUS: keine Befehle gesendet.
+```
+
+**FAKT:** Serial, Firmware, Raumzahl, Gerätezahl und Sollwerte entsprechen der Baseline aus §6; es wurde nichts verändert. **INFERENZ:** Die Statusanzeige kann auf diesem Cube mit echten Lesungen arbeiten; die fachliche Bedeutung weiterhin unbekannter Felder bleibt offen.

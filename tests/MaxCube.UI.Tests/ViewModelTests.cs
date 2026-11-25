@@ -6,6 +6,7 @@ using MaxCube.Domain.Aggregates;
 using MaxCube.Domain.Enums;
 using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
+using MaxCube.UI.Localization;
 using MaxCube.UI.ViewModels;
 using Xunit;
 using DayOfWeek = MaxCube.Domain.Enums.DayOfWeek;
@@ -390,6 +391,101 @@ public class ViewModelTests
         gateway.ProfileCalls.Should().ContainSingle()
             .Which.Day.Should().Be(DayOfWeek.Monday);
         viewModel.SuccessText.Should().Be("Profil auf 1 Tag(e) kopiert.");
+    }
+
+    [Fact]
+    public void Data_status_start_unread_and_never_claim_live_without_a_read()
+    {
+        using var status = new DataStatusViewModel(new Localizer("de"));
+
+        status.State.Should().Be(DataReadState.NotRead);
+        status.HasRead.Should().BeFalse();
+        status.IsNotRead.Should().BeTrue();
+        status.Text.Should().StartWith("○");
+        status.Text.Should().Contain("Nicht vom Cube gelesen");
+
+        status.Update(DataReadState.Live, null);
+        status.HasRead.Should().BeFalse("ein Live-Text ohne Lesung wäre irreführend");
+    }
+
+    [Fact]
+    public void Data_status_text_is_localized_without_raw_keys_in_all_six_languages()
+    {
+        foreach (var language in Localizer.Languages.Select(item => item.Code))
+        {
+            using var status = new DataStatusViewModel(new Localizer(language));
+            foreach (var state in Enum.GetValues<DataReadState>())
+            {
+                status.Update(state, new DateTimeOffset(2026, 11, 25, 10, 30, 0, TimeSpan.Zero), "Test");
+                status.Text.Should().NotContain("{0}");
+                status.Text.Should().NotContain("Data");
+                status.Text.Should().NotBeEmpty();
+                status.Glyph.Should().BeOneOf("○", "◌", "●", "◐", "⚠");
+                status.Text.Should().StartWith(status.Glyph);
+            }
+        }
+    }
+
+    [Fact]
+    public void Weekday_placeholder_is_never_a_read_profile()
+    {
+        var day = new DayProfileViewModel(DayOfWeek.Monday);
+        day.WasReadFromCube.Should().BeFalse();
+
+        day.Reset();
+        day.WasReadFromCube.Should().BeFalse("der Default 00:00/21.0 ist kein Cube-Programm");
+
+        day.Load(new DayProfile(DayOfWeek.Monday, [new SwitchPoint(new TimeOnly(6, 0), new Temperature(19.0))]));
+        day.WasReadFromCube.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Writes_are_blocked_until_values_were_read_from_the_cube()
+    {
+        using var viewModel = CreateViewModel();
+
+        viewModel.ApplyTemperatureCommand.CanExecute(null).Should().BeFalse();
+        viewModel.SetHouseAutoCommand.CanExecute(null).Should().BeFalse();
+        viewModel.SaveWeekProfileCommand.CanExecute(null).Should().BeFalse();
+        viewModel.RoomsStatus.HasRead.Should().BeFalse();
+
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+
+        viewModel.RoomsStatus.State.Should().Be(DataReadState.Live);
+        viewModel.RoomsStatus.HasRead.Should().BeTrue();
+        viewModel.ApplyTemperatureCommand.CanExecute(null).Should().BeTrue();
+        // Der Test-Cube liefert kein Wochenprogramm: der sichtbare Default bleibt ein
+        // Platzhalter und darf auch nach dem Verbinden nicht gesendet werden.
+        viewModel.WeekStatus.HasRead.Should().BeFalse();
+        viewModel.SaveWeekProfileCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Activating_the_cube_tab_reads_it_and_shows_live_data()
+    {
+        using var viewModel = CreateViewModel(out _, out _, out var gateway);
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+
+        viewModel.CubeInfoStatus.State.Should().Be(DataReadState.NotRead);
+        viewModel.SelectedTabIndex = TabIndex.Cube;
+        await Task.Delay(50);
+
+        viewModel.CubeInfoStatus.State.Should().Be(DataReadState.Live);
+        viewModel.CubeInfoStatus.Text.Should().Contain("●");
+        gateway.CubeToReturn.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void About_page_exposes_author_license_and_project_without_runtime_downloads()
+    {
+        using var viewModel = CreateViewModel();
+
+        MainWindowViewModel.AuthorName.Should().Be("Ebenhoeh80");
+        MainWindowViewModel.LicenseName.Should().Be("MIT");
+        MainWindowViewModel.ProjectUrl.Should().Be("https://github.com/Ebenhoeh80/xplat-maxcube");
+        viewModel.LicenseFullText.Should().Contain("MIT License").And.Contain("Permission is hereby granted");
+        viewModel.AboutDisclaimerText.Should().Contain("eQ-3");
+        viewModel.OpenProjectUrlCommand.CanExecute(null).Should().BeTrue();
     }
 
     private sealed class FakeDiscovery : ICubeDiscovery

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Net.Sockets;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -58,6 +59,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _actionCts;
     private string? _statusBeforeCancel;
 
+    /// <summary>Herence und Alter pro Bereich; nie in der Domäne, immer im ViewModel.</summary>
+    private readonly DataStatusViewModel[] _statuses;
+
+    /// <summary>Ein Auto-Read des Cube-Reiters läuft höchstens einmal gleichzeitig.</summary>
+    private Task? _cubeAutoReadTask;
+
+    private bool _cubeTabReadPending;
+
     /// <summary>
     /// Parameterloser Konstruktor für die XAML-Designzeit-Vorschau. Erzeugt ausschließlich
     /// In-Memory-Fakes; die echte App nutzt den DI-Konstruktor darunter.
@@ -69,8 +78,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             discovery: new DesignTimeDiscovery(),
             versionProvider: new AppVersionProvider())
     {
-        UpdateRooms(DesignTimeGateway.CreateCube());
         IsConnected = true;
+        UpdateRooms(DesignTimeGateway.CreateCube());
         StatusText = "Vorschau";
     }
 
@@ -91,10 +100,30 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _log = log ?? new NullAppLog();
         var version = versionProvider ?? new AppVersionProvider();
         AppVersion = version.Version;
+        AppVersionText = L("AppVersion", version.Version);
         WindowTitle = $"{L("AppTitle")} {version.Version}";
         statusText = L("StatusDisconnected");
         discoveryText = L("DiscoveryNone");
         profileRoomName = L("NoRoomSelected");
+        RoomsStatus = new DataStatusViewModel(_loc);
+        DevicesStatus = new DataStatusViewModel(_loc);
+        WeekStatus = new DataStatusViewModel(_loc);
+        ConfigStatus = new DataStatusViewModel(_loc);
+        CubeInfoStatus = new DataStatusViewModel(_loc);
+        TimeZoneStatus = new DataStatusViewModel(_loc);
+        NtpStatus = new DataStatusViewModel(_loc);
+        NetworkStatus = new DataStatusViewModel(_loc);
+        DiagnosticsStatus = new DataStatusViewModel(_loc);
+        _statuses =
+        [
+            RoomsStatus, DevicesStatus, WeekStatus, ConfigStatus, CubeInfoStatus,
+            TimeZoneStatus, NtpStatus, NetworkStatus, DiagnosticsStatus,
+        ];
+        foreach (var status in _statuses)
+        {
+            status.PropertyChanged += OnDataStatusChanged;
+        }
+
         _loc.PropertyChanged += OnLanguageChanged;
         _service.StateChanged += OnStateChanged;
         _service.ConnectionChanged += OnConnectionChanged;
@@ -119,6 +148,28 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string appVersion = "unbekannt";
+
+    [ObservableProperty]
+    private string appVersionText = "App-Version unbekannt";
+
+    /// <summary>Herkunftsanzeige je Bereich; XAML bindet nur an <c>.Text</c>.</summary>
+    public DataStatusViewModel RoomsStatus { get; }
+
+    public DataStatusViewModel DevicesStatus { get; }
+
+    public DataStatusViewModel WeekStatus { get; }
+
+    public DataStatusViewModel ConfigStatus { get; }
+
+    public DataStatusViewModel CubeInfoStatus { get; }
+
+    public DataStatusViewModel TimeZoneStatus { get; }
+
+    public DataStatusViewModel NtpStatus { get; }
+
+    public DataStatusViewModel NetworkStatus { get; }
+
+    public DataStatusViewModel DiagnosticsStatus { get; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
@@ -213,9 +264,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private bool CanLoadLastEndpoint => !IsBusy;
 
-    private bool CanControlHouse => !IsBusy && IsConnected;
+    private bool CanControlHouse
+        => !IsBusy && IsConnected && !IsStale && !_service.IsOffline && RoomsStatus.HasRead;
 
-    private bool CanEditRoom => IsConnected && SelectedRoom is not null;
+    /// <summary>
+    /// Senden setzt eine echte Lesung voraus: kein Platzhalter, kein Cache, kein veralteter
+    /// Zustand. Der Service sperrt Offline zusätzlich (Gremium 0.5.0, QA).
+    /// </summary>
+    private bool CanEditRoom
+        => IsConnected && !IsStale && !_service.IsOffline && RoomsStatus.HasRead && SelectedRoom is not null;
 
     /// <summary>
     /// Strenges IPv4-Format: genau vier Oktette mit je 0..255. `IPAddress.TryParse`
@@ -238,7 +295,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         get
         {
-            if (!IsConnected || SelectedRoom is null)
+            if (!IsConnected || IsStale || _service.IsOffline || !RoomsStatus.HasRead
+                || SelectedRoom is null || !SelectedDay.WasReadFromCube)
             {
                 return false;
             }
@@ -265,6 +323,93 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             StatusText = L("StatusConnected", cube.SerialNumber, cube.FirmwareVersion);
             await RefreshAuditAsync();
         }, L("ErrConnect"), L("OkConnect"));
+
+        // Wurde der Cube-Reiter schon geöffnet, liest die Hybrid-Regel jetzt automatisch
+        // nach; vorher war dort nur der Platzhalter „nicht gelesen“ sichtbar.
+        if (SelectedTabIndex == TabIndex.Cube)
+        {
+            await RefreshCubeTabAsync();
+        }
+    }
+
+    /// <summary>
+    /// Hybrid-Regel (Gremium 0.5.0): Beim Aktivieren des Cube-Reiters wird gelesen, wenn
+    /// eine Verbindung besteht. Das ist ausdrücklich erlaubt; beim Start oder Verbinden
+    /// ohne geöffneten Reiter bleibt der Bereich auf „nicht vom Cube gelesen“.
+    /// </summary>
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        if (value == TabIndex.Cube)
+        {
+            _ = RefreshCubeTabAsync();
+        }
+    }
+
+    /// <summary>
+    /// Liest den Cube-Reiter leise (kein modales „Beschäftigt“) und markiert jeden
+    /// Abschnitt einzeln. Ein fehlgeschlagener Abschnitt sperrt nur seine eigenen
+    /// Schreibbefehle; Räume/Konfiguration bleiben vom Basis-Reload abgedeckt.
+    /// </summary>
+    private async Task RefreshCubeTabAsync()
+    {
+        if (!IsConnected || _service.Current is null)
+        {
+            CubeInfoStatus.Reset();
+            return;
+        }
+
+        if (_cubeAutoReadTask is { IsCompleted: false })
+        {
+            return;
+        }
+
+        _cubeAutoReadTask = RefreshCubeTabCoreAsync();
+        await _cubeAutoReadTask.ConfigureAwait(false);
+    }
+
+    private async Task RefreshCubeTabCoreAsync()
+    {
+        if (IsBusy)
+        {
+            _cubeTabReadPending = true;
+            return;
+        }
+
+        await RunAsync(async token =>
+        {
+            await _service.ReloadAsync(token);
+            var at = DisplayTime;
+            var state = DisplayState;
+            RoomsStatus.Update(state, at);
+            DevicesStatus.Update(state, at);
+            ConfigStatus.Update(state, at);
+            CubeInfoStatus.Update(state, at);
+            IsConnected = true;
+
+            if (_service.SupportsAdministration)
+            {
+                await TryReadAsync(TimeZoneStatus, ReadTimeZoneCoreAsync, token);
+                await TryReadAsync(NtpStatus, ReadNtpCoreAsync, token);
+                if (_service.SupportsNetworkConfiguration)
+                {
+                    await TryReadAsync(NetworkStatus, ReadNetworkCoreAsync, token);
+                }
+            }
+        }, L("ErrReload"), quiet: true, status: CubeInfoStatus).ConfigureAwait(false);
+    }
+
+    /// <summary>Ein Abschnitt darf einzeln scheitern, ohne die anderen zu blockieren.</summary>
+    private async Task TryReadAsync(DataStatusViewModel status, Func<CancellationToken, Task> read, CancellationToken token)
+    {
+        status.MarkLoading();
+        try
+        {
+            await read(token).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            status.MarkFailed(exception.Message);
+        }
     }
 
     /// <summary>Benutzerinitiierte UDP-Suche; kein Broadcast beim App-Start.</summary>
@@ -340,6 +485,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             SelectedRoom = null;
             _weekProfileLoadedFor = null;
             ProfileRoomName = L("NoRoomSelected");
+            MarkAllNotRead();
+            FirmwareText = string.Empty;
+            AirtimeText = string.Empty;
+            DiagnosticText = string.Empty;
+            _cubeTabReadPending = false;
             await RefreshAuditAsync();
         }, L("ErrDisconnect"), L("OkDisconnect"));
     }
@@ -353,7 +503,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             StatusText = cube is null ? L("NoCache") : L("OfflineCache");
             if (cube is not null)
             {
+                // UpdateRooms markt Räume/Geräte/Konfiguration als „Cache vom …“; die
+                // Aktionswerte (Zeitzone, NTP, Netzwerk) gibt es im Cache nicht.
                 UpdateRooms(cube);
+                TimeZoneStatus.Reset();
+                NtpStatus.Reset();
+                NetworkStatus.Reset();
             }
         }, L("ErrCache"));
     }
@@ -588,9 +743,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Führt eine Aktion mit eigenem CTS aus. Der Abbrechen-Button wirkt auf genau diese
     /// Operation; eine abgebrochene Aktion ist kein Fehler (Gremium Runde 1, N7).
+    /// <para/>
+    /// <paramref name="quiet"/> kennzeichnet das automatische Nachlesen beim Reiterwechsel:
+    /// kein modales „Beschäftigt“, kein Fehlerdialog – der Bereich zeigt stattdessen seinen
+    /// eigenen Status. <paramref name="status"/> erhält Loading/Failed/Restore.
     /// </summary>
     private async Task RunAsync(
-        Func<CancellationToken, Task> action, string errorPrefix, string? successText = null)
+        Func<CancellationToken, Task> action, string errorPrefix, string? successText = null,
+        bool quiet = false, DataStatusViewModel? status = null)
     {
         if (IsBusy)
         {
@@ -598,38 +758,68 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         using var cts = new CancellationTokenSource();
-        _actionCts = cts;
-        IsBusy = true;
-        ErrorMessage = string.Empty;
-        SuccessText = string.Empty;
-        // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
-        // stehen bleiben (Sonnet N10).
-        WarningText = string.Empty;
+        if (!quiet)
+        {
+            _actionCts = cts;
+            IsBusy = true;
+            ErrorMessage = string.Empty;
+            SuccessText = string.Empty;
+            // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
+            // stehen bleiben (Sonnet N10).
+            WarningText = string.Empty;
+        }
+
+        status?.MarkLoading();
         try
         {
             await action(cts.Token);
-            SuccessText = cts.IsCancellationRequested ? L("Cancelled") : successText ?? L("OkAction");
+            if (!quiet)
+            {
+                SuccessText = cts.IsCancellationRequested ? L("Cancelled") : successText ?? L("OkAction");
+            }
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
-            SuccessText = L("Cancelled");
+            status?.Restore();
+            if (!quiet)
+            {
+                SuccessText = L("Cancelled");
+            }
         }
         catch (Exception exception)
         {
-            ErrorMessage = $"{errorPrefix}: {exception.Message}";
-            _log.Write("ERROR", ErrorMessage);
+            if (!quiet)
+            {
+                ErrorMessage = $"{errorPrefix}: {exception.Message}";
+                _log.Write("ERROR", ErrorMessage);
+            }
+            else
+            {
+                _log.Write("WARN", $"{errorPrefix}: {exception.Message}");
+            }
+
+            status?.MarkFailed(exception.Message);
         }
         finally
         {
-            // Der Abbruch-Hinweis gehört nur zur laufenden Aktion (Gremium Runde 2, Produkt/UX).
-            if (StatusText == L("StatusCancelling"))
+            if (!quiet)
             {
-                StatusText = _statusBeforeCancel ?? L("StatusDisconnected");
+                // Der Abbruch-Hinweis gehört nur zur laufenden Aktion (Gremium Runde 2).
+                if (StatusText == L("StatusCancelling"))
+                {
+                    StatusText = _statusBeforeCancel ?? L("StatusDisconnected");
+                }
+
+                _statusBeforeCancel = null;
+                _actionCts = null;
+                IsBusy = false;
             }
 
-            _statusBeforeCancel = null;
-            _actionCts = null;
-            IsBusy = false;
+            if (_cubeTabReadPending && !IsBusy && SelectedTabIndex == TabIndex.Cube)
+            {
+                _cubeTabReadPending = false;
+                _ = RefreshCubeTabAsync();
+            }
         }
     }
 
@@ -675,6 +865,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void OnStaleChanged(object? sender, bool stale) => OnUiThread(() =>
     {
         IsStale = stale;
+        MarkStatusesStale(stale);
         // Gremium Runde 2, Produkt/UX: Der Reconnect ist auch in der Statusleiste
         // sichtbar, nicht nur als Warnung und als Stale-Marker.
         if (stale)
@@ -700,6 +891,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 IsConnected = false;
                 StatusText = L("StatusInterrupted");
+                MarkStatusesStale(true);
                 return;
             }
 
@@ -712,6 +904,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 StatusText = L("StatusRestored");
             }
+
+            MarkStatusesStale(false);
         });
     }
 
@@ -731,8 +925,55 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Alle Bereiche wieder als „nicht gelesen“ kennzeichnen (Trennen/Fehler).</summary>
+    private void MarkAllNotRead()
+    {
+        foreach (var status in _statuses)
+        {
+            status.Reset();
+        }
+
+        _cubeAutoReadTask = null;
+        RefreshAdminCommands();
+        SaveWeekProfileCommand.NotifyCanExecuteChanged();
+    }
+
+    private void MarkStatusesStale(bool stale)
+    {
+        var restored = _service.IsOffline ? DataReadState.Cached : DataReadState.Live;
+        foreach (var status in _statuses)
+        {
+            status.MarkStale(stale, restored);
+        }
+    }
+
+    private DataReadState DisplayState => _service.IsOffline ? DataReadState.Cached : DataReadState.Live;
+
+    private DateTimeOffset DisplayTime => _service.LastReadAt ?? _clock.Now;
+
+    /// <summary>Statusänderungen sperren oder entsperren die zugehörigen Schreibbefehle.</summary>
+    private void OnDataStatusChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is nameof(DataStatusViewModel.State) or nameof(DataStatusViewModel.HasRead))
+        {
+            RefreshAdminCommands();
+            SaveWeekProfileCommand.NotifyCanExecuteChanged();
+            ApplyTemperatureCommand.NotifyCanExecuteChanged();
+            SetAutoCommand.NotifyCanExecuteChanged();
+            SetEcoCommand.NotifyCanExecuteChanged();
+            SetComfortCommand.NotifyCanExecuteChanged();
+            SetTemporaryCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     private void UpdateRooms(Cube cube)
     {
+        // Kein stiller Default mehr: Herkunft und Zeitpunkt kommen aus dem Service.
+        var state = DisplayState;
+        var at = DisplayTime;
+        RoomsStatus.Update(state, at);
+        DevicesStatus.Update(state, at);
+
         var previousId = SelectedRoom?.Id;
         var houseSelection = Rooms.Where(room => room.IsHouseSelected).Select(room => room.Id).ToHashSet();
         Rooms.Clear();
@@ -784,6 +1025,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (room is null)
         {
             ProfileRoomName = L("NoRoomSelected");
+            WeekStatus.Reset();
             return;
         }
 
@@ -803,13 +1045,28 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
             else
             {
-                day.Reset();
+                day.Reset(); // Platzhalter, nicht sendbar
             }
         }
 
         _weekProfileLoadedFor = room.Id;
+        UpdateWeekStatus();
         SaveWeekProfileCommand.NotifyCanExecuteChanged();
     }
+
+    /// <summary>Der gewählte Tag entscheidet, ob das Wochenprofil „gelesen“ ist.</summary>
+    private void UpdateWeekStatus()
+    {
+        if (SelectedRoom is null || !SelectedDay.WasReadFromCube)
+        {
+            WeekStatus.Reset();
+            return;
+        }
+
+        WeekStatus.Update(DisplayState, DisplayTime);
+    }
+
+    partial void OnSelectedDayChanged(DayProfileViewModel value) => UpdateWeekStatus();
 
     partial void OnSelectedRoomChanged(RoomViewModel? value)
     {
@@ -840,5 +1097,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _service.ConnectionChanged -= OnConnectionChanged;
         _service.Warning -= OnWarning;
         _service.StaleChanged -= OnStaleChanged;
+        foreach (var status in _statuses)
+        {
+            status.PropertyChanged -= OnDataStatusChanged;
+            status.Dispose();
+        }
     }
 }

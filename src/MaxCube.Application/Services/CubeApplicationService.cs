@@ -75,6 +75,12 @@ public sealed partial class CubeApplicationService
     /// <summary>Letzter bekannter Zustand; null vor connect und nach Disconnect.</summary>
     public Cube? Current => _current;
 
+    /// <summary>
+    /// Zeitpunkt, zu dem die aktuell angezeigten Daten vom Cube gelesen (oder aus dem Cache
+    /// geladen) wurden. Die UI zeigt damit Herkunft und Alter statt stiller Defaultwerte.
+    /// </summary>
+    public DateTimeOffset? LastReadAt { get; private set; }
+
     /// <summary>Der letzte Cube-Zustand ist älter als der Live-Refresh zulässt.</summary>
     public bool IsStale => _stale;
 
@@ -96,6 +102,7 @@ public sealed partial class CubeApplicationService
     private async void OnCubeRefreshed(object? sender, Cube refreshed)
     {
         SetStale(false);
+        LastReadAt = _clock.Now;
         try
         {
             await PersistAsync(CancellationToken.None).ConfigureAwait(false);
@@ -203,6 +210,7 @@ public sealed partial class CubeApplicationService
         {
             var cube = await _gateway.ConnectAsync(endpoint, active).ConfigureAwait(false);
             _current = cube;
+            LastReadAt = _clock.Now;
             try
             {
                 await _store.SetSettingAsync("cube.serial", cube.SerialNumber.Value, active).ConfigureAwait(false);
@@ -292,6 +300,7 @@ public sealed partial class CubeApplicationService
             }
 
             _current = snapshot.ToCube();
+            LastReadAt = snapshot.CapturedAt;
             _offline = true;
             StateChanged?.Invoke(this, _current);
             return _current;
@@ -486,6 +495,7 @@ public sealed partial class CubeApplicationService
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _current = null;
+            LastReadAt = null;
             _offline = false;
             return;
         }
@@ -506,6 +516,7 @@ public sealed partial class CubeApplicationService
                 Warning?.Invoke(this, "Trennen hat länger als erwartet gedauert; Verbindung local zurückgesetzt.");
             }
             _current = null;
+            LastReadAt = null;
             _offline = false;
             try
             {

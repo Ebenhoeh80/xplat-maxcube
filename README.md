@@ -8,7 +8,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.4.0** (`Directory.Build.props:3`), Stand **25.11.2026**. Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.5.0** (`Directory.Build.props:3`), Stand **25.11.2026**. Siehe [CHANGELOG.md](CHANGELOG.md).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
@@ -69,8 +69,10 @@ Der Datenordner ist `%LOCALAPPDATA%\MaxCube` unter Windows bzw. `$XDG_DATA_HOME/
 3. **Wochenprofile:** Bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung im 0,5-°C-/5-Minuten-Raster und Kopieren auf andere Räume.
 4. **Administration:** Raumkonfiguration, Boost/Entkalkung/Ventil, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit/Zeitzone/NTP und UDP-Netzwerkkonfiguration.
 5. **Diagnose:** Funkauslastung aus dem `S:`-Sendestatus, lokaler Fehlerbericht und Fehlercode-Katalog `MAX0001`–`MAX1051`. Es wird nichts nach außen gesendet.
+6. **Datenherkunft:** Jeder Bereich zeigt „nicht vom Cube gelesen“, „Cache vom …“, „Live …“ oder „veraltet“ mit Uhrzeit. Der Cube-Reiter liest beim Aktivieren automatisch, wenn eine Verbindung besteht. Ungelesene Platzhalter (z. B. im Wochenprofil) sind nicht sendbar.
+7. **Über:** Autor, MIT-Lizenz und GitHub-Link; ausdrücklich inoffiziell und nicht von eQ-3. Der Link öffnet erst nach Benutzerklick.
 
-Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche. Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
+Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
 
 ## Screenshots
 

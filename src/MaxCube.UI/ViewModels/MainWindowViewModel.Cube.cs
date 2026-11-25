@@ -63,7 +63,12 @@ public partial class MainWindowViewModel
 
     private bool CanNetwork => CanAdmin && _service.SupportsNetworkConfiguration;
 
-    private bool CanSendNetwork => CanNetwork && ConfirmNetwork;
+    /// <summary>Write setzt gelesene Werte voraus; Lesen bleibt auch ohne Lesung möglich.</summary>
+    private bool CanWriteCubeSetting
+        => CanAdmin && !IsStale && !_service.IsOffline && ConfigStatus.HasRead;
+
+    private bool CanSendNetwork
+        => CanNetwork && !IsStale && !_service.IsOffline && NetworkStatus.HasRead && ConfirmNetwork;
 
     partial void OnConfirmNetworkChanged(bool value) => SendNetworkCommand.NotifyCanExecuteChanged();
 
@@ -71,24 +76,26 @@ public partial class MainWindowViewModel
         => L(FirmwareSupport.IsSupported(firmware) ? "FirmwareSupported" : "FirmwareUnsupported",
             firmware, FirmwareSupport.Minimum, FirmwareSupport.Maximum);
 
-    [RelayCommand(CanExecute = nameof(CanAdmin))]
-    private async Task ReadTimeZoneAsync()
+    private async Task ReadTimeZoneCoreAsync(CancellationToken token)
     {
-        await RunAsync(async token =>
+        var zone = await _service.ReadTimeZoneAsync(token).ConfigureAwait(false);
+        TimeZoneText = L(
+            zone.UsesDaylightSaving ? "ZoneInfoDst" : "ZoneInfo",
+            zone.Winter.Name, Offset(zone.Winter.OffsetSeconds), zone.Summer.Name, Offset(zone.Summer.OffsetSeconds));
+        var match = TimeZonePresets.All.FirstOrDefault(pair => pair.Value == zone);
+        if (match.Key is not null)
         {
-            var zone = await _service.ReadTimeZoneAsync(token);
-            TimeZoneText = L(
-                zone.UsesDaylightSaving ? "ZoneInfoDst" : "ZoneInfo",
-                zone.Winter.Name, Offset(zone.Winter.OffsetSeconds), zone.Summer.Name, Offset(zone.Summer.OffsetSeconds));
-            var match = TimeZonePresets.All.FirstOrDefault(pair => pair.Value == zone);
-            if (match.Key is not null)
-            {
-                SelectedZonePreset = match.Key;
-            }
-        }, L("ErrCubeSetting"), L("OkZoneRead"));
+            SelectedZonePreset = match.Key;
+        }
+
+        TimeZoneStatus.Update(DisplayState, DisplayTime);
     }
 
     [RelayCommand(CanExecute = nameof(CanAdmin))]
+    private Task ReadTimeZoneAsync()
+        => RunAsync(ReadTimeZoneCoreAsync, L("ErrCubeSetting"), L("OkZoneRead"), status: TimeZoneStatus);
+
+    [RelayCommand(CanExecute = nameof(CanWriteCubeSetting))]
     private async Task SendTimeZoneAsync()
     {
         await RunAsync(async token =>
@@ -103,7 +110,7 @@ public partial class MainWindowViewModel
         }, L("ErrCubeSetting"), L("OkZone"));
     }
 
-    [RelayCommand(CanExecute = nameof(CanAdmin))]
+    [RelayCommand(CanExecute = nameof(CanWriteCubeSetting))]
     private async Task SetCubeTimeAsync()
     {
         await RunAsync(async token =>
@@ -113,21 +120,22 @@ public partial class MainWindowViewModel
         }, L("ErrCubeSetting"), L("OkCubeTime"));
     }
 
-    [RelayCommand(CanExecute = nameof(CanAdmin))]
-    private async Task ReadNtpAsync()
+    private async Task ReadNtpCoreAsync(CancellationToken token)
     {
-        await RunAsync(async token =>
-        {
-            var answer = await _service.QueryNtpServersAsync(token);
-            // Format der F:-Antwort ist UNBEKANNT (docs/maxcube-protocol.md:327); er wird roh angezeigt.
-            var servers = answer.StartsWith("F:", StringComparison.Ordinal) ? answer[2..] : answer;
-            var parts = servers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            NtpServer1 = parts.ElementAtOrDefault(0) ?? string.Empty;
-            NtpServer2 = parts.ElementAtOrDefault(1) ?? string.Empty;
-        }, L("ErrCubeSetting"), L("OkNtpRead"));
+        var answer = await _service.QueryNtpServersAsync(token).ConfigureAwait(false);
+        // Format der F:-Antwort ist UNBEKANNT (docs/maxcube-protocol.md:327); er wird roh angezeigt.
+        var servers = answer.StartsWith("F:", StringComparison.Ordinal) ? answer[2..] : answer;
+        var parts = servers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        NtpServer1 = parts.ElementAtOrDefault(0) ?? string.Empty;
+        NtpServer2 = parts.ElementAtOrDefault(1) ?? string.Empty;
+        NtpStatus.Update(DisplayState, DisplayTime);
     }
 
     [RelayCommand(CanExecute = nameof(CanAdmin))]
+    private Task ReadNtpAsync()
+        => RunAsync(ReadNtpCoreAsync, L("ErrCubeSetting"), L("OkNtpRead"), status: NtpStatus);
+
+    [RelayCommand(CanExecute = nameof(CanWriteCubeSetting))]
     private async Task SendNtpAsync()
     {
         await RunAsync(async token =>
@@ -137,20 +145,21 @@ public partial class MainWindowViewModel
         }, L("ErrCubeSetting"), L("OkNtp"));
     }
 
-    [RelayCommand(CanExecute = nameof(CanNetwork))]
-    private async Task ReadNetworkAsync()
+    private async Task ReadNetworkCoreAsync(CancellationToken token)
     {
-        await RunAsync(async token =>
-        {
-            var configuration = await _service.ReadNetworkConfigurationAsync(token);
-            NetworkIp = configuration.IpAddress;
-            NetworkMask = configuration.SubnetMask;
-            NetworkGateway = configuration.Gateway;
-            NetworkDns1 = configuration.Dns1;
-            NetworkDns2 = configuration.Dns2;
-            NetworkDhcp = configuration.Dhcp;
-        }, L("ErrNetwork"), L("OkNetworkRead"));
+        var configuration = await _service.ReadNetworkConfigurationAsync(token).ConfigureAwait(false);
+        NetworkIp = configuration.IpAddress;
+        NetworkMask = configuration.SubnetMask;
+        NetworkGateway = configuration.Gateway;
+        NetworkDns1 = configuration.Dns1;
+        NetworkDns2 = configuration.Dns2;
+        NetworkDhcp = configuration.Dhcp;
+        NetworkStatus.Update(DisplayState, DisplayTime);
     }
+
+    [RelayCommand(CanExecute = nameof(CanNetwork))]
+    private Task ReadNetworkAsync()
+        => RunAsync(ReadNetworkCoreAsync, L("ErrNetwork"), L("OkNetworkRead"), status: NetworkStatus);
 
     [RelayCommand(CanExecute = nameof(CanSendNetwork))]
     private async Task SendNetworkAsync()
@@ -176,6 +185,7 @@ public partial class MainWindowViewModel
         {
             var report = await _service.BuildDiagnosticReportAsync(AppVersion, token);
             DiagnosticText = report;
+            DiagnosticsStatus.Update(DisplayState, DisplayTime);
             if (!string.IsNullOrWhiteSpace(ReportDirectory))
             {
                 Directory.CreateDirectory(ReportDirectory);
@@ -184,7 +194,7 @@ public partial class MainWindowViewModel
                 await File.WriteAllTextAsync(file, report, token);
                 DiagnosticText = $"{L("ReportSaved", file)}{Environment.NewLine}{Environment.NewLine}{report}";
             }
-        }, L("ErrReport"), L("OkReport"));
+        }, L("ErrReport"), L("OkReport"), status: DiagnosticsStatus);
     }
 
     private static string Offset(int seconds)

@@ -64,6 +64,7 @@
 
             <ScrollViewer Grid.Column="1" Margin="16,0,0,0">
               <StackPanel Spacing="14">
+                <TextBlock Text="{Binding RoomsStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding SelectedRoom.Name}" FontSize="22" FontWeight="Bold" />
                 <WrapPanel ItemSpacing="8" LineSpacing="8">
                   <TextBlock Text="{Binding Loc[SetPoint]}" VerticalAlignment="Center" />
@@ -152,6 +153,9 @@
             </ScrollViewer>
 
             <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Top">
+              <TextBlock Text="{Binding WeekStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Loc[WeekPlaceholder]}" Foreground="#B0712A" TextWrapping="Wrap"
+                         IsVisible="{Binding WeekStatus.IsNotRead}" />
               <TextBlock Text="{Binding ProfileRoomName}" FontWeight="Bold" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[WeekHint1]}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[WeekHint2]}" TextWrapping="Wrap" Foreground="#B0712A" />
@@ -168,6 +172,7 @@
         <TabItem Header="{Binding Loc[TabHouse]}">
           <ScrollViewer>
             <StackPanel Margin="16" Spacing="12">
+              <TextBlock Text="{Binding RoomsStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[HouseTitle]}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap" />
               <ItemsControl ItemsSource="{Binding Rooms}">
                 <ItemsControl.ItemTemplate>
@@ -198,6 +203,7 @@
                 <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Config"
                         ToolTip.Tip="{Binding Loc[HelpButton]}" />
               </WrapPanel>
+              <TextBlock Text="{Binding ConfigStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[ConfigNote]}" Foreground="#B0712A" TextWrapping="Wrap" />
 
               <TextBlock Text="{Binding Loc[ConfigTemperatures]}" FontSize="16" FontWeight="Bold" />
@@ -310,6 +316,7 @@
                 <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Devices"
                         ToolTip.Tip="{Binding Loc[HelpButton]}" />
               </WrapPanel>
+              <TextBlock Text="{Binding DevicesStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[StructureWarning]}" Foreground="#B0712A" TextWrapping="Wrap" />
               <WrapPanel ItemSpacing="14" LineSpacing="6">
                 <CheckBox Content="{Binding Loc[ConfirmChanges]}" IsChecked="{Binding ConfirmChanges}" />
@@ -375,9 +382,11 @@
                 <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Cube"
                         ToolTip.Tip="{Binding Loc[HelpButton]}" />
               </WrapPanel>
+              <TextBlock Text="{Binding CubeInfoStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding FirmwareText}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding AirtimeText}" Foreground="Gray" TextWrapping="Wrap" />
 
+              <TextBlock Text="{Binding TimeZoneStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[TimeZone]}" FontSize="16" FontWeight="Bold" />
               <WrapPanel ItemSpacing="8" LineSpacing="8">
                 <ComboBox Width="300" ItemsSource="{Binding ZonePresets}" SelectedItem="{Binding SelectedZonePreset}" />
@@ -388,6 +397,7 @@
               </WrapPanel>
               <TextBlock Text="{Binding TimeZoneText}" Foreground="Gray" TextWrapping="Wrap" />
 
+              <TextBlock Text="{Binding NtpStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[NtpServers]}" FontSize="16" FontWeight="Bold" />
               <WrapPanel ItemSpacing="8" LineSpacing="8">
                 <TextBox Width="220" Text="{Binding NtpServer1}" />
@@ -396,6 +406,7 @@
                 <Button Content="{Binding Loc[SendNtp]}" Command="{Binding SendNtpCommand}" />
               </WrapPanel>
 
+              <TextBlock Text="{Binding NetworkStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[Network]}" FontSize="16" FontWeight="Bold" />
               <TextBlock Text="{Binding Loc[NetworkWarning]}" Foreground="#B0712A" TextWrapping="Wrap" />
               <WrapPanel ItemSpacing="10" LineSpacing="8">
@@ -427,6 +438,7 @@
                 <Button Content="{Binding Loc[SendNetwork]}" Command="{Binding SendNetworkCommand}" />
               </WrapPanel>
 
+              <TextBlock Text="{Binding DiagnosticsStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[Diagnostics]}" FontSize="16" FontWeight="Bold" />
               <TextBlock Text="{Binding Loc[DiagnosticsHint]}" Foreground="Gray" TextWrapping="Wrap" />
               <Button Content="{Binding Loc[ExportDiagnostics]}" Command="{Binding ExportDiagnosticsCommand}"
@@ -440,7 +452,7 @@
         <!-- 6 Status -->
         <TabItem Header="{Binding Loc[TabStatus]}">
           <DockPanel Margin="8">
-            <TextBlock DockPanel.Dock="Top" Text="{Binding AppVersion, StringFormat='App-Version {0}'}"
+            <TextBlock DockPanel.Dock="Top" Text="{Binding AppVersionText}"
                        Foreground="Gray" Margin="0,0,0,8" />
             <TextBlock DockPanel.Dock="Top" Text="{Binding AirtimeText}" Foreground="Gray" Margin="0,0,0,8" />
             <ListBox ItemsSource="{Binding Audit}" />
@@ -482,6 +494,28 @@
                 <TextBlock Text="{Binding Loc[CloseToTrayHint]}" Foreground="Gray" TextWrapping="Wrap" />
               </StackPanel>
               <TextBlock Text="{Binding Loc[ExcludedFeatures]}" Foreground="Gray" TextWrapping="Wrap" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <!-- 9 Über die App -->
+        <TabItem Header="{Binding Loc[TabAbout]}">
+          <ScrollViewer>
+            <StackPanel Margin="16" Spacing="10">
+              <TextBlock Text="{Binding Loc[AboutTitle]}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AboutVersionText}" />
+              <TextBlock Text="{Binding AboutAuthorText}" />
+              <TextBlock Text="{Binding AboutLicenseTextLine}" />
+              <TextBlock Text="{Binding AboutDisclaimerText}" Foreground="#B0712A" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AboutPrivacyText}" Foreground="Gray" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Loc[AboutProject]}" />
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <TextBlock Text="{Binding AboutProjectText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <Button Content="{Binding Loc[AboutProject]}" Command="{Binding OpenProjectUrlCommand}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding Loc[AboutLicenseTitle]}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0" />
+              <TextBox Text="{Binding LicenseFullText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True"
+                       TextWrapping="Wrap" MinHeight="140" MaxHeight="360" />
             </StackPanel>
           </ScrollViewer>
         </TabItem>

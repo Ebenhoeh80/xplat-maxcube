@@ -84,6 +84,10 @@ public sealed partial class DayProfileViewModel : ObservableObject
 
     public DayOfWeek Day { get; }
 
+    /// <summary>False, solange der Tag nur der sichtbare Platzhalter ist (nie senden).</summary>
+    [ObservableProperty]
+    private bool wasReadFromCube;
+
     public string DisplayName => Day.ToString();
 
     public ObservableCollection<SwitchPointViewModel> Points { get; } = new();
@@ -226,10 +230,15 @@ public sealed partial class DayProfileViewModel : ObservableObject
     }
 
     /// <summary>Ersetzt den Tag durch den bekannten Default (nur für die Anzeige, nie zum Senden).</summary>
-    public void Reset() => Load(new DayProfile(Day, [new SwitchPoint(TimeOnly.MinValue, new Temperature(21.0))]));
+    public void Reset()
+    {
+        Load(new DayProfile(Day, [new SwitchPoint(TimeOnly.MinValue, new Temperature(21.0))]));
+        WasReadFromCube = false;
+    }
 
     public void Load(DayProfile profile)
     {
+        WasReadFromCube = true;
         Points.Clear();
         foreach (var point in profile.Points)
         {

@@ -66,22 +66,24 @@ public partial class MainWindowViewModel
 
     partial void OnStructureHintChanged(string value) => OnPropertyChanged(nameof(HasStructureHint));
 
-    private bool CanRenameRoom => CanAdminRoom && RenameRoomText.Trim().Length > 0;
+    private bool CanStructureWrite => CanAdmin && !IsStale && !_service.IsOffline && DevicesStatus.HasRead;
 
-    private bool CanRenameDevice => CanAdmin && SelectedDevice is not null && RenameDeviceText.Trim().Length > 0;
+    private bool CanRenameRoom => CanStructureWrite && RenameRoomText.Trim().Length > 0;
 
-    private bool CanDeleteRoom => CanAdminRoom && ConfirmChanges;
+    private bool CanRenameDevice => CanStructureWrite && SelectedDevice is not null && RenameDeviceText.Trim().Length > 0;
 
-    private bool CanDeleteDevice => CanAdmin && SelectedDevice is not null && ConfirmChanges;
+    private bool CanDeleteRoom => CanStructureWrite && ConfirmChanges;
+
+    private bool CanDeleteDevice => CanStructureWrite && SelectedDevice is not null && ConfirmChanges;
 
     private bool CanMoveDevice
-        => CanAdmin && SelectedDevice is not null && SelectedMoveTarget is not null && ConfirmChanges;
+        => CanStructureWrite && SelectedDevice is not null && SelectedMoveTarget is not null && ConfirmChanges;
 
     private bool CanAssign
-        => CanAdmin && ConfirmChanges && FoundDevice is not null && AssignDeviceName.Trim().Length > 0
+        => CanStructureWrite && ConfirmChanges && FoundDevice is not null && AssignDeviceName.Trim().Length > 0
             && (NewRoomName.Trim().Length > 0 || SelectedAssignTarget is not null);
 
-    private bool CanMoveRoom => CanAdminRoom && Rooms.Count > 1;
+    private bool CanMoveRoom => CanStructureWrite && Rooms.Count > 1;
 
     [RelayCommand(CanExecute = nameof(CanRenameRoom))]
     private async Task RenameRoomAsync()
@@ -253,7 +255,8 @@ public partial class MainWindowViewModel
         {
             await _service.ReloadAsync(token);
             IsConnected = true;
+            CubeInfoStatus.Update(DisplayState, DisplayTime);
             await RefreshAuditAsync();
-        }, L("ErrReload"), L("OkReload"));
+        }, L("ErrReload"), L("OkReload"), status: CubeInfoStatus);
     }
 }
