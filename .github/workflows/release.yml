@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            exe: MaxCube.UI.Desktop.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: MaxCube.UI.Desktop
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Version aus Tag ableiten
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish ${{ matrix.rid }}
+        shell: bash
+        run: |
+          dotnet publish src/MaxCube.UI.Desktop/MaxCube.UI.Desktop.csproj \
+            -c Release -r ${{ matrix.rid }} --self-contained true \
+            -p:PublishSingleFile=false -p:Version="$VERSION" \
+            -o "publish/${{ matrix.rid }}"
+
+      - name: Selbsttest des veröffentlichten Pakets (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          chmod +x "publish/${{ matrix.rid }}/${{ matrix.exe }}"
+          "publish/${{ matrix.rid }}/${{ matrix.exe }}" --selfcheck
+
+      - name: Selbsttest des veröffentlichten Pakets (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: & "publish/${{ matrix.rid }}/${{ matrix.exe }}" --selfcheck
+
+      - name: Archiv erstellen (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "publish/${{ matrix.rid }}/*" `
+            -DestinationPath "xplat-maxcube-$env:VERSION-${{ matrix.rid }}.zip"
+
+      - name: Archiv erstellen (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          (cd publish && zip -r "../xplat-maxcube-${VERSION}-${{ matrix.rid }}.zip" "${{ matrix.rid }}")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xplat-maxcube-${{ matrix.rid }}
+          path: xplat-maxcube-*.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          pattern: xplat-maxcube-*
+          merge-multiple: true
+
+      - name: Release-Notes erzeugen
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]") > 0) { found=1; print; next }
+            }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          {
+            if [ -s notes.md ]; then cat notes.md; else echo "Release $GITHUB_REF_NAME"; fi
+            echo
+            echo "## Commits"
+            git log --pretty='format:- %s' -20
+          } > release-notes.md
+
+      - name: Release anlegen und Artefakte anhängen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARGS=(--title "$GITHUB_REF_NAME" --notes-file release-notes.md)
+          if [[ "$VERSION" == *-* ]]; then ARGS+=(--prerelease); fi
+          shopt -s nullglob
+          FILES=(release-artifacts/*.zip)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "Keine Release-Artefakte gefunden." >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" "${FILES[@]}" "${ARGS[@]}"

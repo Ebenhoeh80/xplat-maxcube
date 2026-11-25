@@ -1,0 +1,526 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:MaxCube.UI.Controls"
+        x:Class="MaxCube.UI.Views.MainWindow"
+        Title="{Binding WindowTitle}"
+        Width="1120"
+        Height="760"
+        MinWidth="560"
+        MinHeight="460">
+  <Grid>
+    <Grid RowDefinitions="Auto,*,Auto">
+
+      <!-- Verbindung und Suche; WrapPanel bricht auf kleinen Fenstern um -->
+      <Border Grid.Row="0" Padding="12" BorderThickness="0,0,0,1">
+        <StackPanel Spacing="8">
+          <WrapPanel ItemSpacing="8" LineSpacing="8">
+            <TextBlock Text="{Binding Loc[Host]}" VerticalAlignment="Center" />
+            <TextBox Width="150" Text="{Binding Host}" />
+            <TextBlock Text="{Binding Loc[Port]}" VerticalAlignment="Center" />
+            <NumericUpDown Width="110" Minimum="1" Maximum="65535" Increment="1" Value="{Binding Port}" />
+            <Button Content="{Binding Loc[Connect]}" Command="{Binding ConnectCommand}" />
+            <Button Content="{Binding Loc[Disconnect]}" Command="{Binding DisconnectCommand}" />
+            <Button Content="{Binding Loc[LoadCache]}" Command="{Binding LoadCachedCommand}" />
+            <Button Content="{Binding Loc[LastEndpoint]}" Command="{Binding LoadLastEndpointCommand}" />
+            <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" FontWeight="SemiBold" />
+          </WrapPanel>
+          <WrapPanel ItemSpacing="8" LineSpacing="8">
+            <Button Content="{Binding Loc[SearchCube]}" Command="{Binding DiscoverCubesCommand}" />
+            <ComboBox Width="340"
+                      ItemsSource="{Binding DiscoveredCubes}"
+                      SelectedItem="{Binding SelectedDiscoveredCube}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Display}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="{Binding Loc[UseCube]}" Command="{Binding UseDiscoveredCubeCommand}" />
+            <TextBlock Text="{Binding DiscoveryText}" VerticalAlignment="Center" Foreground="Gray" />
+            <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Connect"
+                    ToolTip.Tip="{Binding Loc[HelpButton]}" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <TabControl Grid.Row="1" Margin="12" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+
+        <!-- 0 Räume -->
+        <TabItem Header="{Binding Loc[TabRooms]}">
+          <Grid ColumnDefinitions="240,*">
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Rooms}"
+                     SelectedItem="{Binding SelectedRoom}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Spacing="2" Margin="4">
+                    <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                    <TextBlock Text="{Binding SetPoint, StringFormat='{}{0:F1} °C'}" FontSize="12" />
+                    <TextBlock Text="{Binding ActualText}" FontSize="12" Foreground="Gray" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <ScrollViewer Grid.Column="1" Margin="16,0,0,0">
+              <StackPanel Spacing="14">
+                <TextBlock Text="{Binding SelectedRoom.Name}" FontSize="22" FontWeight="Bold" />
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                  <TextBlock Text="{Binding Loc[SetPoint]}" VerticalAlignment="Center" />
+                  <NumericUpDown Width="150" Minimum="4.5" Maximum="30.5" Increment="0.5"
+                                 Value="{Binding RequestedTemperature}" />
+                  <Button Content="{Binding Loc[Send]}" Command="{Binding ApplyTemperatureCommand}" />
+                </WrapPanel>
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                  <Button Content="{Binding Loc[ModeAuto]}" Command="{Binding SetAutoCommand}" />
+                  <Button Content="{Binding Loc[ModeEco]}" Command="{Binding SetEcoCommand}" />
+                  <Button Content="{Binding Loc[ModeComfort]}" Command="{Binding SetComfortCommand}" />
+                  <Button Content="{Binding Loc[ModeTemporary]}" Command="{Binding SetTemporaryCommand}" />
+                </WrapPanel>
+                <WrapPanel ItemSpacing="16" LineSpacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding Loc[ModeLabel]}" />
+                    <TextBlock Text="{Binding SelectedRoom.ControlMode}" FontWeight="SemiBold" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding Loc[TempModeLabel]}" />
+                    <TextBlock Text="{Binding SelectedRoom.TemperatureMode}" FontWeight="SemiBold" />
+                  </StackPanel>
+                </WrapPanel>
+
+                <TextBlock Text="{Binding Loc[TabDevices]}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0" />
+                <ItemsControl ItemsSource="{Binding Devices}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Padding="8" Margin="0,0,0,4" BorderThickness="1" CornerRadius="4">
+                        <WrapPanel ItemSpacing="12" LineSpacing="2">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Type}" />
+                          <TextBlock Text="{Binding Address}" />
+                          <TextBlock Text="{Binding State}" />
+                        </WrapPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </TabItem>
+
+        <!-- 1 Wochenprofil -->
+        <TabItem Header="{Binding Loc[TabWeek]}">
+          <Grid ColumnDefinitions="150,*,240">
+            <ListBox Grid.Column="0" ItemsSource="{Binding WeekDays}" SelectedItem="{Binding SelectedDay}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <ScrollViewer Grid.Column="1" Margin="16,0">
+              <StackPanel Spacing="10">
+                <WrapPanel ItemSpacing="12" LineSpacing="4">
+                  <TextBlock Text="{Binding SelectedDay.DisplayName}" FontSize="18" FontWeight="Bold" />
+                  <Button Content="{Binding Loc[AddPoint]}" Command="{Binding AddSwitchPointCommand}" />
+                </WrapPanel>
+                <c:DayTimeline Segments="{Binding SelectedDay.Segments}" />
+                <ItemsControl ItemsSource="{Binding SelectedDay.Points}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <WrapPanel ItemSpacing="6" LineSpacing="4" Margin="0,4">
+                        <Button Content="−5" Command="{Binding EarlierCommand}"
+                                ToolTip.Tip="{Binding $parent[Window].DataContext.Loc[QuickEarlier]}" />
+                        <TextBox Width="90" Text="{Binding UntilText}" />
+                        <Button Content="+5" Command="{Binding LaterCommand}"
+                                ToolTip.Tip="{Binding $parent[Window].DataContext.Loc[QuickLater]}" />
+                        <Button Content="−" Command="{Binding ColderCommand}"
+                                ToolTip.Tip="{Binding $parent[Window].DataContext.Loc[QuickColder]}" />
+                        <NumericUpDown Width="140" Minimum="4.5" Maximum="30.5" Increment="0.5"
+                                       Value="{Binding Temperature}" />
+                        <Button Content="+" Command="{Binding WarmerCommand}"
+                                ToolTip.Tip="{Binding $parent[Window].DataContext.Loc[QuickWarmer]}" />
+                        <Button Content="✕"
+                                Command="{Binding $parent[ItemsControl].DataContext.RemoveSwitchPointCommand}"
+                                CommandParameter="{Binding}" />
+                      </WrapPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+
+            <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Top">
+              <TextBlock Text="{Binding ProfileRoomName}" FontWeight="Bold" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Loc[WeekHint1]}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Loc[WeekHint2]}" TextWrapping="Wrap" Foreground="#B0712A" />
+              <Button Content="{Binding Loc[SendProfile]}" Command="{Binding SaveWeekProfileCommand}" />
+              <Button Content="{Binding Loc[CopyDay]}" Command="{Binding CopyDayToWeekCommand}"
+                      ToolTip.Tip="{Binding Loc[CopyDayTip]}" />
+              <Button Content="{Binding Loc[CopyWeek]}" Command="{Binding CopyWeekToSelectedRoomsCommand}"
+                      ToolTip.Tip="{Binding Loc[CopyWeekTip]}" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+
+        <!-- 2 Haus -->
+        <TabItem Header="{Binding Loc[TabHouse]}">
+          <ScrollViewer>
+            <StackPanel Margin="16" Spacing="12">
+              <TextBlock Text="{Binding Loc[HouseTitle]}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding Rooms}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsHouseSelected}" Margin="0,2" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Content="{Binding Loc[AllAuto]}" Command="{Binding SetHouseAutoCommand}" />
+                <Button Content="{Binding Loc[AllEco]}" Command="{Binding SetHouseEcoCommand}" />
+                <Button Content="{Binding Loc[AllComfort]}" Command="{Binding SetHouseComfortCommand}" />
+                <Button Content="{Binding Loc[AllTemporary]}" Command="{Binding SetHouseTemporaryCommand}" />
+                <NumericUpDown Width="140" Minimum="4.5" Maximum="30.5" Increment="0.5"
+                               Value="{Binding RequestedTemperature}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding Loc[HouseHint]}" Foreground="Gray" TextWrapping="Wrap" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <!-- 3 Konfiguration -->
+        <TabItem Header="{Binding Loc[TabConfig]}">
+          <ScrollViewer>
+            <StackPanel Margin="16" Spacing="14">
+              <WrapPanel ItemSpacing="12" LineSpacing="4">
+                <TextBlock Text="{Binding SelectedRoom.Name}" FontSize="22" FontWeight="Bold" />
+                <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Config"
+                        ToolTip.Tip="{Binding Loc[HelpButton]}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding Loc[ConfigNote]}" Foreground="#B0712A" TextWrapping="Wrap" />
+
+              <TextBlock Text="{Binding Loc[ConfigTemperatures]}" FontSize="16" FontWeight="Bold" />
+              <WrapPanel ItemSpacing="10" LineSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigComfort]}" />
+                  <NumericUpDown Width="130" Minimum="4.5" Maximum="30.5" Increment="0.5" Value="{Binding ConfigComfort}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigEco]}" />
+                  <NumericUpDown Width="130" Minimum="4.5" Maximum="30.5" Increment="0.5" Value="{Binding ConfigEco}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigMaximum]}" />
+                  <NumericUpDown Width="130" Minimum="4.5" Maximum="30.5" Increment="0.5" Value="{Binding ConfigMaximum}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigMinimum]}" />
+                  <NumericUpDown Width="130" Minimum="4.5" Maximum="30.5" Increment="0.5" Value="{Binding ConfigMinimum}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigWindowTemperature]}" />
+                  <NumericUpDown Width="130" Minimum="4.5" Maximum="30.5" Increment="0.5" Value="{Binding ConfigWindowTemperature}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigWindowMinutes]}" />
+                  <ComboBox Width="110" ItemsSource="{Binding WindowMinuteOptions}" SelectedItem="{Binding ConfigWindowMinutes}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ConfigOffset]}" />
+                  <NumericUpDown Width="130" Minimum="-3.5" Maximum="3.5" Increment="0.5" Value="{Binding ConfigOffset}" />
+                </StackPanel>
+              </WrapPanel>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Content="{Binding Loc[SendConfig]}" Command="{Binding ApplyRoomConfigurationCommand}" />
+                <Button Content="{Binding Loc[CopyConfig]}" Command="{Binding CopyConfigurationToSelectedRoomsCommand}"
+                        ToolTip.Tip="{Binding Loc[CopyConfigTip]}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[ConfigBoostDecalc]}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0" />
+              <TextBlock Text="{Binding Loc[ValveNotRead]}" Foreground="#B0712A" TextWrapping="Wrap"
+                         IsVisible="{Binding !HasValveConfiguration}" />
+              <WrapPanel ItemSpacing="10" LineSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[BoostMinutes]}" />
+                  <ComboBox Width="110" ItemsSource="{Binding BoostMinuteOptions}" SelectedItem="{Binding BoostMinutes}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[BoostValve]}" />
+                  <NumericUpDown Width="130" Minimum="0" Maximum="100" Increment="5" Value="{Binding BoostValveAngle}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[DecalcDay]}" />
+                  <ComboBox Width="150" ItemsSource="{Binding DecalcificationDays}" SelectedItem="{Binding DecalcificationDay}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[DecalcHour]}" />
+                  <NumericUpDown Width="110" Minimum="0" Maximum="23" Increment="1" Value="{Binding DecalcificationHour}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[ValveOffset]}" />
+                  <NumericUpDown Width="130" Minimum="0" Maximum="100" Increment="5" Value="{Binding ValveOffsetPercent}" />
+                </StackPanel>
+              </WrapPanel>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Content="{Binding Loc[SendBoost]}" Command="{Binding ApplyBoostAndDecalcificationCommand}" />
+                <Button Content="{Binding Loc[SendValveOffset]}" Command="{Binding ApplyValveOffsetCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[ConfigDisplay]}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0" />
+              <TextBlock Text="{Binding Loc[DisplayHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Content="{Binding Loc[DisplayActual]}" Command="{Binding SetDisplayActualCommand}" />
+                <Button Content="{Binding Loc[DisplaySetpoint]}" Command="{Binding SetDisplaySetpointCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[ConfigPushButton]}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0" />
+              <WrapPanel ItemSpacing="10" LineSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[KeyUpper]}" />
+                  <ComboBox Width="190" ItemsSource="{Binding PushButtonModes}" SelectedItem="{Binding PushUpperMode}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[KeyTemperature]}" />
+                  <NumericUpDown Width="130" Minimum="5" Maximum="30" Increment="0.5" Value="{Binding PushUpperTemperature}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[KeyLower]}" />
+                  <ComboBox Width="190" ItemsSource="{Binding PushButtonModes}" SelectedItem="{Binding PushLowerMode}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[KeyTemperature]}" />
+                  <NumericUpDown Width="130" Minimum="5" Maximum="30" Increment="0.5" Value="{Binding PushLowerTemperature}" />
+                </StackPanel>
+              </WrapPanel>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Content="{Binding Loc[ReadPushButton]}" Command="{Binding ReadPushButtonCommand}" />
+                <Button Content="{Binding Loc[SendPushButton]}" Command="{Binding SendPushButtonCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <!-- 4 Geräte / Struktur / Anlernen -->
+        <TabItem Header="{Binding Loc[TabDevices]}">
+          <ScrollViewer>
+            <StackPanel Margin="16" Spacing="14">
+              <WrapPanel ItemSpacing="12" LineSpacing="4">
+                <TextBlock Text="{Binding Loc[StructureTitle]}" FontSize="20" FontWeight="Bold" />
+                <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Devices"
+                        ToolTip.Tip="{Binding Loc[HelpButton]}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding Loc[StructureWarning]}" Foreground="#B0712A" TextWrapping="Wrap" />
+              <WrapPanel ItemSpacing="14" LineSpacing="6">
+                <CheckBox Content="{Binding Loc[ConfirmChanges]}" IsChecked="{Binding ConfirmChanges}" />
+                <CheckBox Content="{Binding Loc[FactoryReset]}" IsChecked="{Binding FactoryReset}" />
+                <Button Content="{Binding Loc[ReloadState]}" Command="{Binding ReloadStateCommand}"
+                        ToolTip.Tip="{Binding Loc[ReloadStateTip]}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding StructureHint}" Foreground="#B0712A" TextWrapping="Wrap"
+                         IsVisible="{Binding HasStructureHint}" />
+
+              <TextBlock Text="{Binding Loc[RoomStructure]}" FontSize="16" FontWeight="Bold" />
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <TextBlock Text="{Binding SelectedRoom.Name}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <TextBox Width="220" Text="{Binding RenameRoomText}" />
+                <Button Content="{Binding Loc[Rename]}" Command="{Binding RenameRoomCommand}" />
+                <Button Content="↑" Command="{Binding MoveRoomUpCommand}" ToolTip.Tip="{Binding Loc[MoveUp]}" />
+                <Button Content="↓" Command="{Binding MoveRoomDownCommand}" ToolTip.Tip="{Binding Loc[MoveDown]}" />
+                <Button Content="{Binding Loc[DeleteRoom]}" Command="{Binding DeleteRoomCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[DeviceStructure]}" FontSize="16" FontWeight="Bold" />
+              <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" MaxHeight="190">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <WrapPanel ItemSpacing="12">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Type}" />
+                      <TextBlock Text="{Binding Address}" />
+                    </WrapPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <TextBox Width="220" Text="{Binding RenameDeviceText}" />
+                <Button Content="{Binding Loc[Rename]}" Command="{Binding RenameDeviceCommand}" />
+                <ComboBox Width="200" ItemsSource="{Binding RoomOptions}" SelectedItem="{Binding SelectedMoveTarget}" />
+                <Button Content="{Binding Loc[MoveDevice]}" Command="{Binding MoveDeviceCommand}" />
+                <Button Content="{Binding Loc[DeleteDevice]}" Command="{Binding DeleteDeviceCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[Inclusion]}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0" />
+              <TextBlock Text="{Binding Loc[InclusionHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <Button Content="{Binding Loc[SearchDevices]}" Command="{Binding SearchNewDeviceCommand}" />
+                <TextBlock Text="{Binding FoundDeviceText}" VerticalAlignment="Center" FontWeight="SemiBold" />
+              </WrapPanel>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <TextBox Width="220" Watermark="{Binding Loc[DeviceName]}" Text="{Binding AssignDeviceName}" />
+                <ComboBox Width="200" ItemsSource="{Binding RoomOptions}" SelectedItem="{Binding SelectedAssignTarget}" />
+                <TextBox Width="200" Watermark="{Binding Loc[NewRoomName]}" Text="{Binding NewRoomName}" />
+                <Button Content="{Binding Loc[AssignDevice]}" Command="{Binding AssignFoundDeviceCommand}" />
+              </WrapPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <!-- 5 Cube: Zeit, NTP, Netzwerk, Firmware, Funkauslastung -->
+        <TabItem Header="{Binding Loc[TabCube]}">
+          <ScrollViewer>
+            <StackPanel Margin="16" Spacing="14">
+              <WrapPanel ItemSpacing="12" LineSpacing="4">
+                <TextBlock Text="{Binding Loc[CubeTitle]}" FontSize="20" FontWeight="Bold" />
+                <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Cube"
+                        ToolTip.Tip="{Binding Loc[HelpButton]}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding FirmwareText}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AirtimeText}" Foreground="Gray" TextWrapping="Wrap" />
+
+              <TextBlock Text="{Binding Loc[TimeZone]}" FontSize="16" FontWeight="Bold" />
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <ComboBox Width="300" ItemsSource="{Binding ZonePresets}" SelectedItem="{Binding SelectedZonePreset}" />
+                <Button Content="{Binding Loc[ReadZone]}" Command="{Binding ReadTimeZoneCommand}" />
+                <Button Content="{Binding Loc[SendZone]}" Command="{Binding SendTimeZoneCommand}" />
+                <Button Content="{Binding Loc[SetCubeTime]}" Command="{Binding SetCubeTimeCommand}"
+                        ToolTip.Tip="{Binding Loc[SetCubeTimeTip]}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding TimeZoneText}" Foreground="Gray" TextWrapping="Wrap" />
+
+              <TextBlock Text="{Binding Loc[NtpServers]}" FontSize="16" FontWeight="Bold" />
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <TextBox Width="220" Text="{Binding NtpServer1}" />
+                <TextBox Width="220" Text="{Binding NtpServer2}" />
+                <Button Content="{Binding Loc[ReadNtp]}" Command="{Binding ReadNtpCommand}" />
+                <Button Content="{Binding Loc[SendNtp]}" Command="{Binding SendNtpCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[Network]}" FontSize="16" FontWeight="Bold" />
+              <TextBlock Text="{Binding Loc[NetworkWarning]}" Foreground="#B0712A" TextWrapping="Wrap" />
+              <WrapPanel ItemSpacing="10" LineSpacing="8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[NetIp]}" />
+                  <TextBox Width="150" Text="{Binding NetworkIp}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[NetMask]}" />
+                  <TextBox Width="150" Text="{Binding NetworkMask}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[NetGateway]}" />
+                  <TextBox Width="150" Text="{Binding NetworkGateway}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[NetDns1]}" />
+                  <TextBox Width="150" Text="{Binding NetworkDns1}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[NetDns2]}" />
+                  <TextBox Width="150" Text="{Binding NetworkDns2}" />
+                </StackPanel>
+              </WrapPanel>
+              <WrapPanel ItemSpacing="12" LineSpacing="8">
+                <CheckBox Content="{Binding Loc[NetDhcp]}" IsChecked="{Binding NetworkDhcp}" />
+                <CheckBox Content="{Binding Loc[ConfirmNetwork]}" IsChecked="{Binding ConfirmNetwork}" />
+                <Button Content="{Binding Loc[ReadNetwork]}" Command="{Binding ReadNetworkCommand}" />
+                <Button Content="{Binding Loc[SendNetwork]}" Command="{Binding SendNetworkCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[Diagnostics]}" FontSize="16" FontWeight="Bold" />
+              <TextBlock Text="{Binding Loc[DiagnosticsHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              <Button Content="{Binding Loc[ExportDiagnostics]}" Command="{Binding ExportDiagnosticsCommand}"
+                      HorizontalAlignment="Left" />
+              <TextBox Text="{Binding DiagnosticText}" IsReadOnly="True" AcceptsReturn="True"
+                       TextWrapping="Wrap" MinHeight="120" MaxHeight="320" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <!-- 6 Status -->
+        <TabItem Header="{Binding Loc[TabStatus]}">
+          <DockPanel Margin="8">
+            <TextBlock DockPanel.Dock="Top" Text="{Binding AppVersion, StringFormat='App-Version {0}'}"
+                       Foreground="Gray" Margin="0,0,0,8" />
+            <TextBlock DockPanel.Dock="Top" Text="{Binding AirtimeText}" Foreground="Gray" Margin="0,0,0,8" />
+            <ListBox ItemsSource="{Binding Audit}" />
+          </DockPanel>
+        </TabItem>
+
+        <!-- 7 Hilfe -->
+        <TabItem Header="{Binding Loc[TabHelp]}">
+          <Grid ColumnDefinitions="240,*" Margin="8">
+            <ListBox Grid.Column="0" ItemsSource="{Binding HelpTopics}" SelectedItem="{Binding SelectedHelpTopic}" />
+            <ScrollViewer Grid.Column="1" Margin="16,0,0,0">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{Binding SelectedHelpTopic.Title}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding SelectedHelpTopic.Body}" TextWrapping="Wrap" />
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </TabItem>
+
+        <!-- 8 Einstellungen -->
+        <TabItem Header="{Binding Loc[TabSettings]}">
+          <ScrollViewer>
+            <StackPanel Margin="16" Spacing="14">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Loc[Language]}" FontWeight="SemiBold" />
+                <ComboBox Width="240" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Loc[LogRetention]}" FontWeight="SemiBold" />
+                <NumericUpDown Width="140" Minimum="1" Maximum="365" Increment="1" Value="{Binding LogRetentionDays}" />
+                <TextBlock Text="{Binding Loc[LogRetentionHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <CheckBox Content="{Binding Loc[BundleTemperatures]}" IsChecked="{Binding BundleTemperatures}" />
+                <TextBlock Text="{Binding Loc[BundleHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <CheckBox Content="{Binding Loc[CloseToTray]}" IsChecked="{Binding CloseToTray}" />
+                <TextBlock Text="{Binding Loc[CloseToTrayHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              </StackPanel>
+              <TextBlock Text="{Binding Loc[ExcludedFeatures]}" Foreground="Gray" TextWrapping="Wrap" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+      </TabControl>
+
+      <Border Grid.Row="2" Padding="12" BorderThickness="1,0,0,0">
+        <WrapPanel ItemSpacing="12" LineSpacing="4">
+          <TextBlock Text="{Binding SuccessText}" Foreground="#2E7D32" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding WarningText}" Foreground="#B0712A" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Loc[ConnectionLost]}" Foreground="#B0712A"
+                     IsVisible="{Binding IsStale}" TextWrapping="Wrap" />
+        </WrapPanel>
+      </Border>
+    </Grid>
+
+    <!-- Statusdialog „Warten“ (modal) -->
+    <Border Background="#99000000" IsVisible="{Binding IsBusy}">
+      <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="8"
+              Background="{DynamicResource SystemControlBackgroundAltHighBrush}" MinWidth="280">
+        <StackPanel Spacing="14">
+          <TextBlock Text="{Binding Loc[Busy]}" FontSize="16" FontWeight="SemiBold" />
+          <ProgressBar IsIndeterminate="True" />
+          <Button Content="{Binding Loc[Cancel]}" Command="{Binding CancelCommand}" HorizontalAlignment="Right" />
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Statusdialog „Fehler“ (modal) -->
+    <Border Background="#99000000" IsVisible="{Binding HasError}">
+      <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="8"
+              Background="{DynamicResource SystemControlBackgroundAltHighBrush}" MinWidth="320" MaxWidth="560">
+        <StackPanel Spacing="12">
+          <TextBlock Text="{Binding Loc[ErrorTitle]}" FontSize="16" FontWeight="SemiBold" Foreground="Red" />
+          <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding ErrorHint}" TextWrapping="Wrap" Foreground="Gray" />
+          <Button Content="{Binding Loc[Ok]}" Command="{Binding DismissErrorCommand}" HorizontalAlignment="Right" />
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+</Window>

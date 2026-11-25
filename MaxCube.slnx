@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MaxCube.Application/MaxCube.Application.csproj" />
+    <Project Path="src/MaxCube.Domain/MaxCube.Domain.csproj" />
+    <Project Path="src/MaxCube.Infrastructure/MaxCube.Infrastructure.csproj" />
+    <Project Path="src/MaxCube.Protocol/MaxCube.Protocol.csproj" />
+    <Project Path="src/MaxCube.UI.Desktop/MaxCube.UI.Desktop.csproj" />
+    <Project Path="src/MaxCube.UI/MaxCube.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MaxCube.Application.Tests/MaxCube.Application.Tests.csproj" />
+    <Project Path="tests/MaxCube.Domain.Tests/MaxCube.Domain.Tests.csproj" />
+    <Project Path="tests/MaxCube.Infrastructure.Tests/MaxCube.Infrastructure.Tests.csproj" />
+    <Project Path="tests/MaxCube.Protocol.Tests/MaxCube.Protocol.Tests.csproj" />
+    <Project Path="tests/MaxCube.UI.Tests/MaxCube.UI.Tests.csproj" />
+  </Folder>
+</Solution>

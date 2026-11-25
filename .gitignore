@@ -1,0 +1,16 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+TestResults/
+*.trx
+artifacts/
+publish/
+# Reverse-Engineering-Eingaben aus der eQ-3 MAX! Local Application sind nicht
+# Teil des öffentlichen Repos (Lizenz!). Nur unsere eigenen Auswertungen liegen
+# unter docs/ und bleiben quelloffen.
+decompiled/
+extracted/
+evidence/
