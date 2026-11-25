@@ -556,6 +556,77 @@ public class ViewModelTests
         viewModel.Port.Should().Be(62910);
     }
 
+    [Fact]
+    public async Task Service_events_from_a_background_thread_go_through_the_ui_dispatcher()
+    {
+        var dispatcher = new CountingUiDispatcher();
+        using var viewModel = CreateViewModel(out _, out _, out var gateway, dispatcher: dispatcher);
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+        var before = dispatcher.Posted;
+
+        await Task.Run(() => gateway.RaiseFaulted());
+
+        dispatcher.Posted.Should().BeGreaterThan(before);
+        viewModel.IsConnected.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Successful_actions_log_the_success_text_not_the_failure_prefix()
+    {
+        using var viewModel = CreateViewModelWithLog(out _, out var log);
+        viewModel.LogEnabled = true;
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+        viewModel.RequestedTemperature = 20.5;
+
+        await viewModel.ApplyTemperatureCommand.ExecuteAsync(null);
+
+        log.Entries.Should().Contain("[INFO] Temperatur gesendet.");
+        log.Entries.Should().NotContain(entry =>
+            entry.Contains("Temperatur konnte nicht gesendet werden: Temperatur gesendet", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Switching_the_log_off_writes_a_final_entry()
+    {
+        using var viewModel = CreateViewModelWithLog(out _, out var log);
+        await viewModel.InitializeAsync();
+
+        viewModel.LogEnabled = true;
+        viewModel.LogEnabled = false;
+
+        log.Entries.Should().Contain("[INFO] Protokoll eingeschaltet.");
+        log.Entries.Should().Contain("[INFO] Protokoll ausgeschaltet.");
+    }
+
+    [Fact]
+    public void A_discarded_radiogram_gets_an_actionable_hint()
+    {
+        ErrorCatalog.Describe("Konfiguration: Command discarded", german: true)
+            .Should().Contain("Funkauslastung");
+        ErrorCatalog.Describe("Command discarded", german: false)
+            .Should().Contain("airtime");
+    }
+
+    [Fact]
+    public void The_ui_viewmodel_does_not_opt_out_of_the_ui_synchronization_context()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "src", "MaxCube.UI")))
+        {
+            root = root.Parent;
+        }
+
+        root.Should().NotBeNull("die Quellen sind im Testlauf immer vorhanden");
+        var uiSources = Path.Combine(root!.FullName, "src", "MaxCube.UI");
+        var offenders = Directory.GetFiles(uiSources, "*.cs", SearchOption.AllDirectories)
+            .SelectMany(file => File.ReadAllLines(file).Select((line, index) => (file, line, number: index + 1)))
+            .Where(item => item.line.Contains("ConfigureAwait(false)", StringComparison.Ordinal))
+            .Select(item => $"{Path.GetFileName(item.file)}:{item.number}")
+            .ToArray();
+
+        offenders.Should().BeEmpty("UI-Fortsetzungen müssen auf dem UI-Thread landen");
+    }
+
     private sealed class FakeDiscovery : ICubeDiscovery
     {
         private readonly IReadOnlyList<DiscoveredCube> _cubes;
@@ -574,6 +645,20 @@ public class ViewModelTests
         public bool CheckAccess() => false;
 
         public void Post(Action action) => Posted++;
+    }
+
+    /// <summary>Simuliert Avalonia: jeder fremdthreads Event muss über Post laufen.</summary>
+    private sealed class CountingUiDispatcher : IUiDispatcher
+    {
+        public int Posted { get; private set; }
+
+        public bool CheckAccess() => false;
+
+        public void Post(Action action)
+        {
+            Posted++;
+            action();
+        }
     }
 
     private static MainWindowViewModel CreateViewModel() => CreateViewModel(out _, out _);
@@ -598,7 +683,8 @@ public class ViewModelTests
         out FakeGateway gateway,
         ICubeDiscovery? discovery = null,
         IAppVersionProvider? versionProvider = null,
-        ILogStore? logStore = null)
+        ILogStore? logStore = null,
+        IUiDispatcher? dispatcher = null)
     {
         cube = new Cube(new SerialNumber("JEQ0001234"), 275, new RadioAddress(0x1D2A3C), true);
         cube.AddRoom(new Room(1, "Wohnen", new RadioAddress(0x1D2A3C)));
@@ -610,7 +696,7 @@ public class ViewModelTests
         store = new FakeStore();
         var clock = new FakeClock();
         var service = new CubeApplicationService(gateway, store, clock);
-        return new MainWindowViewModel(service, clock, discovery: discovery,
+        return new MainWindowViewModel(service, clock, discovery: discovery, dispatcher: dispatcher,
             versionProvider: versionProvider, logStore: logStore);
     }
 

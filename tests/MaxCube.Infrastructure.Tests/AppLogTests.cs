@@ -41,6 +41,19 @@ public sealed class AppLogTests
     }
 
     [Fact]
+    public void Lines_carry_the_thread_context_for_support()
+    {
+        using var folder = new TempFolder();
+        var log = new FileAppLog(folder.Path);
+        log.Write("INFO", "Test");
+        log.Write("WARN", "Test");
+
+        var lines = log.ReadRecent(2);
+        lines.Should().OnlyContain(line => line.Contains("[INFO] Test (T") || line.Contains("[WARN] Test (T"));
+        lines[0].Should().MatchRegex(@"\(T\d+(,UI)?\)$");
+    }
+
+    [Fact]
     public void Export_creates_a_zip_with_the_log_files_only_on_request()
     {
         using var folder = new TempFolder();

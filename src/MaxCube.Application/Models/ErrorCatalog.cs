@@ -91,6 +91,15 @@ public static partial class ErrorCatalog
             }
         }
 
+        // S:<duty>,1,<free> ist code-belegt (CubeCommands.cs:250-254), aber ohne
+        // Fehlercode. Der Hinweis macht die Kundenmeldung „Command discarded" nutzbar.
+        if (message.Contains("Command discarded", StringComparison.OrdinalIgnoreCase))
+        {
+            return german
+                ? "MAX1008: Funkbefehl vom Cube verworfen – Funkauslastung prüfen und später erneut senden."
+                : "MAX1008: Radio command rejected by the Cube – check airtime and retry later.";
+        }
+
         return null;
     }
 

@@ -38,15 +38,38 @@ public partial class MainWindowViewModel
 
     partial void OnLogEnabledChanged(bool value)
     {
-        if (_logStore is not null)
+        // 0.6.1: Der Ausschalt-Eintrag muss geschrieben werden, bevor der Store
+        // schweigestellt wird. 0.6.0 setzte IsEnabled zuerst und verlor Zeile 2 eines
+        // Ein/Aus/Ein-Zyklus – im Kundenlog standen deshalb zwei „eingeschaltet".
+        var message = value ? "Protokoll eingeschaltet." : "Protokoll ausgeschaltet.";
+        if (value)
         {
-            _logStore.IsEnabled = value;
+            if (_logStore is not null)
+            {
+                _logStore.IsEnabled = true;
+            }
+
+            if (!_loadingSettings)
+            {
+                _log.Write("INFO", message);
+            }
+        }
+        else
+        {
+            if (!_loadingSettings)
+            {
+                _log.Write("INFO", message);
+            }
+
+            if (_logStore is not null)
+            {
+                _logStore.IsEnabled = false;
+            }
         }
 
         if (!_loadingSettings)
         {
             _ = PersistAsync(LogEnabledSetting, value ? "1" : "0");
-            _log.Write("INFO", value ? "Protokoll eingeschaltet." : "Protokoll ausgeschaltet.");
             LoadLog();
         }
 

@@ -381,7 +381,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         _cubeAutoReadTask = RefreshCubeTabCoreAsync();
-        await _cubeAutoReadTask.ConfigureAwait(false);
+        // Fortsetzungen dürfen nie auf dem Threadpool landen: hier werden UI-Properties aktualisiert.
+        await _cubeAutoReadTask;
     }
 
     private async Task RefreshCubeTabCoreAsync()
@@ -413,20 +414,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     await TryReadAsync(NetworkStatus, ReadNetworkCoreAsync, token);
                 }
             }
-        }, L("ErrReload"), quiet: true, status: CubeInfoStatus).ConfigureAwait(false);
+        }, L("ErrReload"), quiet: true, status: CubeInfoStatus);
     }
 
     /// <summary>Ein Abschnitt darf einzeln scheitern, ohne die anderen zu blockieren.</summary>
     private async Task TryReadAsync(DataStatusViewModel status, Func<CancellationToken, Task> read, CancellationToken token)
     {
-        status.MarkLoading();
+        OnUiThread(status.MarkLoading);
         try
         {
-            await read(token).ConfigureAwait(false);
+            await read(token);
         }
         catch (Exception exception)
         {
-            status.MarkFailed(exception.Message);
+            // Auch die Fehler_markierung gehört auf den UI-Thread; ein MarkFailed aus dem
+            // Threadpool löste 0.6.0 „Call from invalid thread" aus (Kundenprotokoll 09:41).
+            OnUiThread(() => status.MarkFailed(exception.Message));
         }
     }
 
@@ -550,10 +553,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 _service.QueueRoomTemperature(room.Id, new Temperature(RequestedTemperature));
                 ErrorMessage = string.Empty;
                 SuccessText = L("OkTemperatureQueued", (int)CubeApplicationService.BundleWindow.TotalSeconds);
+                _log.Write("INFO", SuccessText);
             }
             catch (Exception exception)
             {
                 ErrorMessage = $"{L("ErrTemperature")}: {exception.Message}";
+                _log.Write("ERROR", $"{ErrorMessage} ({exception.GetType().Name})");
             }
 
             return;
@@ -646,18 +651,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 {
                     case HouseMode.Auto:
                         await _service.SetRoomControlModeAsync(
-                            room.Id, RoomControlMode.Auto, null, null, token).ConfigureAwait(false);
+                            room.Id, RoomControlMode.Auto, null, null, token);
                         break;
                     case HouseMode.Eco:
-                        await _service.ApplyEcoAsync(room.Id, token).ConfigureAwait(false);
+                        await _service.ApplyEcoAsync(room.Id, token);
                         break;
                     case HouseMode.Comfort:
-                        await _service.ApplyComfortAsync(room.Id, token).ConfigureAwait(false);
+                        await _service.ApplyComfortAsync(room.Id, token);
                         break;
                     case HouseMode.Temporary:
                         await _service.SetRoomControlModeAsync(
                             room.Id, RoomControlMode.Temporary, new Temperature(RequestedTemperature),
-                            _clock.Now.AddHours(1), token).ConfigureAwait(false);
+                            _clock.Now.AddHours(1), token);
                         break;
                 }
             }
@@ -703,8 +708,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             foreach (var day in days)
             {
-                await _service.SetWeekDayProfileAsync(room.Id, profile with { Day = day }, token)
-                    .ConfigureAwait(false);
+                await _service.SetWeekDayProfileAsync(room.Id, profile with { Day = day }, token);
             }
 
             await RefreshAuditAsync();
@@ -777,72 +781,90 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         using var cts = new CancellationTokenSource();
-        if (!quiet)
+        OnUiThread(() =>
         {
-            _actionCts = cts;
-            IsBusy = true;
-            ErrorMessage = string.Empty;
-            SuccessText = string.Empty;
-            // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
-            // stehen bleiben (Sonnet N10).
-            WarningText = string.Empty;
-        }
+            if (!quiet)
+            {
+                _actionCts = cts;
+                IsBusy = true;
+                ErrorMessage = string.Empty;
+                SuccessText = string.Empty;
+                // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
+                // stehen bleiben (Sonnet N10).
+                WarningText = string.Empty;
+            }
 
-        status?.MarkLoading();
+            status?.MarkLoading();
+        });
+
         try
         {
             await action(cts.Token);
-            var result = cts.IsCancellationRequested ? L("Cancelled") : successText ?? L("OkAction");
-            if (!quiet)
+            var cancelled = cts.IsCancellationRequested;
+            var result = cancelled ? L("Cancelled") : successText ?? L("OkAction");
+            OnUiThread(() =>
             {
-                SuccessText = result;
-            }
+                if (!quiet)
+                {
+                    SuccessText = result;
+                }
 
-            // INFO deckt jede Aktion ab - das war der grösste Support-Blindfleck (QA 0.6.0).
-            _log.Write("INFO", $"{errorPrefix}: {result}");
+                // 0.6.1: Nur der Erfolgstext, nie der Fehlerprefix. 0.6.0 schrieb
+                // „Temperatur konnte nicht gesendet werden: Temperatur gesendet."
+                _log.Write("INFO", result);
+            });
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
-            status?.Restore();
-            if (!quiet)
+            OnUiThread(() =>
             {
-                SuccessText = L("Cancelled");
-            }
+                status?.Restore();
+                if (!quiet)
+                {
+                    SuccessText = L("Cancelled");
+                }
+
+                _log.Write("INFO", L("Cancelled"));
+            });
         }
         catch (Exception exception)
         {
-            if (!quiet)
+            var message = $"{errorPrefix}: {exception.Message}";
+            OnUiThread(() =>
             {
-                ErrorMessage = $"{errorPrefix}: {exception.Message}";
-                _log.Write("ERROR", ErrorMessage);
-            }
-            else
-            {
-                _log.Write("WARN", $"{errorPrefix}: {exception.Message}");
-            }
+                if (!quiet)
+                {
+                    ErrorMessage = message;
+                }
 
-            status?.MarkFailed(exception.Message);
+                // Der Ausnahmetyp hilft beim Support ohne Nutzdaten oder Zugangsdaten.
+                _log.Write(quiet ? "WARN" : "ERROR", $"{message} ({exception.GetType().Name})");
+                status?.MarkFailed(exception.Message);
+            });
         }
         finally
         {
-            if (!quiet)
+            OnUiThread(() =>
             {
-                // Der Abbruch-Hinweis gehört nur zur laufenden Aktion (Gremium Runde 2).
-                if (StatusText == L("StatusCancelling"))
+                if (!quiet)
                 {
-                    StatusText = _statusBeforeCancel ?? L("StatusDisconnected");
+                    // Der Abbruch-Hinweis gehört nur zur laufenden Aktion (Gremium Runde 2).
+                    if (StatusText == L("StatusCancelling"))
+                    {
+                        StatusText = _statusBeforeCancel ?? L("StatusDisconnected");
+                    }
+
+                    _statusBeforeCancel = null;
+                    _actionCts = null;
+                    IsBusy = false;
                 }
 
-                _statusBeforeCancel = null;
-                _actionCts = null;
-                IsBusy = false;
-            }
-
-            if (_cubeTabReadPending && !IsBusy && SelectedTabIndex == TabIndex.Cube)
-            {
-                _cubeTabReadPending = false;
-                _ = RefreshCubeTabAsync();
-            }
+                if (_cubeTabReadPending && !IsBusy && SelectedTabIndex == TabIndex.Cube)
+                {
+                    _cubeTabReadPending = false;
+                    _ = RefreshCubeTabAsync();
+                }
+            });
         }
     }
 
@@ -870,11 +892,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private async Task RefreshAuditAsync()
     {
         var entries = await _service.ReadAuditAsync();
-        Audit.Clear();
-        foreach (var entry in entries.TakeLast(100))
+        // Die Audit-Liste ist an die View gebunden; auch bei einem Hintergrundaufruf
+        // dürfen Clear/Add niemals außerhalb des UI-Threads laufen (0.6.1).
+        OnUiThread(() =>
         {
-            Audit.Add(entry);
-        }
+            Audit.Clear();
+            foreach (var entry in entries.TakeLast(100))
+            {
+                Audit.Add(entry);
+            }
+        });
     }
 
     private void OnStateChanged(object? sender, Cube cube) => OnUiThread(() => UpdateRooms(cube));
@@ -936,8 +963,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Die Events kommen nach ConfigureAwait(false) aus dem Threadpool. ObservableCollections
-    /// und gebundene Properties dürfen nur auf dem UI-Thread verändert werden.
+    /// Service-Events und Fortsetzungen können aus dem Threadpool kommen. ObservableCollections
+    /// und gebundene Properties dürfen nur auf dem UI-Thread verändert werden; Avalonia meldet
+    /// einen Verstoß mit „Call from invalid thread". Alle UI-Mutationen laufen hier hindurch.
     /// </summary>
     private void OnUiThread(Action action)
     {

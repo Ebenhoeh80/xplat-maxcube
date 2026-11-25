@@ -1,4 +1,5 @@
 using Avalonia;
+using MaxCube.Application.Abstractions;
 using MaxCube.Infrastructure.Platform;
 using MaxCube.UI.Localization;
 using MaxCube.UI.ViewModels;
@@ -75,6 +76,24 @@ internal static class Program
     {
         var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.InitializeAsync("de").GetAwaiter().GetResult();
+
+        // QA 0.6.1: der Log-Schalter muss beide Zustände protokollieren. Der alte
+        // Ablauf verlor „ausgeschaltet", weil der Store vor dem Schreiben stumm geschaltet wurde.
+        viewModel.LogEnabled = true;
+        viewModel.LogEnabled = false;
+        var logEntries = provider.GetRequiredService<ILogStore>().ReadRecent(10);
+        if (!logEntries.Any(entry => entry.Contains("Protokoll eingeschaltet", StringComparison.Ordinal))
+            || !logEntries.Any(entry => entry.Contains("Protokoll ausgeschaltet", StringComparison.Ordinal)))
+        {
+            Console.Error.WriteLine("SELFCHECK FEHLER: Log-Schalter protokolliert nicht beide Zustände.");
+            return 5;
+        }
+
+        foreach (var entry in logEntries.Where(entry => entry.Contains("Protokoll ", StringComparison.Ordinal)))
+        {
+            Console.WriteLine("SELFCHECK LOG: " + entry);
+        }
+
         var localizer = provider.GetRequiredService<Localizer>();
         foreach (var language in Localizer.Languages)
         {

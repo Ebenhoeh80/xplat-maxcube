@@ -78,7 +78,7 @@ public partial class MainWindowViewModel
 
     private async Task ReadTimeZoneCoreAsync(CancellationToken token)
     {
-        var zone = await _service.ReadTimeZoneAsync(token).ConfigureAwait(false);
+        var zone = await _service.ReadTimeZoneAsync(token);
         TimeZoneText = L(
             zone.UsesDaylightSaving ? "ZoneInfoDst" : "ZoneInfo",
             zone.Winter.Name, Offset(zone.Winter.OffsetSeconds), zone.Summer.Name, Offset(zone.Summer.OffsetSeconds));
@@ -122,7 +122,7 @@ public partial class MainWindowViewModel
 
     private async Task ReadNtpCoreAsync(CancellationToken token)
     {
-        var answer = await _service.QueryNtpServersAsync(token).ConfigureAwait(false);
+        var answer = await _service.QueryNtpServersAsync(token);
         // Format der F:-Antwort ist UNBEKANNT (docs/maxcube-protocol.md:327); er wird roh angezeigt.
         var servers = answer.StartsWith("F:", StringComparison.Ordinal) ? answer[2..] : answer;
         var parts = servers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -147,7 +147,7 @@ public partial class MainWindowViewModel
 
     private async Task ReadNetworkCoreAsync(CancellationToken token)
     {
-        var configuration = await _service.ReadNetworkConfigurationAsync(token).ConfigureAwait(false);
+        var configuration = await _service.ReadNetworkConfigurationAsync(token);
         NetworkIp = configuration.IpAddress;
         NetworkMask = configuration.SubnetMask;
         NetworkGateway = configuration.Gateway;

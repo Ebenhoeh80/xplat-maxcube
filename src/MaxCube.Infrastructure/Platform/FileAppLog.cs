@@ -42,7 +42,11 @@ public sealed class FileAppLog : ILogStore
             var now = _time.GetLocalNow();
             var file = Path.Combine(
                 _directory, Prefix + now.ToString("yyyyMMdd", CultureInfo.InvariantCulture) + Extension);
-            var line = $"{now:yyyy-MM-dd HH:mm:ss.fff zzz} [{level}] {message.ReplaceLineEndings(" ")}{Environment.NewLine}";
+            // 0.6.1: Thread-Kontext als Support-Hinweis. „Call from invalid thread" war
+            // im Kundenprotokoll nicht zuordenbar, solange nur Uhrzeit und Level standen.
+            var context = SynchronizationContext.Current is null ? string.Empty : ",UI";
+            var line = $"{now:yyyy-MM-dd HH:mm:ss.fff zzz} [{level}] {message.ReplaceLineEndings(" ")}"
+                + $" (T{Environment.CurrentManagedThreadId}{context}){Environment.NewLine}";
             lock (_gate)
             {
                 System.IO.Directory.CreateDirectory(_directory);

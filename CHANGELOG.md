@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-25
+
+Auswertung des Kundenprotokolls vom 25.11.2026: „Call from invalid thread" beim
+Cube-Reiter, bei Netzwerk-/Cube-Einstellungen und widersprüchliche Protokollzeilen.
+
+### Fixed
+
+- Alle UI-Mutationen laufen über `IUiDispatcher`; `ConfigureAwait(false)` wurde aus
+  dem ViewModel entfernt. Damit aktualisieren Status, Audit und Lesewerte nicht mehr
+  vom Threadpool (`Call from invalid thread`, 09:41/09:45 im Kundenlog).
+- Erfolgreiche Aktionen werden mit dem Erfolgstext protokolliert, nicht mit dem
+  Fehlerprefix (`Temperatur konnte nicht gesendet werden: Temperatur gesendet.`).
+- Das Ausschalten des Protokolls wird protokolliert, bevor der Store schweigestellt
+  wird; Ein/Aus/Ein erzeugt jetzt drei nachvollziehbare Zeilen.
+- `Command discarded` erhält einen konkreten Hinweis (MAX1008, Funkauslastung).
+
+### Changed
+
+- Logzeilen tragen Thread-ID und UI-Marker, damit Supportfälle zuordenbar sind.
+- `--selfcheck` prüft den Ein/Aus-Schalter des Protokolls.
+- Version auf `0.6.1`.
+
 ## [0.6.0] - 2026-11-25
 
 Kritischer Cognitive Walkthrough mit den Gremien UX, Architektur und QA: das
@@ -45,7 +67,8 @@ Gleichzeitig werden die gefährlichsten Erstnutzer-Fallen geschlossen.
   Seriennummern und Raumwerte enthalten und ist vor der Weitergabe zu prüfen;
   ein Hinweis steht direkt im Viewer. Keine Cloud, kein HTTP, keine Telemetrie.
 
-[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.1
 [0.6.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.0
 
 Eindeutige Datenherkunft: Der Cube-Reiter zeigt „nicht vom Cube gelesen“ oder liest
