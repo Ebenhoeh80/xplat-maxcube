@@ -52,7 +52,8 @@ jobs:
       - name: Selbsttest des veröffentlichten Pakets (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: & "publish/${{ matrix.rid }}/${{ matrix.exe }}" --selfcheck
+        run: |
+          & "publish/${{ matrix.rid }}/${{ matrix.exe }}" --selfcheck
 
       - name: Archiv erstellen (Windows)
         if: runner.os == 'Windows'
