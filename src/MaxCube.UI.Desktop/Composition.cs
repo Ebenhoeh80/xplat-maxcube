@@ -22,7 +22,8 @@ internal static class Composition
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IAppVersionProvider, AppVersionProvider>();
-        services.AddSingleton<IAppLog>(_ => new FileAppLog(paths.Logs));
+        services.AddSingleton<ILogStore>(_ => new FileAppLog(paths.Logs));
+        services.AddSingleton<IAppLog>(provider => provider.GetRequiredService<ILogStore>());
 
         // Ein Gateway-Objekt bedient Kern- und Admin-Schnittstelle: ein Socket, eine Queue, ein Worker.
         services.AddSingleton<CubeGateway>();

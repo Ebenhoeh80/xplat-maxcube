@@ -4,38 +4,117 @@
 
 [![CI](https://github.com/Ebenhoeh80/xplat-maxcube/actions/workflows/ci.yml/badge.svg)](https://github.com/Ebenhoeh80/xplat-maxcube/actions/workflows/ci.yml)
 [![Release](https://github.com/Ebenhoeh80/xplat-maxcube/actions/workflows/release.yml/badge.svg)](https://github.com/Ebenhoeh80/xplat-maxcube/actions/workflows/release.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/Ebenhoeh80/xplat-maxcube)](https://github.com/Ebenhoeh80/xplat-maxcube/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Sponsor on GitHub](https://img.shields.io/badge/%E2%9D%A4%20Sponsor%20on%20GitHub-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Ebenhoeh80)
 
-Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
+[English](README.md) | [Deutsch](README.de.md)
 
-Version **0.5.0** (`Directory.Build.props:3`), Stand **25.11.2026**. Siehe [CHANGELOG.md](CHANGELOG.md).
+---
 
-> **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
+A local C#/.NET 10 desktop application for the eQ-3 MAX! Cube LAN gateway. It
+replaces the local control of the former MAX! Local Application — **no Java,
+browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
+remains the source of truth; SQLite is only a cache, settings store and audit log
+(`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-## Inhalt
+Version **0.6.0** (`Directory.Build.props:3`), released **2026-11-25**. See
+[CHANGELOG.md](CHANGELOG.md).
 
+> **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
+> MAX! cloud control and removed the cloud app from the app stores. Remote
+> access, product account, proxy and app updates are therefore deliberately out
+> of scope (`docs/features.md:34-36`).
+
+## Contents
+
+- [How it works](#how-it-works)
+- [Features](#features)
+- [Requirements](#requirements)
 - [Installation](#installation)
-- [Verwendung](#verwendung)
+- [Quick start](#quick-start)
+- [Data provenance and write protection](#data-provenance-and-write-protection)
+- [Configuration and data folder](#configuration-and-data-folder)
+- [Supported functions](#supported-functions)
+- [Known limitations](#known-limitations)
+- [Roadmap and ideas](#roadmap-and-ideas)
+- [Privacy and security](#privacy-and-security)
+- [Verification status](#verification-status)
 - [Screenshots](#screenshots)
-- [Entwicklung](#entwicklung)
-- [Architektur](#architektur)
-- [Grenzen und bewusste Ausschlüsse](#grenzen-und-bewusste-ausschüsse)
-- [Verifikationsstand](#verifikationsstand)
-- [Dokumentation](#dokumentation)
-- [Mitmachen und Lizenz](#mitmachen-und-lizenz)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Support this project](#support-this-project)
+- [Contributing and license](#contributing-and-license)
+
+## How it works
+
+1. The app connects to the Cube over **local TCP, port `62910`**. `Find Cube`
+   sends a **UDP discovery broadcast only when you click it** (local port
+   `23272`) — never at startup.
+2. Rooms, devices, schedules and configuration are **read from the Cube**. The
+   local SQLite cache is used for offline display and as an audit log; it never
+   overrides the Cube.
+3. Every section shows where its values came from: *not read from Cube*, *cache
+   from …*, *live …*, *stale* or *failed* — with a symbol **and** localised text,
+   never colour alone. Activating the Cube tab reads it automatically when
+   connected (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:340`).
+4. Writing needs an explicit confirmation **and** a genuinely read basis.
+   Unread placeholders, stale data and offline state block write commands;
+   cached values are writable only while offline, never over an active
+   connection (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:280`).
+5. A persistent status bar shows connection, host, data provenance, the last
+   action with a timestamp and the log state. Diagnostics are opt-in and stay
+   local; the viewer and ZIP export are in the **Status** tab.
+
+**Important:** the Cube accepts only **one client connection at a time**. Close
+the MAX! smartphone app and any other integration before connecting, otherwise
+the connection fails.
+
+## Features
+
+- **Rooms and devices:** target/measured temperature, valve position, window
+  state, device status; modes Auto / Permanent / Temporary and ECO / COMFORT.
+- **Weekly schedule:** up to 13 switch points per day, a graphical day bar,
+  quick editing in 0.5 °C / 5-minute steps and copying to other rooms.
+  Unread placeholder profiles cannot be sent.
+- **Administration:** room configuration, boost / descaling / valve settings,
+  wall thermostat display, button configuration, inclusion, device mapping,
+  structure maintenance, time / time zone / NTP and UDP network configuration.
+- **Diagnostics:** radio duty cycle from the `S:` send status, local error report
+  and error-code catalogue `MAX0001`–`MAX1051`. Nothing is sent anywhere.
+- **Application log:** opt-in (`log.enabled`, default off), INFO/WARN/ERROR,
+  in-app viewer and local ZIP export on click only
+  (`src/MaxCube.UI/ViewModels/MainWindowViewModel.StatusBar.cs`).
+- **Status bar:** connection, host/port, data provenance with read time, last
+  action with timestamp and log state always visible with symbol **and** text.
+- **Data provenance:** consistent status for every section with read timestamp
+  in DE / EN / FR / IT / NL / PL (`src/MaxCube.UI/ViewModels/DataStatusViewModel.cs:13`).
+- **About page:** author `Ebenhoeh80`, MIT licence, project link and an explicit
+  *unofficial, not from eQ-3* notice. The link opens only on user click.
+- **Self-contained packages** for `win-x64` and `linux-x64`; no installed .NET
+  runtime required.
+
+## Requirements
+
+- An **eQ-3 MAX! Cube LAN gateway** reachable on the local network (default port
+  `62910`). No flashing, no CUL/CUN, no cloud.
+- Windows 10+ or Linux with X11/Wayland for the desktop UI.
+- For building from source: **.NET 10 SDK**. The released ZIPs do not need it.
 
 ## Installation
 
-### Fertige Pakete (empfohlen)
+### Ready-to-run packages (recommended)
 
-Unter [Releases](https://github.com/Ebenhoeh80/xplat-maxcube/releases) liegen selbstständige Pakete für `win-x64` und `linux-x64` (self-contained, kein .NET-SDK nötig). Die Archive werden bei jedem `v*`-[Tag](https://github.com/Ebenhoeh80/xplat-maxcube/tags) automatisch von GitHub Actions gebaut, mit dem fensterlosen Selbsttest geprüft und an das Release angehängt.
+Download a self-contained archive from
+[Releases](https://github.com/Ebenhoeh80/xplat-maxcube/releases). Archives are
+built by GitHub Actions for every `v*` [tag](https://github.com/Ebenhoeh80/xplat-maxcube/tags),
+checked with the headless self-test and attached to the release.
 
-- **Windows:** ZIP entpacken, `MaxCube.UI.Desktop.exe` starten.
-- **Linux:** ZIP entpacken, `chmod +x MaxCube.UI.Desktop`, danach `./MaxCube.UI.Desktop`. Für die Oberfläche sind X11 oder Wayland nötig.
+- **Windows:** unzip and run `MaxCube.UI.Desktop.exe`.
+- **Linux:** unzip, run `chmod +x MaxCube.UI.Desktop`, then
+  `./MaxCube.UI.Desktop`. An X11 or Wayland session is required.
 
-### Aus Quellen bauen
-
-Voraussetzung: **.NET 10 SDK**.
+### Build from source
 
 ```powershell
 git clone https://github.com/Ebenhoeh80/xplat-maxcube.git
@@ -49,36 +128,174 @@ cd xplat-maxcube
 bash start.sh
 ```
 
-`start.cmd` und `start.sh` suchen ein .NET-10-SDK, bauen inkrementell und starten die Desktop-App (`start.cmd:8-43`, `start.sh:8-35`). `start.sh` setzt bei fehlendem `libicuuc` automatisch `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1`.
+`start.cmd` / `start.sh` locate a .NET 10 SDK, build incrementally and start the
+app (`start.cmd:8-43`, `start.sh:8-35`). `start.sh` sets
+`DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1` automatically when `libicuuc` is
+missing.
 
-### Fensterloser Selbsttest
+### Headless self-test
 
 ```powershell
 dotnet test MaxCube.slnx
 dotnet src/MaxCube.UI.Desktop/bin/Debug/net10.0/MaxCube.UI.Desktop.dll --selfcheck
 ```
 
-Der Selbsttest baut Pfade, SQLite, Gateway, Service, ViewModel und Lokalisierung, prüft Instanzschutz und die sechs Sprachen. Er kontaktiert **keinen** Cube und sendet **keinen** Broadcast (`src/MaxCube.UI.Desktop/Program.cs:26-92`).
+The self-test builds paths, SQLite, gateway, service, view model and
+localisation, checks single-instance handling and all six languages. It contacts
+**no** Cube and sends **no** broadcast (`src/MaxCube.UI.Desktop/Program.cs:26-92`).
 
-Der Datenordner ist `%LOCALAPPDATA%\MaxCube` unter Windows bzw. `$XDG_DATA_HOME/MaxCube` (Standard `~/.local/share/MaxCube`) unter Linux. `MAXCUBE_DATA_DIR` verschiebt ihn für portablen Betrieb (`AppPaths.cs:3-10`).
+## Quick start
 
-## Verwendung
+1. Click **Connect** — the saved endpoint is used. If the Cube has a new IP,
+   click **Find Cube** instead; the discovery broadcast is sent only then.
+2. In **Rooms**, select a room. Values are marked *live* after the read. Change
+   a setpoint and confirm — writes are disabled until a real read happened.
+3. Open **Weekly profile** to edit a schedule; the placeholder shown before a
+   read is deliberately not sendable.
+4. Open the **Cube** tab: it reads the Cube automatically while connected.
+   Time zone, NTP and network sections can fail independently.
+5. Use the **Status** tab for the log viewer, export and error catalogue;
+   **About** for author, licence and project link. Enable the log in
+   **Settings** only if you need diagnostics; the export stays local.
 
-1. **Cube verbinden:** Entweder den gespeicherten Endpoint verwenden oder **Cube suchen**. Der UDP-Broadcast wird ausschließlich auf diese Benutzeraktion hin gesendet, niemals beim App-Start (`UdpDiscoveryTransport.cs`). Der lokale UDP-Port ist `23272`; die eigentliche Steuerungsverbindung läuft über TCP `host:62910`.
-2. **Räume und Geräte:** Räume, Ist-/Solltemperaturen und Gerätestatus werden aus dem Cube gelesen. Modi Auto/Permanent/Temporary sowie ECO/COMFORT und Haussteuerung sind verfügbar.
-3. **Wochenprofile:** Bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung im 0,5-°C-/5-Minuten-Raster und Kopieren auf andere Räume.
-4. **Administration:** Raumkonfiguration, Boost/Entkalkung/Ventil, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit/Zeitzone/NTP und UDP-Netzwerkkonfiguration.
-5. **Diagnose:** Funkauslastung aus dem `S:`-Sendestatus, lokaler Fehlerbericht und Fehlercode-Katalog `MAX0001`–`MAX1051`. Es wird nichts nach außen gesendet.
-6. **Datenherkunft:** Jeder Bereich zeigt „nicht vom Cube gelesen“, „Cache vom …“, „Live …“ oder „veraltet“ mit Uhrzeit. Der Cube-Reiter liest beim Aktivieren automatisch, wenn eine Verbindung besteht. Ungelesene Platzhalter (z. B. im Wochenprofil) sind nicht sendbar.
-7. **Über:** Autor, MIT-Lizenz und GitHub-Link; ausdrücklich inoffiziell und nicht von eQ-3. Der Link öffnet erst nach Benutzerklick.
+## Data provenance and write protection
 
-Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
+| State | Meaning | Write allowed? |
+| :--- | :--- | :--- |
+| `NotRead` | No read from the Cube yet — placeholder or empty | No |
+| `Loading` | A read is in progress | No |
+| `Live` | Read from the Cube in this session | Yes, with confirmation |
+| `Cached` | Read from the local SQLite cache with timestamp | Only offline, with confirmation |
+| `Stale` | Read data is too old | No |
+| `Failed` | Read failed | No |
+
+`CubeSnapshot.CapturedAt` supplies the cache timestamp. Disconnect resets all
+section states to *not read*. The Cube is never written without a prior read,
+confirmation and a non-stale, online state.
+
+## Configuration and data folder
+
+The data folder is `%LOCALAPPDATA%\MaxCube` on Windows and
+`$XDG_DATA_HOME/MaxCube` (default `~/.local/share/MaxCube`) on Linux.
+`MAXCUBE_DATA_DIR` relocates it for portable use (`AppPaths.cs:3-10`).
+Host and port of the saved endpoint are kept locally and restored at startup.
+Daily log files live in the `logs/` subfolder; the ZIP export is written next
+to it in the data folder.
+
+## Supported functions
+
+Most local functions of the original MAX! Local Application are implemented;
+49 of 61 catalogued features are complete, 1 partial, 1 replaced and 10 not
+mappable (cloud/update/firmware-write) (`docs/features.md`).
+
+| Area | Read | Write |
+| :--- | :--- | :--- |
+| Rooms, temperatures, modes | yes | yes, confirmed |
+| Weekly schedules (thermostats) | yes | yes, confirmed |
+| Wall thermostat display, boost, valve, descaling | yes | yes, confirmed |
+| Inclusion, device mapping, structure | yes | yes, confirmed |
+| Time, time zone, NTP | yes | yes, confirmed |
+| UDP network configuration | yes | yes, confirmed |
+| Radio duty cycle (`S:`) | yes | n/a |
+| Firmware version | yes (read-only) | no, deliberately disabled |
+
+## Known limitations
+
+- **One Cube connection at a time.** Other clients must be closed.
+- Only the original **MAX! Cube LAN gateway** is supported; no CUL/CUN, no
+  newer proprietary protocol and no MAX! cloud.
+- **Wall thermostats cannot be programmed** from this app; their display
+  configuration can be read and written.
+- A device paired with the Cube appears after a reload; removing a device is
+  reflected after a reload/restart of the app.
+- Drag-and-drop editing of weekly programmes is **not implemented**; the day bar
+  and quick editing are available instead.
+- The radio duty cycle is limited by the Cube. At 100 % it pauses radio commands
+  for about an hour; changing many settings at once takes time.
+- The technical wire format of `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` and `z:`
+  is hardware-confirmed (`FACT`), but the **functional effect on the devices is
+  only partially confirmed by read-back** (`UNKNOWN`).
+- The `F:` NTP response format, the effect of a UDP `C:` write and golden
+  captures with 8–13 schedule points remain `UNKNOWN`.
+- The Linux UI on a real desktop and tray behaviour are `UNKNOWN`; CI covers
+  the headless self-test only.
+- No screenshots of the real Cube have been published yet.
+
+Statements in this project are classified as `FACT`, `OBSERVATION`, `INFERENCE`
+or `UNKNOWN` with a `file:line` reference. Hardware evidence is in
+[docs/HARDWARE-VERIFY.md](docs/HARDWARE-VERIFY.md).
+
+## Roadmap and ideas
+
+Planned and under consideration — **give a reaction to what matters to you** and
+bring your own ideas to
+[Discussions → Ideas](https://github.com/Ebenhoeh80/xplat-maxcube/discussions/categories/ideas):
+
+- Fine-grained log levels, filters and a redacted support export.
+- Confirmation preview for weekly-profile and configuration writes.
+- Room selection directly inside the weekly-profile and configuration tabs.
+- Free end time for `Temporary` mode.
+- Read-only firmware queries (`latest` / `least compatible`).
+- Drag-and-drop editing and resizing of weekly schedule points.
+- `autoSetupTimeZoneConfiguration` and wiring of `WakeupCommand`.
+- Real read-backs for derived write formats, UDP `C:` write, `F:` NTP format,
+  golden captures with 8–13 schedule points.
+- Screenshots and a Linux desktop smoke check.
+
+## Privacy and security
+
+- Fully local. **No cloud, no telemetry, no HTTP, no update check, no browser
+  dependency, no AGPL code.** Outbound links open only after a user click.
+- TCP write commands and the UDP broadcast require a user action; discovery is
+  never automatic at startup.
+- No passwords, tokens or secrets are stored in the repository or the wiki.
+- The optional log can contain IP addresses, serial numbers and room values;
+  inspect a ZIP export before sharing it. No payloads, credentials or tokens
+  are logged (`src/MaxCube.Application/Abstractions/IAppLog.cs:1-5`).
+- Reverse-engineering inputs (`decompiled/`, `extracted/`, `evidence/`) are
+  **not** part of this repository; only our own documentation under `docs/` is
+  open source (see [docs/INDEX.md](docs/INDEX.md)).
+- The decompiled and extracted artefacts of the eQ-3 MAX! Local Application
+  remain under their original licences.
+
+## Verification status
+
+Build **0 warnings / 0 errors**, **468/468** hardware-free tests green on Windows
+and Debian 13 (WSL2), `--selfcheck` `OK` on both systems, self-contained Linux
+package `OK` with `LANG=de_DE.UTF-8` and `LANG=C` (`docs/gremium.md:134`,
+`docs/roadmap.md:460-487`). These results are `OBSERVATION`.
+
+**FACT (2026-11-25, authorised hardware check):** discovery, `0x11`
+comfort/eco, `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` and `z:` were sent to the
+original Cube `192.168.10.60` and acknowledged; the Cube state was restored to
+21.5 °C / 16.5 °C and confirmed read-only (`docs/HARDWARE-VERIFY.md`). The
+functional acceptance by the thermostats is only partially read-back verified.
 
 ## Screenshots
 
-Noch keine Screenshots veröffentlicht. Die Oberfläche ist eine native Avalonia-Desktopanwendung mit Hauptfenster (Räume/Geräte), Wochenprofil-Editor und Admin-Dialogen; die geplante Gestaltung ist in [`docs/gui-specification.md`](docs/gui-specification.md) beschrieben. Screenshots eines echten Cubes werden in einem Folge-Release ergänzt.
+No screenshots have been published yet. The UI is a native Avalonia desktop
+application with a main window (rooms/devices), weekly schedule editor and
+administration views; the intended design is in
+[docs/gui-specification.md](docs/gui-specification.md). Screenshots from a real
+Cube are planned for a follow-up release.
 
-## Entwicklung
+## Documentation
+
+| Purpose | Document |
+| :--- | :--- |
+| System understanding, decisions, risks | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Setup, build, tests, conventions | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
+| C# interfaces and Cube wire protocol | [docs/API.md](docs/API.md) |
+| SQLite schema, migration, data flows | [docs/DATABASE.md](docs/DATABASE.md) |
+| Network, CI, packages | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
+| Auth, secrets, privacy | [docs/SECURITY.md](docs/SECURITY.md) |
+| Error patterns and diagnostics | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
+| Start/stop/update/maintenance | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
+| Wiki extract, FAQ, lessons learned, ADRs | [docs/SECOND_BRAIN.md](docs/SECOND_BRAIN.md) |
+| Hardware verification on the original Cube | [docs/HARDWARE-VERIFY.md](docs/HARDWARE-VERIFY.md) |
+| Reverse-engineering sources and council | [docs/INDEX.md](docs/INDEX.md), [docs/features.md](docs/features.md), [docs/gremium.md](docs/gremium.md) |
+
+## Development
 
 ```powershell
 dotnet restore MaxCube.slnx
@@ -92,73 +309,47 @@ dotnet build MaxCube.slnx --nologo
 dotnet test MaxCube.slnx --nologo
 ```
 
-Die Solution enthält die Projekte `Domain`, `Application`, `Protocol`, `Infrastructure`, `UI`, `UI.Desktop` und die zugehörigen Testprojekte. Der CI-Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) baut und testet auf `ubuntu-latest` und `windows-latest` und fährt zusätzlich den fensterlosen Selbsttest.
+The solution contains `Domain`, `Application`, `Protocol`, `Infrastructure`,
+`UI`, `UI.Desktop` and the matching test projects. CI
+([.github/workflows/ci.yml](.github/workflows/ci.yml)) builds and tests on
+`ubuntu-latest` and `windows-latest` and runs the headless self-test.
 
-**Wichtige Konventionen:**
+Conventions:
 
-- Aussagen über das Protokoll werden als `FAKT`, `BEOBACHTUNG`, `INFERENZ` oder `UNBEKANNT` mit Beleg `Datei:Zeile` markiert. Hardwarebelege stehen in [`docs/HARDWARE-VERIFY.md`](docs/HARDWARE-VERIFY.md).
-- Der Cube ist Source of Truth. Neue Schreibformate nie ohne kontrollierte Rücksetzung testen; echte Hardwaretests nur mit freigegebener Gegenstelle.
-- Die Reverse-Engineering-Eingaben (`decompiled/`, `extracted/`, `evidence/`) sind **nicht** Teil dieses Repos. Nur unsere eigenen Auswertungen unter `docs/` sind quelloffen. Details: [`docs/INDEX.md`](docs/INDEX.md).
-- Keine Cloud-, HTTP- oder Update-Abhängigkeiten ergänzen.
+- Protocol statements are marked `FACT` / `OBSERVATION` / `INFERENCE` /
+  `UNKNOWN` with a `file:line` reference.
+- The Cube is the source of truth. Never test a new write format without a
+  controlled reset; hardware tests only against an authorised device.
+- Do not add cloud, HTTP or update dependencies.
 
-Weitere Hinweise: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) und [CONTRIBUTING.md](CONTRIBUTING.md).
+## ❤️ Support this project
 
-## Architektur
+<div align="center">
 
-```mermaid
-flowchart LR
-  User[Benutzer] --> UI[Avalonia UI / MVVM]
-  UI --> App[CubeApplicationService]
-  App --> GW[ICubeGateway / CubeGateway]
-  App --> Store[ICubeStateStore / SQLite]
-  App --> Disc[ICubeDiscovery / UDP]
-  GW --> Proto[MaxCube.Protocol]
-  Proto --> TCP[(MAX! Cube TCP 62910)]
-  Disc --> UDP[(UDP 23272)]
-  Store --> DB[(maxcube.db)]
-  UI --> Log[(logs/maxcube-*.log)]
-```
+**I build and maintain this project in my free time and cover the running costs myself — my time, electricity, tools and IT equipment.**
 
-Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](docs/DATABASE.md), [Module](docs/modules.md).
+Sponsoring is voluntary and does not buy support, features or response times. Every contribution, however small, helps. Thank you! 🙏
 
-## Grenzen und bewusste Ausschlüsse
+<a href="https://github.com/sponsors/Ebenhoeh80">
+  <img src="https://img.shields.io/badge/%E2%9D%A4%20Sponsor%20on%20GitHub-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors" height="42">
+</a>
+<a href="https://www.paypal.com/pool/9p84qTHCFr?sr=wccr">
+  <img src="https://img.shields.io/badge/%E2%9D%A4%20Donate%20via%20PayPal-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" height="42">
+</a>
+<a href="https://buymeacoffee.com/daneben">
+  <img src="https://img.shields.io/badge/%E2%98%95%20Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" height="42">
+</a>
 
-| Thema | Status |
-|---|---|
-| Cloud, Fernzugriff, Produktkonto, Proxy, App-Update | bewusst verworfen (Cloud abgeschaltet) |
-| Firmware schreiben | bewusst deaktiviert; nur read-only Versionsprüfung |
-| Browser-/Jetty-/AGPL-Abhängigkeit | keine |
-| WebSocket-/HTTP-API | keine; `docs/API.md` beschreibt C#-Schnittstellen und das Cube-Wire-Protokoll |
-| Golden-Capture der Schreibformate `m:`, `w:`, `v:`, `z:` | `FAKT` (Wire-Format und `A:`-Quittung am Original-Cube), fachliche Gerätewirkung teils `UNBEKANNT` |
-| `S:`-Sendestatus | `FAKT`: `S:<dutyHex>,<discarded>,<freeHex>`; Airtime und freie Slots, keine Fehlercodes |
-| UDP-Adressreihenfolge | `FAKT`: IP, Gateway, Maske, DNS 1, DNS 2; durch Java-Code und echte `c`-Antwort belegt |
-| Drag-and-drop im Wochenprogramm | nicht umgesetzt; Tagesleiste und Schnellbearbeitung vorhanden |
-| Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
+</div>
 
-## Verifikationsstand
+## Contributing and license
 
-Build **0 Warnungen / 0 Fehler**, **454/454** hardwarefreie Tests grün unter Windows und Debian 13 (WSL2), `--selfcheck` unter beiden Systemen `OK`, self-contained Linux-Paket mit `LANG=de_DE.UTF-8` und `LANG=C` `OK` (`docs/gremium.md:134`, `docs/roadmap.md:460-487`). Diese Ergebnisse sind `BEOBACHTUNG`.
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Please do
+not add cloud functions, firmware writing or unconfirmed Cube write commands.
 
-**FAKT (25.11.2026, freigegebene Hardwareprüfung):** Discovery, `0x11` Komfort/Eco, `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` und `z:` wurden am Original-Cube `192.168.10.60` gesendet und quittiert; der Cube-Zustand wurde auf die Ursprungswerte 21,5 °C / 16,5 °C zurückgesetzt und nur-lesend bestätigt (`docs/HARDWARE-VERIFY.md`). Die fachliche Annahme durch Thermostate ist nur teilweise per Read-back belegt.
+Released under the [MIT licence](LICENSE). This project is **unofficial and not
+affiliated with eQ-3**. The decompiled and extracted artefacts of the eQ-3 MAX!
+Local Application are expressly not part of this repository and remain subject
+to their original licence terms.
 
-## Dokumentation
-
-| Ziel | Dokument |
-|---|---|
-| Systemverständnis, Entscheidungen, Risiken | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Setup, Build, Tests, Konventionen | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
-| C#-Schnittstellen und Cube-Wire-Protokoll | [docs/API.md](docs/API.md) |
-| SQLite-Schema, Migration, Datenflüsse | [docs/DATABASE.md](docs/DATABASE.md) |
-| Netzwerk, CI, Pakete | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
-| Auth, Secrets, Datenschutz | [docs/SECURITY.md](docs/SECURITY.md) |
-| Fehlerbilder und Diagnose | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
-| Start/Stopp/Update/Wartung | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
-| Wiki-Auszug, FAQ, Lessons Learned, ADRs | [docs/SECOND_BRAIN.md](docs/SECOND_BRAIN.md) |
-| Hardwareprüfung am Original-Cube | [docs/HARDWARE-VERIFY.md](docs/HARDWARE-VERIFY.md) |
-| Reverse-Engineering-Quellen und Gremium | [docs/INDEX.md](docs/INDEX.md), [docs/features.md](docs/features.md), [docs/gremium.md](docs/gremium.md) |
-
-## Mitmachen und Lizenz
-
-Beiträge sind willkommen – siehe [CONTRIBUTING.md](CONTRIBUTING.md). Bitte keine Cloud-Funktionen, kein Firmware-Schreiben und keine unbestätigten Cube-Schreibzugriffe ergänzen.
-
-Veröffentlicht unter der [MIT-Lizenz](LICENSE). Die dekompilierten und extrahierten Artefakte der eQ-3 MAX! Local Application sind ausdrücklich **nicht** Bestandteil dieses Repos und unterliegen weiterhin ihren ursprünglichen Lizenzbedingungen.
+**Author:** Ebenhoeh80 · **Project:** <https://github.com/Ebenhoeh80/xplat-maxcube>

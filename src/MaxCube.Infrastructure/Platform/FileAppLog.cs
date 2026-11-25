@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Compression;
 using MaxCube.Application.Abstractions;
 
 namespace MaxCube.Infrastructure.Platform;
@@ -6,8 +7,10 @@ namespace MaxCube.Infrastructure.Platform;
 /// <summary>
 /// Tageslogdatei <c>maxcube-JJJJMMTT.log</c> mit Aufbewahrung (ApplicationSettings.java:7,67-78).
 /// Schreibfehler dürfen die App nie beeinträchtigen: das Protokoll ist Diagnose, keine Funktion.
+/// Der Export ist rein lokal und wird ausschließlich vom Benutzer ausgelöst; es werden keine
+/// Funknutzlasten, Zugangsdaten oder Tokens protokolliert.
 /// </summary>
-public sealed class FileAppLog : IAppLog
+public sealed class FileAppLog : ILogStore
 {
     private const string Prefix = "maxcube-";
     private const string Extension = ".log";
@@ -22,8 +25,18 @@ public sealed class FileAppLog : IAppLog
         _time = time ?? TimeProvider.System;
     }
 
+    /// <summary>Ausgeschaltet oder nur für den aktuellen Prozess; nie eine Netzwerkfunktion.</summary>
+    public bool IsEnabled { get; set; } = true;
+
+    public string Directory => _directory;
+
     public void Write(string level, string message)
     {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         try
         {
             var now = _time.GetLocalNow();
@@ -32,7 +45,7 @@ public sealed class FileAppLog : IAppLog
             var line = $"{now:yyyy-MM-dd HH:mm:ss.fff zzz} [{level}] {message.ReplaceLineEndings(" ")}{Environment.NewLine}";
             lock (_gate)
             {
-                Directory.CreateDirectory(_directory);
+                System.IO.Directory.CreateDirectory(_directory);
                 File.AppendAllText(file, line);
             }
         }
@@ -44,14 +57,14 @@ public sealed class FileAppLog : IAppLog
 
     public int Cleanup(int retentionDays)
     {
-        if (retentionDays < 1 || !Directory.Exists(_directory))
+        if (retentionDays < 1 || !System.IO.Directory.Exists(_directory))
         {
             return 0;
         }
 
         var limit = _time.GetLocalNow().Date.AddDays(-retentionDays);
         var removed = 0;
-        foreach (var file in Directory.EnumerateFiles(_directory, Prefix + "*" + Extension))
+        foreach (var file in System.IO.Directory.EnumerateFiles(_directory, Prefix + "*" + Extension))
         {
             var name = Path.GetFileNameWithoutExtension(file)[Prefix.Length..];
             if (!DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
@@ -72,5 +85,57 @@ public sealed class FileAppLog : IAppLog
         }
 
         return removed;
+    }
+
+    public IReadOnlyList<string> ReadRecent(int maxEntries)
+    {
+        if (maxEntries <= 0 || !System.IO.Directory.Exists(_directory))
+        {
+            return [];
+        }
+
+        var newest = System.IO.Directory
+            .EnumerateFiles(_directory, Prefix + "*" + Extension)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+        if (newest is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            lock (_gate)
+            {
+                return File.ReadAllLines(newest).TakeLast(maxEntries).ToArray();
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return [$"Log konnte nicht gelesen werden: {exception.Message}"];
+        }
+    }
+
+    public string Export(string targetDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetDirectory);
+        System.IO.Directory.CreateDirectory(targetDirectory);
+        var stamp = _time.GetLocalNow().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        var archive = Path.Combine(targetDirectory, $"log-export-{stamp}.zip");
+        lock (_gate)
+        {
+            using var zip = ZipFile.Open(archive, ZipArchiveMode.Create);
+            if (System.IO.Directory.Exists(_directory))
+            {
+                foreach (var file in System.IO.Directory
+                             .EnumerateFiles(_directory, Prefix + "*" + Extension)
+                             .OrderBy(name => name, StringComparer.Ordinal))
+                {
+                    zip.CreateEntryFromFile(file, Path.GetFileName(file));
+                }
+            }
+        }
+
+        return archive;
     }
 }

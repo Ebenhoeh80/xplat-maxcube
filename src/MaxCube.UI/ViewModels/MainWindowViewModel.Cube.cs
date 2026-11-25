@@ -65,10 +65,10 @@ public partial class MainWindowViewModel
 
     /// <summary>Write setzt gelesene Werte voraus; Lesen bleibt auch ohne Lesung möglich.</summary>
     private bool CanWriteCubeSetting
-        => CanAdmin && !IsStale && !_service.IsOffline && ConfigStatus.HasRead;
+        => CanAdmin && !IsStale && CanWriteFrom(ConfigStatus);
 
     private bool CanSendNetwork
-        => CanNetwork && !IsStale && !_service.IsOffline && NetworkStatus.HasRead && ConfirmNetwork;
+        => CanNetwork && !IsStale && CanWriteFrom(NetworkStatus) && ConfirmNetwork;
 
     partial void OnConfirmNetworkChanged(bool value) => SendNetworkCommand.NotifyCanExecuteChanged();
 

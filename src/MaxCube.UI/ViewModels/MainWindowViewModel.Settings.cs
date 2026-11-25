@@ -103,12 +103,14 @@ public partial class MainWindowViewModel
             string? retention = null;
             string? bundle = null;
             string? tray = null;
+            string? logging = null;
             try
             {
                 language = await _service.ReadSettingAsync(LanguageSetting);
                 retention = await _service.ReadSettingAsync(LogRetentionSetting);
                 bundle = await _service.ReadSettingAsync(BundleSetting);
                 tray = await _service.ReadSettingAsync(CloseToTraySetting);
+                logging = await _service.ReadSettingAsync(LogEnabledSetting);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -123,6 +125,8 @@ public partial class MainWindowViewModel
                 : DefaultLogRetentionDays;
             BundleTemperatures = bundle == "1";
             CloseToTray = tray == "1";
+            // Opt-in: ohne gespeicherte Freigabe bleibt das Protokoll aus.
+            LogEnabled = logging == "1";
         }
         finally
         {
@@ -134,6 +138,23 @@ public partial class MainWindowViewModel
         {
             _log.Write("INFO", $"{removed} alte Logdatei(en) entfernt (Aufbewahrung {LogRetentionDays} Tage).");
         }
+
+        // Erstkontakt: den gespeicherten Endpoint übernehmen statt 127.0.0.1 raten zu lassen.
+        try
+        {
+            if (await _service.GetLastEndpointAsync() is { } endpoint)
+            {
+                Host = endpoint.Host;
+                Port = endpoint.Port;
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _log.Write("WARN", $"Letzter Endpoint konnte nicht geladen werden: {exception.Message}");
+        }
+
+        _log.Write("INFO", $"App {AppVersion} gestartet; Protokoll {(LogEnabled ? "an" : "aus")}.");
+        LoadLog();
     }
 
     private async Task PersistAsync(string key, string value)

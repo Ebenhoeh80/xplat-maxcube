@@ -196,3 +196,17 @@ NUR-LESE-MODUS: keine Befehle gesendet.
 ```
 
 **FAKT:** Serial, Firmware, Raumzahl, Gerätezahl und Sollwerte entsprechen der Baseline aus §6; es wurde nichts verändert. **INFERENZ:** Die Statusanzeige kann auf diesem Cube mit echten Lesungen arbeiten; die fachliche Bedeutung weiterhin unbekannter Felder bleibt offen.
+
+## 9. Lesende Verifikation für 0.6.0 (25.11.2026)
+
+**FAKT:** Nach Einführung der Statusleiste und des Protokolls erneut nur-lesend geprüft (`--read-only`, kein Schreibbefehl):
+
+```text
+Discovery: Treffer 1 -> 192.168.10.60 | Serial=JEQ0355273 | Firmware=275 | Bootloader=False
+Cube: serial=JEQ0355273, firmware=275, raeume=6, geraete=9
+Raum 1 'Esszimmer': master=1AB088, komfort=21.5, eco=16.5, max=ON, min=OFF,
+       offset=0, fenster=12.0/15min
+Nur-Lese-Modus: kein Schreibbefehl gesendet.
+```
+
+**FAKT:** Serial, Firmware, Raum-/Gerätezahl und Sollwerte stimmen exakt mit §8 überein. Die 0.6.0-Änderungen betreffen nur UI, Protokoll und Leseprüfung; der Cube blieb unverändert. **INFERENZ:** Die neue Statusleiste kann ihre Werte aus echten Lesungen dieses Cubes beziehen; eine Änderung am Gerät ist nicht erforderlich.

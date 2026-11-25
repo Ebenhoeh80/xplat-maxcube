@@ -72,6 +72,9 @@ public partial class MainWindowViewModel
     {
         OnPropertyChanged(nameof(HasError));
         ErrorHint = ErrorCatalog.Describe(value, german: _loc.Language == "de") ?? string.Empty;
+        ErrorTimeText = string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : L("ErrorAt", _clock.Now.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture));
     }
 
     /// <summary>Schließt den Fehlerdialog (Statusdialog „Fehler“).</summary>
@@ -140,7 +143,7 @@ public partial class MainWindowViewModel
     /// <summary>Lesen bleibt immer möglich; Schreiben setzt eine echte Lesung voraus.</summary>
     private bool CanAdmin => IsConnected && !IsBusy && _service.SupportsAdministration;
 
-    private bool CanWriteAdmin => CanAdmin && !IsStale && !_service.IsOffline && ConfigStatus.HasRead;
+    private bool CanWriteAdmin => CanAdmin && !IsStale && CanWriteFrom(ConfigStatus);
 
     private bool CanSetDisplay
         => CanWriteAdmin && SelectedDevice is { Type: nameof(DeviceType.WallMountedThermostat) };
@@ -216,7 +219,11 @@ public partial class MainWindowViewModel
 
     partial void OnIsConnectedChanged(bool value) => RefreshAdminCommands();
 
-    partial void OnIsBusyChanged(bool value) => RefreshAdminCommands();
+    partial void OnIsBusyChanged(bool value)
+    {
+        RefreshAdminCommands();
+        RefreshStatusBar();
+    }
 
     partial void OnSelectedDeviceChanged(DeviceViewModel? value)
     {
@@ -244,10 +251,14 @@ public partial class MainWindowViewModel
             BuildHelpTopics();
             if (_service.Current is { } cube)
             {
-                UpdateRooms(cube);
+                UpdateRooms(cube, RoomsStatus.State is DataReadState.Cached or DataReadState.Stale
+                    ? RoomsStatus.State
+                    : null);
             }
 
             ErrorHint = ErrorCatalog.Describe(ErrorMessage, german: _loc.Language == "de") ?? string.Empty;
+            RefreshStatusBar();
+            LoadLog();
         });
     }
 

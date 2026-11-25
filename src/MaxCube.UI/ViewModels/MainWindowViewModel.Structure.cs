@@ -66,7 +66,7 @@ public partial class MainWindowViewModel
 
     partial void OnStructureHintChanged(string value) => OnPropertyChanged(nameof(HasStructureHint));
 
-    private bool CanStructureWrite => CanAdmin && !IsStale && !_service.IsOffline && DevicesStatus.HasRead;
+    private bool CanStructureWrite => CanAdmin && !IsStale && CanWriteFrom(DevicesStatus);
 
     private bool CanRenameRoom => CanStructureWrite && RenameRoomText.Trim().Length > 0;
 

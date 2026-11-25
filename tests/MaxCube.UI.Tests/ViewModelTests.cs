@@ -488,6 +488,74 @@ public class ViewModelTests
         viewModel.OpenProjectUrlCommand.CanExecute(null).Should().BeTrue();
     }
 
+    [Fact]
+    public void Status_bar_is_honest_before_the_first_read()
+    {
+        using var viewModel = CreateViewModel();
+
+        viewModel.StatusBarConnectionText.Should().StartWith("○");
+        viewModel.StatusBarConnectionText.Should().Contain("Getrennt");
+        viewModel.StatusBarDataText.Should().Contain("Noch nicht vom Cube gelesen");
+        viewModel.StatusBarActionText.Should().Contain("Keine Aktion");
+        viewModel.StatusBarLogText.Should().Contain("Protokoll aus");
+    }
+
+    [Fact]
+    public async Task Status_bar_tracks_live_data_and_last_action_with_a_time()
+    {
+        using var viewModel = CreateViewModel();
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+
+        viewModel.StatusBarConnectionText.Should().StartWith("●");
+        viewModel.StatusBarDataText.Should().Contain("Letztes Lesen:");
+        viewModel.StatusBarActionText.Should().Contain("Verbindung hergestellt").And.Contain(":00:00");
+
+        viewModel.SuccessText = "Temperatur gesendet.";
+        viewModel.StatusBarActionText.Should().Contain("Temperatur gesendet.");
+    }
+
+    [Fact]
+    public async Task Log_switch_is_opt_in_and_reaches_the_store_without_restart()
+    {
+        using var viewModel = CreateViewModelWithLog(out _, out var log);
+        log.IsEnabled.Should().BeFalse();
+
+        await viewModel.InitializeAsync();
+        log.IsEnabled.Should().BeFalse();
+        log.Entries.Should().BeEmpty();
+
+        viewModel.LogEnabled = true;
+        log.IsEnabled.Should().BeTrue();
+        log.Entries.Should().Contain(entry => entry.Contains("Protokoll eingeschaltet"));
+        viewModel.StatusBarLogText.Should().Contain("Protokoll an");
+        viewModel.LogText.Should().Contain("Protokoll eingeschaltet");
+    }
+
+    [Fact]
+    public async Task Cached_values_are_not_writable_while_connected()
+    {
+        using var viewModel = CreateViewModel();
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+        viewModel.ApplyTemperatureCommand.CanExecute(null).Should().BeTrue();
+
+        viewModel.RoomsStatus.Update(DataReadState.Cached, DateTimeOffset.UtcNow);
+
+        viewModel.ApplyTemperatureCommand.CanExecute(null).Should().BeFalse();
+        viewModel.SetHouseAutoCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Saved_endpoint_is_used_at_startup()
+    {
+        using var viewModel = CreateViewModel(out _, out var store);
+        store.Settings["cube.endpoint"] = "192.168.10.60:62910";
+
+        await viewModel.InitializeAsync();
+
+        viewModel.Host.Should().Be("192.168.10.60");
+        viewModel.Port.Should().Be(62910);
+    }
+
     private sealed class FakeDiscovery : ICubeDiscovery
     {
         private readonly IReadOnlyList<DiscoveredCube> _cubes;
@@ -515,6 +583,12 @@ public class ViewModelTests
     private static MainWindowViewModel CreateViewModelWithGateway(out Cube cube, out FakeGateway gateway)
         => CreateViewModel(out cube, out _, out gateway);
 
+    private static MainWindowViewModel CreateViewModelWithLog(out Cube cube, out NullLogStore log)
+    {
+        log = new NullLogStore();
+        return CreateViewModel(out cube, out _, out _, logStore: log);
+    }
+
     private static MainWindowViewModel CreateViewModel(out Cube cube, out FakeStore store)
         => CreateViewModel(out cube, out store, out _);
 
@@ -523,7 +597,8 @@ public class ViewModelTests
         out FakeStore store,
         out FakeGateway gateway,
         ICubeDiscovery? discovery = null,
-        IAppVersionProvider? versionProvider = null)
+        IAppVersionProvider? versionProvider = null,
+        ILogStore? logStore = null)
     {
         cube = new Cube(new SerialNumber("JEQ0001234"), 275, new RadioAddress(0x1D2A3C), true);
         cube.AddRoom(new Room(1, "Wohnen", new RadioAddress(0x1D2A3C)));
@@ -535,7 +610,8 @@ public class ViewModelTests
         store = new FakeStore();
         var clock = new FakeClock();
         var service = new CubeApplicationService(gateway, store, clock);
-        return new MainWindowViewModel(service, clock, discovery: discovery, versionProvider: versionProvider);
+        return new MainWindowViewModel(service, clock, discovery: discovery,
+            versionProvider: versionProvider, logStore: logStore);
     }
 
     private sealed class FakeClock : IClock

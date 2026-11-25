@@ -90,14 +90,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ICubeDiscovery? discovery = null,
         IAppVersionProvider? versionProvider = null,
         Localizer? localizer = null,
-        IAppLog? log = null)
+        IAppLog? log = null,
+        ILogStore? logStore = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _dispatcher = dispatcher ?? new ImmediateUiDispatcher();
         _discovery = discovery ?? new DesignTimeDiscovery();
         _loc = localizer ?? new Localizer("de");
-        _log = log ?? new NullAppLog();
+        _logStore = logStore ?? log as ILogStore;
+        _log = log ?? _logStore ?? (IAppLog)new NullAppLog();
+        if (_logStore is not null)
+        {
+            // Opt-in: ohne ausdrückliche Aktivierung wird keine Protokolldatei geschrieben.
+            _logStore.IsEnabled = false;
+        }
+
         var version = versionProvider ?? new AppVersionProvider();
         AppVersion = version.Version;
         AppVersionText = L("AppVersion", version.Version);
@@ -141,6 +149,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         SelectedDay = WeekDays.First();
+        RefreshStatusBar();
     }
 
     [ObservableProperty]
@@ -264,15 +273,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private bool CanLoadLastEndpoint => !IsBusy;
 
+    /// <summary>
+    /// Online ist nur eine echte Live-Lesung schreibberechtigt; der Cache darf nie
+    /// über eine bestehende Verbindung auf den Cube zurückgeschrieben werden (QA 0.6.0).
+    /// </summary>
+    private bool CanWriteFrom(DataStatusViewModel status)
+        => status.State == DataReadState.Live
+            || (_service.IsOffline && status.State == DataReadState.Cached);
+
     private bool CanControlHouse
-        => !IsBusy && IsConnected && !IsStale && !_service.IsOffline && RoomsStatus.HasRead;
+        => !IsBusy && IsConnected && !IsStale && CanWriteFrom(RoomsStatus);
 
     /// <summary>
     /// Senden setzt eine echte Lesung voraus: kein Platzhalter, kein Cache, kein veralteter
     /// Zustand. Der Service sperrt Offline zusätzlich (Gremium 0.5.0, QA).
     /// </summary>
     private bool CanEditRoom
-        => IsConnected && !IsStale && !_service.IsOffline && RoomsStatus.HasRead && SelectedRoom is not null;
+        => IsConnected && !IsStale && CanWriteFrom(RoomsStatus) && SelectedRoom is not null;
 
     /// <summary>
     /// Strenges IPv4-Format: genau vier Oktette mit je 0..255. `IPAddress.TryParse`
@@ -295,7 +312,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         get
         {
-            if (!IsConnected || IsStale || _service.IsOffline || !RoomsStatus.HasRead
+            if (!IsConnected || IsStale || !CanWriteFrom(RoomsStatus)
                 || SelectedRoom is null || !SelectedDay.WasReadFromCube)
             {
                 return false;
@@ -377,6 +394,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         await RunAsync(async token =>
         {
+            _log.Write("INFO", "Cube-Reiter liest Zustand automatisch.");
             await _service.ReloadAsync(token);
             var at = DisplayTime;
             var state = DisplayState;
@@ -480,6 +498,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             await _service.DisconnectAsync();
             IsConnected = false;
             StatusText = L("StatusDisconnected");
+            _log.Write("INFO", "Verbindung zum Cube getrennt.");
             Rooms.Clear();
             Devices.Clear();
             SelectedRoom = null;
@@ -505,7 +524,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 // UpdateRooms markt Räume/Geräte/Konfiguration als „Cache vom …“; die
                 // Aktionswerte (Zeitzone, NTP, Netzwerk) gibt es im Cache nicht.
-                UpdateRooms(cube);
+                UpdateRooms(cube, DataReadState.Cached);
                 TimeZoneStatus.Reset();
                 NtpStatus.Reset();
                 NetworkStatus.Reset();
@@ -773,10 +792,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         try
         {
             await action(cts.Token);
+            var result = cts.IsCancellationRequested ? L("Cancelled") : successText ?? L("OkAction");
             if (!quiet)
             {
-                SuccessText = cts.IsCancellationRequested ? L("Cancelled") : successText ?? L("OkAction");
+                SuccessText = result;
             }
+
+            // INFO deckt jede Aktion ab - das war der grösste Support-Blindfleck (QA 0.6.0).
+            _log.Write("INFO", $"{errorPrefix}: {result}");
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
@@ -871,10 +894,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (stale)
         {
             StatusText = L("StatusReconnecting");
+            _log.Write("WARN", "Veraltete Daten erkannt - automatische Reconnect läuft.");
         }
         else if (StatusText == L("StatusReconnecting"))
         {
             StatusText = IsConnected ? L("StatusRestored") : L("StatusDisconnected");
+            _log.Write("INFO", "Verbindung wiederhergestellt.");
         }
     });
 
@@ -891,6 +916,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 IsConnected = false;
                 StatusText = L("StatusInterrupted");
+                _log.Write("ERROR", "Verbindung zum Cube unterbrochen.");
                 MarkStatusesStale(true);
                 return;
             }
@@ -963,13 +989,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             SetEcoCommand.NotifyCanExecuteChanged();
             SetComfortCommand.NotifyCanExecuteChanged();
             SetTemporaryCommand.NotifyCanExecuteChanged();
+            RefreshStatusBar();
         }
     }
 
-    private void UpdateRooms(Cube cube)
+    private void UpdateRooms(Cube cube, DataReadState? explicitState = null)
     {
         // Kein stiller Default mehr: Herkunft und Zeitpunkt kommen aus dem Service.
-        var state = DisplayState;
+        // Ein Cache-Ladevorgang bleibt auch bei bestehender Verbindung Cached.
+        var state = explicitState ?? DisplayState;
         var at = DisplayTime;
         RoomsStatus.Update(state, at);
         DevicesStatus.Update(state, at);

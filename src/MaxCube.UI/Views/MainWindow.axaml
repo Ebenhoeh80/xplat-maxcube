@@ -22,7 +22,6 @@
             <Button Content="{Binding Loc[Disconnect]}" Command="{Binding DisconnectCommand}" />
             <Button Content="{Binding Loc[LoadCache]}" Command="{Binding LoadCachedCommand}" />
             <Button Content="{Binding Loc[LastEndpoint]}" Command="{Binding LoadLastEndpointCommand}" />
-            <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" FontWeight="SemiBold" />
           </WrapPanel>
           <WrapPanel ItemSpacing="8" LineSpacing="8">
             <Button Content="{Binding Loc[SearchCube]}" Command="{Binding DiscoverCubesCommand}" />
@@ -451,12 +450,24 @@
 
         <!-- 6 Status -->
         <TabItem Header="{Binding Loc[TabStatus]}">
-          <DockPanel Margin="8">
-            <TextBlock DockPanel.Dock="Top" Text="{Binding AppVersionText}"
-                       Foreground="Gray" Margin="0,0,0,8" />
-            <TextBlock DockPanel.Dock="Top" Text="{Binding AirtimeText}" Foreground="Gray" Margin="0,0,0,8" />
-            <ListBox ItemsSource="{Binding Audit}" />
-          </DockPanel>
+          <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="8">
+            <TextBlock Grid.Row="0" Text="{Binding AppVersionText}"
+                       Foreground="Gray" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="1" Text="{Binding AirtimeText}" Foreground="Gray" Margin="0,0,0,8" />
+            <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,6">
+              <TextBlock Text="{Binding Loc[LogTitle]}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding LogCountText}" Foreground="Gray" />
+              <TextBlock Text="{Binding Loc[LogPrivacy]}" Foreground="Gray" TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{Binding Loc[LogRefresh]}" Command="{Binding RefreshLogCommand}" />
+                <Button Content="{Binding Loc[LogExport]}" Command="{Binding ExportLogCommand}" />
+                <Button Content="{Binding Loc[LogOpenFolder]}" Command="{Binding OpenLogFolderCommand}" />
+              </StackPanel>
+            </StackPanel>
+            <TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True"
+                     AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas,Monospace" />
+            <ListBox Grid.Row="4" ItemsSource="{Binding Audit}" MaxHeight="140" Margin="0,8,0,0" />
+          </Grid>
         </TabItem>
 
         <!-- 7 Hilfe -->
@@ -479,6 +490,10 @@
               <StackPanel Spacing="4">
                 <TextBlock Text="{Binding Loc[Language]}" FontWeight="SemiBold" />
                 <ComboBox Width="240" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <CheckBox Content="{Binding Loc[LogEnabled]}" IsChecked="{Binding LogEnabled}" />
+                <TextBlock Text="{Binding Loc[LogEnabledHint]}" Foreground="Gray" TextWrapping="Wrap" />
               </StackPanel>
               <StackPanel Spacing="4">
                 <TextBlock Text="{Binding Loc[LogRetention]}" FontWeight="SemiBold" />
@@ -522,13 +537,28 @@
 
       </TabControl>
 
-      <Border Grid.Row="2" Padding="12" BorderThickness="1,0,0,0">
-        <WrapPanel ItemSpacing="12" LineSpacing="4">
-          <TextBlock Text="{Binding SuccessText}" Foreground="#2E7D32" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding WarningText}" Foreground="#B0712A" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Loc[ConnectionLost]}" Foreground="#B0712A"
-                     IsVisible="{Binding IsStale}" TextWrapping="Wrap" />
-        </WrapPanel>
+      <!-- Dauerhaft sichtbare Statusleiste: Verbindung, Datenherkunft, letzte Aktion, Protokoll.
+           Symbol UND Text (nie Farbe allein); Stale/Reconnect erscheint genau einmal. -->
+      <Border Grid.Row="2" Padding="10,6" BorderThickness="1,1,0,0">
+        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{Binding StatusBarConnectionText}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Host}" Foreground="Gray" />
+            <TextBlock Text=":" Foreground="Gray" />
+            <TextBlock Text="{Binding Port}" Foreground="Gray" />
+            <TextBlock Text="◌" ToolTip.Tip="{Binding Loc[Busy]}" IsVisible="{Binding IsBusy}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                      HorizontalAlignment="Center">
+            <TextBlock Text="{Binding StatusBarDataText}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding StatusBarActionText}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+            <ToggleButton Content="{Binding StatusBarLogText}" IsChecked="{Binding LogEnabled}"
+                          ToolTip.Tip="{Binding Loc[LogEnabledHint]}" />
+            <Button Content="{Binding Loc[LogExport]}" Command="{Binding ExportLogCommand}" />
+          </StackPanel>
+        </Grid>
       </Border>
     </Grid>
 
@@ -551,8 +581,12 @@
         <StackPanel Spacing="12">
           <TextBlock Text="{Binding Loc[ErrorTitle]}" FontSize="16" FontWeight="SemiBold" Foreground="Red" />
           <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding ErrorTimeText}" Foreground="Gray" />
           <TextBlock Text="{Binding ErrorHint}" TextWrapping="Wrap" Foreground="Gray" />
-          <Button Content="{Binding Loc[Ok]}" Command="{Binding DismissErrorCommand}" HorizontalAlignment="Right" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="{Binding Loc[ErrorOpenLog]}" Command="{Binding ShowLogCommand}" />
+            <Button Content="{Binding Loc[Ok]}" Command="{Binding DismissErrorCommand}" />
+          </StackPanel>
         </StackPanel>
       </Border>
     </Border>
