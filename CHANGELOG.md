@@ -41,6 +41,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Avalonia-Sichtprüfung und Muttersprachlerprüfung weiterhin offen. Audit- und
   Diagnosetexte bleiben historische Rohtexte und werden nicht nachträglich übersetzt.
 
+### Release
+
+- PR [#20](https://github.com/Ebenhoeh80/xplat-maxcube/pull/20) wurde als Squash
+  `5af4edd` in `main` gemergt; alle sieben PR-Checks waren grün. Der annotierte Tag
+  `v0.6.5` zeigt auf diesen Merge-Commit und wurde erst danach erstellt. Der
+  Release-Lauf `45803317941` war grün; [v0.6.5](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.5)
+  ist veröffentlicht.
+- Geprüfte Assets: `xplat-maxcube-0.6.5-win-x64.zip` (SHA-256
+  `6163152c75eea9b83a4508d022be9959242aefe4d19708b418d52a901115e36b`) und
+  `xplat-maxcube-0.6.5-linux-x64.zip` (SHA-256
+  `2e16bb6df70d35fe571db8af39bd5fdaebf6cdef10bc3a99c529b820fa98b36b`). Beide
+  liefen fensterlos mit `SELFCHECK OK … 0.6.5 … SQLite ok` unter Windows 10.0.26300
+  und Debian GNU/Linux 13 (trixie).
+- Der Doku-Nachtrag PR [#21](https://github.com/Ebenhoeh80/xplat-maxcube/pull/21)
+  (`fb4bb8d`) folgte ohne neues Tag; `v0.6.5` bleibt auf `5af4edd`.
+
 ## [0.6.4] - 2026-11-26
 
 ### Fixed
