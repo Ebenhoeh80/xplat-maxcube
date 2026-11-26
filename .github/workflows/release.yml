@@ -68,7 +68,7 @@ jobs:
         run: |
           (cd publish && zip -r "../xplat-maxcube-${VERSION}-${{ matrix.rid }}.zip" "${{ matrix.rid }}")
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: xplat-maxcube-${{ matrix.rid }}
           path: xplat-maxcube-*.zip

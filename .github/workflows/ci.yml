@@ -33,7 +33,7 @@ jobs:
         run: dotnet src/MaxCube.UI.Desktop/bin/Debug/net10.0/MaxCube.UI.Desktop.dll --selfcheck
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
           path: '**/TestResults/*.trx'
@@ -66,7 +66,7 @@ jobs:
       - name: Selbsttest des veröffentlichten Pakets (Windows)
         if: matrix.rid == 'win-x64'
         run: publish\win-x64\MaxCube.UI.Desktop.exe --selfcheck
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: maxcube-${{ matrix.rid }}
           path: publish/${{ matrix.rid }}
