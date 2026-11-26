@@ -35,6 +35,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UNBEKANNT:** Eine Muttersprachlerprüfung der sechs Sprachen wurde nicht durchgeführt;
   Vollständigkeit und Platzhalter bleiben weiterhin maschinell geprüft.
 
+### Release
+
+- PR [#25](https://github.com/Ebenhoeh80/xplat-maxcube/pull/25) wurde als Squash
+  `d452d82` in `main` gemergt; alle sieben PR-Checks waren grün. Der annotierte Tag
+  `v0.6.7` zeigt auf diesen Merge-Commit und wurde erst danach erstellt. Der
+  Release-Lauf `45853761096` war grün; [v0.6.7](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.7)
+  ist veröffentlicht.
+- Geprüfte Assets: `xplat-maxcube-0.6.7-win-x64.zip` (SHA-256
+  `8e9fdec601730e4c6231c5b26c092aa1e0f339009e66ef7e9756728096c7a977`) und
+  `xplat-maxcube-0.6.7-linux-x64.zip` (SHA-256
+  `4d8ae381e054b1d5343a9a598905ea47b97c1cf0e0d4bf75b09d187681c358fd`). Die lokal
+  berechneten Hashes stimmen mit den GitHub-Digests überein; beide Pakete liefen
+  fensterlos mit `SELFCHECK OK … 0.6.7 … SQLite ok` unter Windows 10.0.26300 und
+  Debian GNU/Linux 13 (trixie).
+- Der Doku-Nachtrag der Release-Belege erfolgt ohne neues Tag; `v0.6.7` bleibt auf
+  `d452d82`.
+
 ## [0.6.6] - 2026-11-26
 
 ### Fixed
