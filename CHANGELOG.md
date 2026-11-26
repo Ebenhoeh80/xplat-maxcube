@@ -33,7 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schloss der Hardwaretest **1/1** grün ab: zwei vollständige Connect-/Trenn-Zyklen hintereinander.
   Kein Schreib-, Reboot- oder Werksresetbefehl; `nmap` bleibt außerhalb des App-Pfads.
 - PR [#27](https://github.com/Ebenhoeh80/xplat-maxcube/pull/27) hat **7/7** Checks grün;
-  der Hardwarebeleg lag vor dem Merge vor. Tag und Release werden nach dem Merge erstellt.
+  der Hardwarebeleg lag vor dem Merge vor. Tag und Release wurden nach dem Merge erstellt.
+
+### Release
+
+- PR [#27](https://github.com/Ebenhoeh80/xplat-maxcube/pull/27) wurde als Squash `2b88567`
+  in `main` gemergt; alle sieben Checks waren grün. Der annotierte Tag `v0.6.8` zeigt erst
+  nach dem Merge auf diesen Commit. Der Release-Lauf `45870498515` war grün; das Release
+  [v0.6.8](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.8) ist veröffentlicht.
+- Geprüfte Assets: `xplat-maxcube-0.6.8-win-x64.zip` (SHA-256
+  `1d6c9b83f5e3c0905e35cec2a9cecaf47b8bd35db0bb5d00fa8fb27711907612`) und
+  `xplat-maxcube-0.6.8-linux-x64.zip` (SHA-256
+  `3f1d4ecb21cfbf2d877c4c2120b2f4ab65420c4785a597b672d7c07516086e00`). Beide Digests
+  stimmen mit der GitHub-API überein, und beide heruntergeladenen Pakete liefen fensterlos
+  mit `SELFCHECK OK … 0.6.8 … SQLite ok` unter Windows 10.0.26300 und Debian GNU/Linux 13
+  (trixie), jeweils Exitcode 0.
+- Der Doku-Nachtrag der Release-Belege erfolgt ohne neues Tag; `v0.6.8` bleibt auf `2b88567`.
 
 ## [0.6.7] - 2026-11-26
 
