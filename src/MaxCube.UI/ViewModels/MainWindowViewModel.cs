@@ -481,13 +481,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanConnect))]
     private async Task ConnectAsync()
     {
+        var endpoint = new CubeEndpoint(Host, Port);
         await RunAsync(async token =>
         {
-            var cube = await _service.ConnectAsync(new CubeEndpoint(Host, Port), token);
+            var cube = await _service.ConnectAsync(endpoint, token);
             IsConnected = true;
             SetStatus(L("StatusConnected", cube.SerialNumber, cube.FirmwareVersion));
             await RefreshAuditAsync();
-        }, L("ErrConnect"), L("OkConnect"));
+        }, L("ErrConnect"), L("OkConnect"),
+           errorHint: exception => ConnectErrorHint(exception, endpoint.Host, endpoint.Port));
 
         // Wurde der Cube-Reiter schon geöffnet, liest die Hybrid-Regel jetzt automatisch
         // nach; vorher war dort nur der Platzhalter „nicht gelesen“ sichtbar.
@@ -1064,17 +1066,71 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// 0.6.6: Bekannte Verbindungsursachen als vollständig lokalisierten Dialogtext. Die rohe
+    /// Ausnahme bleibt im Protokoll und im Datenstatus; die UI zeigt einen Katalogtext ohne
+    /// englische Ausnahmebrocken. Alle Texte sind sprachwechselfähig (sechs Sprachen).
+    /// </summary>
+    private LocalizedValue? ConnectErrorHint(Exception exception, string host, int port)
+    {
+        var messages = new List<string>();
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (!string.IsNullOrEmpty(current.Message))
+            {
+                messages.Add(current.Message);
+            }
+        }
+
+        var text = string.Join(" ", messages);
+        if (text.Contains("Timed out connecting to the cube", StringComparison.OrdinalIgnoreCase)
+            || messages.Any(message => message.Contains("timeout", StringComparison.OrdinalIgnoreCase)))
+        {
+            return L("ErrConnectTimeout");
+        }
+
+        if (text.Contains("Cannot connect to cube at", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("ErrConnectRefused", host, port);
+        }
+
+        if (text.Contains("No Incoming Hello", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("ErrConnectHello");
+        }
+
+        if (text.Contains("H: line", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("Malformed Hello", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("ErrConnectMalformedHello");
+        }
+
+        if (text.Contains("outside the supported range", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("ErrConnectFirmware");
+        }
+
+        if (text.Contains("Already connected. Disconnect first", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("ErrConnectAlready");
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Führt eine Aktion mit eigenem CTS aus. Der Abbrechen-Button wirkt auf genau diese
     /// Operation; eine abgebrochene Aktion ist kein Fehler (Gremium Runde 1, N7).
     /// <para/>
     /// <paramref name="quiet"/> kennzeichnet das automatische Nachlesen beim Reiterwechsel:
     /// kein modales „Beschäftigt“, kein Fehlerdialog – der Bereich zeigt stattdessen seinen
     /// eigenen Status. <paramref name="status"/> erhält Loading/Failed/Restore.
+    /// <paramref name="errorHint"/> liefert für bekannte Verbindungsfehler einen lokalisierten
+    /// Dialogtext; ohne Treffer bleibt der bisherige Code-/Generic-Hinweis maßgeblich.
     /// </summary>
     private async Task RunAsync(
         Func<CancellationToken, Task> action, LocalizedValue errorPrefix, LocalizedValue? successText = null,
         bool quiet = false, DataStatusViewModel? status = null, LocalizedValue? previewText = null,
-        LocalizedValue? contextText = null)
+        LocalizedValue? contextText = null, Func<Exception, LocalizedValue?>? errorHint = null)
     {
         if (IsBusy)
         {
@@ -1147,12 +1203,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            // Die rohe Ausnahme bleibt im Log; der sichtbare Dialog bekommt einen
-            // vollständig lokalisierten Fehlerhinweis über den Code (0.6.4).
+            // Die rohe Ausnahme bleibt im Log; der sichtbare Dialog bekommt seit 0.6.6
+            // zuerst einen lokalisierten Ursachenhinweis (Verbinden) und sonst den
+            // vollständig lokalisierten Code-/Generic-Hinweis (0.6.4/0.6.5).
             var code = ErrorCatalog.FindFirstCode(exception.Message);
-            var message = code is null
-                ? L(localizer => $"{errorPrefix.In(localizer).Current}: {localizer.Get("ErrorGeneric")}")
-                : L("ErrorWithCode", errorPrefix, code);
+            var message = errorHint?.Invoke(exception)
+                ?? (code is null
+                    ? L(localizer => $"{errorPrefix.In(localizer).Current}: {localizer.Get("ErrorGeneric")}")
+                    : L("ErrorWithCode", errorPrefix, code));
             OnUiThread(() =>
             {
                 if (!quiet)

@@ -354,3 +354,15 @@ SETPOINT RESTORE OK
 **FAKT:** Beide heruntergeladenen Pakete liefen fensterlos mit `SELFCHECK OK … 0.6.5 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie). Lokal: Build 0 Warnungen/0 Fehler, **501/501** Tests grün auf Windows und Debian 13.
 
 **UNBEKANNT:** Ob der physische Cube nach `q:` tatsächlich EOF liefert und die Session sofort freigibt, blieb wie in §21 ungemessen. Eine Avalonia-Sichtprüfung aller sechs Sprachen und eine Muttersprachlerprüfung stehen weiter aus; der fensterlose Selbsttest ersetzt sie nicht. Audit- und Diagnosetexte bleiben historische Rohtexte.
+
+## 24. nmap-Frage und lokalisierter Verbindungsfehler 0.6.6
+
+**FAKT (Gremium 3/3):** Auf die Frage, ob beim Verbinden `nmap -p 62910 192.168.10.60` eingebaut werden soll, rieten Technik/Code, Betrieb/Sicherheit und Release/Strategie einheitlich ab. Der vorhandene TCP-Connect mit 30-s-Grenze und anschließendem `H:`/`L:`/`C:`/`M:`-Handshake ist die maßgebliche Prüfung (`TcpCubeTransport.cs:23-59`, `CubeGateway.cs:103-106`); ein Portscan beweist nur „Port offen“, nicht die Cube-Funktion. `nmap` kommt im Repo nicht vor; die App verspricht Betrieb ohne Administratorrechte (`Program.cs:12`) und der Selbsttest bleibt hardwarefrei (`Program.cs:118`). Die Bediener-Checks „IP/Ping/TCP 62910 prüfen“ stehen bereits in `docs/RUNBOOK.md:168` und `docs/TROUBLESHOOTING.md:64-65`.
+
+**FAKT (Ursache der Dialog-Lücke):** Bis 0.6.5 zeigte der Dialog bei Verbindungsfehlern ohne MAX-Code nur den generischen Hinweis; die genaue Ursache (z. B. „Cannot connect to cube at …“, „Timed out connecting …“) stand nur im Protokoll und im Datenstatus (`MainWindowViewModel.cs:1148-1166`, Stand 0.6.5).
+
+**FAKT (Fix 0.6.6):** Sechs bekannte Verbindungsursachen werden über Katalogschlüssel in allen Sprachen angezeigt: Timeout, nicht erreichbarer Endpoint mit Host/Port, fehlender Handshake, ungültiger Handshake, nicht unterstützte Firmware und bereits bestehende Verbindung. Die Zuordnung nutzt nur feste Hinweise, keine englische Ausnahmeausgabe; `LocalizedValue` bleibt sprachwechselfähig. Ein Wechsel zu DE/EN/FR/IT/NL/PL rendert den sichtbaren Text ohne Neustart neu.
+
+**FAKT (Verifikation):** Build 0/0; Windows und Debian 13 (WSL2) **507/507** Tests grün; `SELFCHECK OK … 0.6.6 … SQLite ok` auf beiden Systemen. Neue Regressionstests prüfen sechs Ursachen auf Deutsch und nach Sprachwechsel, jeweils ohne Rohtext im Dialog.
+
+**UNBEKANNT:** Der nmap-Befehl wurde nicht ausgeführt; die Reaktion des Original-Cube auf einen halboffenen SYN-/connect-Scan ohne `q:` blieb ungemessen. Avalonia-Sichtprüfung und Muttersprachlerprüfung der sechs Sprachen stehen weiter aus. Der Scan bleibt als lesender Bediener-Schritt außerhalb der App optional; er darf nie parallel zur einen Cube-TCP-Session laufen.
