@@ -214,10 +214,13 @@ internal static class Program
         foreach (var language in Localizer.Languages)
         {
             localizer.SetLanguage(language.Code);
-            if (localizer["Connect"].StartsWith('!'))
+            foreach (var key in Localizer.Keys)
             {
-                Console.Error.WriteLine($"SELFCHECK FEHLER: Text fehlt in {language.Code}.");
-                return 3;
+                if (localizer[key].StartsWith('!'))
+                {
+                    Console.Error.WriteLine($"SELFCHECK FEHLER: Text fehlt in {language.Code}: {key}.");
+                    return 3;
+                }
             }
         }
 

@@ -103,6 +103,38 @@ public class LocalizationTests
         loc["GibtEsNicht"].Should().Be("!GibtEsNicht!");
     }
 
+    [Fact]
+    public void Enum_labels_follow_the_selected_language()
+    {
+        var loc = new Localizer("de");
+        var cube = new Cube(new SerialNumber("JEQ0001234"), 275, new RadioAddress(0x1D2A3C), true);
+        cube.AddRoom(new Room(1, "Wohnen", new RadioAddress(0x0A0B0C)));
+        cube.SetControlMode(1, RoomControlMode.Permanently);
+        cube.SetTemperatureMode(1, RoomTemperatureMode.Normal);
+        var notifications = new List<string?>();
+        var day = new DayProfileViewModel(DayOfWeek.Monday, loc);
+        var room = new RoomViewModel(cube.GetRoom(1)!, loc);
+        var device = new DeviceViewModel(
+            new Device(new RadioAddress(0x0A0B0D), DeviceType.WallMountedThermostat, 3,
+                new SerialNumber("JEQ0000002"), "Wand", 1), loc);
+        day.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+
+        day.DisplayName.Should().Be("Montag");
+        room.ControlMode.Should().Be("Dauerhaft");
+        room.TemperatureMode.Should().Be("Normal");
+        device.Type.Should().Be("Wandthermostat");
+        device.State.Should().Be("Nicht initialisiert");
+
+        loc.SetLanguage("en");
+
+        day.DisplayName.Should().Be("Monday");
+        room.ControlMode.Should().Be("Permanent");
+        room.TemperatureMode.Should().Be("Normal");
+        device.Type.Should().Be("Wall thermostat");
+        device.State.Should().Be("Not initialized");
+        notifications.Should().Contain(nameof(DayProfileViewModel.DisplayName));
+    }
+
     [Theory]
     [InlineData(null, "fr", "fr")]
     [InlineData("it", "fr", "it")]
@@ -199,6 +231,10 @@ public class AdminViewModelTests : IDisposable
         var vm = h.ViewModel;
         vm.WindowTitle.Should().StartWith("MAX! Cube – Lokale App");
         vm.HelpTopics.Should().HaveCount(6);
+        vm.StatusText.Should().StartWith("Verbunden");
+        vm.WeekDays[0].DisplayName.Should().Be("Montag");
+        vm.DecalcificationDays[0].Label.Should().Be("Montag");
+        vm.PushButtonModes.Last().Label.Should().Be("Manuell");
 
         vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "en");
 
@@ -206,8 +242,32 @@ public class AdminViewModelTests : IDisposable
         vm.Loc["Connect"].Should().Be("Connect");
         vm.HelpTopics[0].Title.Should().Be("Connecting and finding the cube");
         vm.Rooms[0].ActualText.Should().Be("Actual: —");
+        vm.StatusText.Should().StartWith("Connected");
+        vm.WeekDays[0].DisplayName.Should().Be("Monday");
+        vm.DecalcificationDays[0].Label.Should().Be("Monday");
+        vm.PushButtonModes.Last().Label.Should().Be("Manual");
         await vm.DisconnectCommand.ExecuteAsync(null);
         vm.StatusText.Should().Be("Disconnected");
+    }
+
+    [Fact]
+    public async Task Language_switch_refreshes_cached_preview_and_result_texts()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        vm.BundleTemperatures = true;
+        vm.RequestedTemperature = 19.5;
+        await vm.ApplyTemperatureCommand.ExecuteAsync(null);
+        vm.SuccessText.Should().Contain("vorgemerkt");
+
+        vm.ApplyRoomConfigurationCommand.CanExecute(null).Should().BeTrue();
+        await vm.ApplyRoomConfigurationCommand.ExecuteAsync(null);
+        vm.WritePreviewText.Should().Contain("Konfiguration senden");
+
+        vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "en");
+
+        vm.SuccessText.Should().Contain("queued");
+        vm.WritePreviewText.Should().Contain("Send configuration");
     }
 
     [Fact]
@@ -357,7 +417,7 @@ public class AdminViewModelTests : IDisposable
         await h.ViewModel.ApplyValveOffsetCommand.ExecuteAsync(null);
 
         h.ViewModel.SetDisplayActualCommand.CanExecute(null).Should().BeFalse("kein Wandthermostat ausgewählt");
-        h.ViewModel.SelectedDevice = h.ViewModel.Devices.Single(device => device.Type == "WallMountedThermostat");
+        h.ViewModel.SelectedDevice = h.ViewModel.Devices.Single(device => device.DeviceType == DeviceType.WallMountedThermostat);
         h.ViewModel.SetDisplayActualCommand.CanExecute(null).Should().BeTrue();
         await h.ViewModel.SetDisplayActualCommand.ExecuteAsync(null);
 
@@ -384,7 +444,7 @@ public class AdminViewModelTests : IDisposable
     public async Task Structure_changes_need_the_confirmation_checkbox()
     {
         var h = await CreateAsync();
-        h.ViewModel.SelectedDevice = h.ViewModel.Devices.Single(device => device.Type == "WallMountedThermostat");
+        h.ViewModel.SelectedDevice = h.ViewModel.Devices.Single(device => device.DeviceType == DeviceType.WallMountedThermostat);
 
         h.ViewModel.DeleteDeviceCommand.CanExecute(null).Should().BeFalse();
         h.ViewModel.ConfirmChanges = true;

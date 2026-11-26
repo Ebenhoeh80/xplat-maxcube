@@ -264,7 +264,7 @@
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[DecalcDay]}" />
-                  <ComboBox Width="150" ItemsSource="{Binding DecalcificationDays}" SelectedItem="{Binding DecalcificationDay}" />
+                  <ComboBox Width="150" ItemsSource="{Binding DecalcificationDays}" SelectedItem="{Binding SelectedDecalcificationDayOption}" />
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[DecalcHour]}" />
@@ -291,7 +291,7 @@
               <WrapPanel ItemSpacing="10" LineSpacing="8">
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[KeyUpper]}" />
-                  <ComboBox Width="190" ItemsSource="{Binding PushButtonModes}" SelectedItem="{Binding PushUpperMode}" />
+                  <ComboBox Width="190" ItemsSource="{Binding PushButtonModes}" SelectedItem="{Binding SelectedPushUpperModeOption}" />
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[KeyTemperature]}" />
@@ -299,7 +299,7 @@
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[KeyLower]}" />
-                  <ComboBox Width="190" ItemsSource="{Binding PushButtonModes}" SelectedItem="{Binding PushLowerMode}" />
+                  <ComboBox Width="190" ItemsSource="{Binding PushButtonModes}" SelectedItem="{Binding SelectedPushLowerModeOption}" />
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[KeyTemperature]}" />
@@ -396,7 +396,7 @@
               <TextBlock Text="{Binding TimeZoneStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[TimeZone]}" FontSize="16" FontWeight="Bold" />
               <WrapPanel ItemSpacing="8" LineSpacing="8">
-                <ComboBox Width="300" ItemsSource="{Binding ZonePresets}" SelectedItem="{Binding SelectedZonePreset}" />
+                <ComboBox Width="300" ItemsSource="{Binding ZonePresets}" SelectedItem="{Binding SelectedZonePresetOption}" />
                 <Button Content="{Binding Loc[ReadZone]}" Command="{Binding ReadTimeZoneCommand}" />
                 <Button Content="{Binding Loc[SendZone]}" Command="{Binding SendTimeZoneCommand}" />
                 <Button Content="{Binding Loc[SetCubeTime]}" Command="{Binding SetCubeTimeCommand}"

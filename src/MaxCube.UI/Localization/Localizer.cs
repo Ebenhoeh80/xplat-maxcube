@@ -24,7 +24,11 @@ public sealed class Localizer : INotifyPropertyChanged
 
     private int _index;
 
-    public Localizer(string language = "de") => _index = IndexOf(language);
+    public Localizer(string language = "de")
+    {
+        _index = IndexOf(language);
+        ApplyCulture(Languages[_index].Code);
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -49,6 +53,7 @@ public sealed class Localizer : INotifyPropertyChanged
         }
 
         _index = index;
+        ApplyCulture(Languages[index].Code);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Language)));
     }
@@ -81,6 +86,35 @@ public sealed class Localizer : INotifyPropertyChanged
 
         var systemCode = systemLanguage?.Trim().ToLowerInvariant();
         return systemCode is not null && Languages.Any(language => language.Code == systemCode) ? systemCode : "de";
+    }
+
+    /// <summary>
+    /// Zahlen- und Zeitformate folgen der gewählten Sprache, nicht der Systemsprache. Die
+    /// Protokoll- und Berechnungspfade bleiben bewusst invariant (explizites CultureInfo.InvariantCulture).
+    /// </summary>
+    private static void ApplyCulture(string code)
+    {
+        var name = code switch
+        {
+            "en" => "en-US",
+            "fr" => "fr-FR",
+            "it" => "it-IT",
+            "nl" => "nl-NL",
+            "pl" => "pl-PL",
+            _ => "de-DE",
+        };
+
+        try
+        {
+            var culture = CultureInfo.GetCultureInfo(name);
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+        }
+        catch (CultureNotFoundException)
+        {
+            // Auf schlanken Linux-Systemen ohne ICU bleibt die Systemkultur stehen; die Texte
+            // werden trotzdem aus dem Katalog geliefert (SystemLanguage.cs:7-12).
+        }
     }
 
     private static int IndexOf(string? language)

@@ -51,14 +51,50 @@ public partial class MainWindowViewModel
 
     public IReadOnlyList<int> BoostMinuteOptions { get; } = [0, 5, 10, 15, 20, 25, 30, 60];
 
-    public IReadOnlyList<DayOfWeek> DecalcificationDays { get; } = Enum.GetValues<DayOfWeek>();
+    public IReadOnlyList<EnumOption<DayOfWeek>> DecalcificationDays
+        => Enum.GetValues<DayOfWeek>()
+            .Select(day => new EnumOption<DayOfWeek>(day, _loc.Get(EnumLabels.Key(day))))
+            .ToArray();
 
-    public IReadOnlyList<PushButtonKeyMode> PushButtonModes { get; } = Enum.GetValues<PushButtonKeyMode>();
+    public IReadOnlyList<EnumOption<PushButtonKeyMode>> PushButtonModes
+        => Enum.GetValues<PushButtonKeyMode>()
+            .Select(mode => new EnumOption<PushButtonKeyMode>(mode, _loc.Get(EnumLabels.Key(mode))))
+            .ToArray();
+
+    /// <summary>Auswahlobjekte für die ComboBox; der Domänenwert bleibt in der VM.</summary>
+    public EnumOption<DayOfWeek> SelectedDecalcificationDayOption
+    {
+        get => DecalcificationDays.First(option => option.Value == DecalcificationDay);
+        set => DecalcificationDay = value.Value;
+    }
+
+    public EnumOption<PushButtonKeyMode> SelectedPushUpperModeOption
+    {
+        get => PushButtonModes.First(option => option.Value == PushUpperMode);
+        set => PushUpperMode = value.Value;
+    }
+
+    public EnumOption<PushButtonKeyMode> SelectedPushLowerModeOption
+    {
+        get => PushButtonModes.First(option => option.Value == PushLowerMode);
+        set => PushLowerMode = value.Value;
+    }
+
+    partial void OnDecalcificationDayChanged(DayOfWeek value)
+        => OnPropertyChanged(nameof(SelectedDecalcificationDayOption));
+
+    partial void OnPushUpperModeChanged(PushButtonKeyMode value)
+        => OnPropertyChanged(nameof(SelectedPushUpperModeOption));
+
+    partial void OnPushLowerModeChanged(PushButtonKeyMode value)
+        => OnPropertyChanged(nameof(SelectedPushLowerModeOption));
 
     public ObservableCollection<RoomOption> RoomOptions { get; } = new();
 
-    private string L(string key, params object[] arguments)
-        => arguments.Length == 0 ? _loc.Get(key) : _loc.Format(key, arguments);
+    private LocalizedValue L(string key, params object[] arguments)
+        => new(arguments.Length == 0 ? loc => loc.Get(key) : loc => loc.Format(key, arguments), _loc);
+
+    private LocalizedValue L(Func<Localizer, string> render) => new(render, _loc);
 
     [ObservableProperty]
     private int selectedTabIndex;
@@ -71,15 +107,49 @@ public partial class MainWindowViewModel
     partial void OnErrorMessageChanged(string value)
     {
         OnPropertyChanged(nameof(HasError));
-        ErrorHint = ErrorCatalog.Describe(value, german: _loc.Language == "de") ?? string.Empty;
-        ErrorTimeText = string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : L("ErrorAt", _clock.Now.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture));
+        ErrorHint = BuildErrorHint(value);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _localizedBindings.Remove("ErrorTimeText");
+            ErrorTimeText = string.Empty;
+        }
+        else
+        {
+            var time = _clock.Now.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture);
+            SetLocalized("ErrorTimeText", L("ErrorAt", time), text => ErrorTimeText = text);
+        }
+    }
+
+    /// <summary>
+    /// DE/EN behalten die ausformulierten Katalogtexte; FR/IT/NL/PL erhalten einen
+    /// lokalisierten Hinweis mit Code, stattenglish zu bleiben (0.6.3).
+    /// </summary>
+    private string BuildErrorHint(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        if (ErrorCatalog.IsCommandDiscarded(value))
+        {
+            return L("ErrorCommandDiscarded");
+        }
+
+        var code = ErrorCatalog.FindFirstCode(value);
+        if (code is null)
+        {
+            return string.Empty;
+        }
+
+        return _loc.Language is "de" or "en"
+            ? ErrorCatalog.Describe(value, german: _loc.Language == "de") ?? string.Empty
+            : L("ErrorCatalogHint", code);
     }
 
     /// <summary>Schließt den Fehlerdialog (Statusdialog „Fehler“).</summary>
     [RelayCommand]
-    private void DismissError() => ErrorMessage = string.Empty;
+    private void DismissError() => SetError(null);
 
     // --- Raumkonfiguration (0x11) ----------------------------------------------------
 
@@ -146,7 +216,7 @@ public partial class MainWindowViewModel
     private bool CanWriteAdmin => CanAdmin && !IsStale && CanWriteFrom(ConfigStatus);
 
     private bool CanSetDisplay
-        => CanWriteAdmin && SelectedDevice is { Type: nameof(DeviceType.WallMountedThermostat) };
+        => CanWriteAdmin && SelectedDevice?.DeviceType == DeviceType.WallMountedThermostat;
 
     private bool CanCopyToRooms
         => CanWriteAdmin && Rooms.Count(room => room.IsHouseSelected && room.Id != SelectedRoom?.Id) > 0;
@@ -248,7 +318,7 @@ public partial class MainWindowViewModel
 
         OnUiThread(() =>
         {
-            WindowTitle = $"{L("AppTitle")} {AppVersion}";
+            WindowTitle = $"{L("AppTitle").Current} {AppVersion}";
             AppVersionText = L("AppVersion", AppVersion);
             OnPropertyChanged(nameof(AboutVersionText));
             OnPropertyChanged(nameof(AboutAuthorText));
@@ -256,6 +326,13 @@ public partial class MainWindowViewModel
             OnPropertyChanged(nameof(AboutProjectText));
             OnPropertyChanged(nameof(AboutDisclaimerText));
             OnPropertyChanged(nameof(AboutPrivacyText));
+            OnPropertyChanged(nameof(DecalcificationDays));
+            OnPropertyChanged(nameof(SelectedDecalcificationDayOption));
+            OnPropertyChanged(nameof(PushButtonModes));
+            OnPropertyChanged(nameof(SelectedPushUpperModeOption));
+            OnPropertyChanged(nameof(SelectedPushLowerModeOption));
+            OnPropertyChanged(nameof(ZonePresets));
+            OnPropertyChanged(nameof(SelectedZonePresetOption));
             BuildHelpTopics();
             if (_service.Current is { } cube)
             {
@@ -264,7 +341,11 @@ public partial class MainWindowViewModel
                     : null);
             }
 
-            ErrorHint = ErrorCatalog.Describe(ErrorMessage, german: _loc.Language == "de") ?? string.Empty;
+            // Gespeicherte Texte (Status, Erfolg, Fehler, Vorschau, Dirty …) werden in der
+            // neuen Sprache neu erzeugt; der Cube wird dabei nicht angesprochen.
+            RefreshLocalizedBindings();
+            RefreshDirtyState();
+            ErrorHint = BuildErrorHint(ErrorMessage);
             RefreshStatusBar();
             LoadLog();
         });
@@ -311,7 +392,7 @@ public partial class MainWindowViewModel
 
     private void OnAirtimeChanged(object? sender, AirtimeStatus status) => OnUiThread(() =>
     {
-        AirtimeText = L("AirtimeInfo", status.DutyCycle, status.FreeMemorySlots);
+        SetAirtime(L("AirtimeInfo", status.DutyCycle, status.FreeMemorySlots));
         CubeInfoStatus.Update(DisplayState, DisplayTime);
     });
 
@@ -332,7 +413,7 @@ public partial class MainWindowViewModel
             await RefreshAuditAsync();
             MarkConfigurationSaved();
         }, L("ErrConfig"), L("OkConfig"),
-            previewText: PreviewConfiguration(L("SendConfig")), contextText: L("SendConfig") + " …");
+            previewText: PreviewConfiguration(L("SendConfig")), contextText: L("SendConfig").Append(" …"));
     }
 
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
@@ -380,7 +461,7 @@ public partial class MainWindowViewModel
         var targets = Rooms.Where(room => room.IsHouseSelected && room.Id != SelectedRoom?.Id).ToArray();
         if (targets.Length == 0)
         {
-            SuccessText = L("NoRoomsChosen");
+            SetSuccess(L("NoRoomsChosen"));
             return;
         }
 
@@ -395,7 +476,7 @@ public partial class MainWindowViewModel
             await RefreshAuditAsync();
         }, L("ErrConfig"), L("OkCopyConfig", targets.Length),
             previewText: PreviewConfigurationCopy(targets.Length),
-            contextText: L("CopyConfig") + " …");
+            contextText: L("CopyConfig").Append(" …"));
     }
 
     private RoomConfigurationValues CurrentConfigurationValues() => new(
@@ -485,7 +566,7 @@ public partial class MainWindowViewModel
             .ToArray();
         if (plan.Length == 0)
         {
-            SuccessText = L("NoLoadedProfiles");
+            SetSuccess(L("NoLoadedProfiles"));
             return;
         }
 
@@ -499,6 +580,6 @@ public partial class MainWindowViewModel
 
             await RefreshAuditAsync();
         }, L("ErrCopyProfile"), L("OkCopyWeek", plan.Length, targets.Length),
-            previewText: PreviewWeekCopy(plan.Length), contextText: L("CopyWeek") + " …");
+            previewText: PreviewWeekCopy(plan.Length), contextText: L("CopyWeek").Append(" …"));
     }
 }

@@ -67,6 +67,6 @@ public partial class MainWindowViewModel
             return;
         }
 
-        StatusText = L("OpenExternalFailed", ProjectUrl);
+        SetStatus(L("OpenExternalFailed", ProjectUrl));
     }
 }

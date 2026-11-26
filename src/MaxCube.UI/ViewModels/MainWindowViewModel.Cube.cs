@@ -14,7 +14,19 @@ namespace MaxCube.UI.ViewModels;
 /// </summary>
 public partial class MainWindowViewModel
 {
-    public IReadOnlyList<string> ZonePresets { get; } = TimeZonePresets.All.Keys.ToArray();
+    public IReadOnlyList<EnumOption<string>> ZonePresets
+        => TimeZonePresets.All.Keys
+            .Select(key => new EnumOption<string>(key, _loc.Get(EnumLabels.Key(key))))
+            .ToArray();
+
+    public EnumOption<string> SelectedZonePresetOption
+    {
+        get => ZonePresets.FirstOrDefault(option => option.Value == SelectedZonePreset) ?? ZonePresets.First();
+        set => SelectedZonePreset = value.Value;
+    }
+
+    partial void OnSelectedZonePresetChanged(string value)
+        => OnPropertyChanged(nameof(SelectedZonePresetOption));
 
     /// <summary>Ordner für gespeicherte Diagnoseberichte; vom Composition Root gesetzt.</summary>
     public string? ReportDirectory { get; set; }
@@ -79,9 +91,9 @@ public partial class MainWindowViewModel
     private async Task ReadTimeZoneCoreAsync(CancellationToken token)
     {
         var zone = await _service.ReadTimeZoneAsync(token);
-        TimeZoneText = L(
+        SetTimeZone(L(
             zone.UsesDaylightSaving ? "ZoneInfoDst" : "ZoneInfo",
-            zone.Winter.Name, Offset(zone.Winter.OffsetSeconds), zone.Summer.Name, Offset(zone.Summer.OffsetSeconds));
+            zone.Winter.Name, Offset(zone.Winter.OffsetSeconds), zone.Summer.Name, Offset(zone.Summer.OffsetSeconds)));
         var match = TimeZonePresets.All.FirstOrDefault(pair => pair.Value == zone);
         if (match.Key is not null)
         {
@@ -184,7 +196,7 @@ public partial class MainWindowViewModel
         await RunAsync(async token =>
         {
             var report = await _service.BuildDiagnosticReportAsync(AppVersion, token);
-            DiagnosticText = report;
+            SetDiagnostic(new LocalizedValue(report));
             DiagnosticsStatus.Update(DisplayState, DisplayTime);
             if (!string.IsNullOrWhiteSpace(ReportDirectory))
             {
@@ -192,7 +204,8 @@ public partial class MainWindowViewModel
                 var file = Path.Combine(
                     ReportDirectory, $"maxcube-diagnose-{_clock.Now:yyyyMMdd-HHmmss}.txt");
                 await File.WriteAllTextAsync(file, report, token);
-                DiagnosticText = $"{L("ReportSaved", file)}{Environment.NewLine}{Environment.NewLine}{report}";
+                SetDiagnostic(L(localizer =>
+                    $"{localizer.Format("ReportSaved", file)}{Environment.NewLine}{Environment.NewLine}{report}"));
             }
         }, L("ErrReport"), L("OkReport"), status: DiagnosticsStatus);
     }

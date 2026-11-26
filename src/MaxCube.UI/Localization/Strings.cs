@@ -340,5 +340,47 @@ internal static class Strings
         ["HelpDevicesBody"] = T("Neue Geräte: Suche starten, Anlerntaster am Gerät drücken, Name vergeben, Raum wählen (ein neuer Raum braucht ein Heizkörperthermostat) und zuordnen. Umbenennen, Verschieben, Löschen und die Raumreihenfolge ändern die Metadaten des Cubes und müssen bestätigt werden. Danach hilft „Zustand neu laden“.", "New devices: start the search, press the pairing button on the device, enter a name, choose a room (a new room needs a heating thermostat) and assign. Renaming, moving, deleting and room order change the cube's metadata and must be confirmed. “Reload state” helps afterwards.", "Nouveaux appareils : lancez la recherche, appuyez sur le bouton d'appairage, donnez un nom, choisissez une pièce (une nouvelle pièce exige un thermostat de radiateur) et affectez. Renommer, déplacer, supprimer et l'ordre des pièces modifient les métadonnées du Cube et doivent être confirmés. Ensuite « Recharger l'état » aide.", "Nuovi dispositivi: avvia la ricerca, premi il pulsante di abbinamento, assegna un nome, scegli una stanza (una nuova stanza richiede un termostato per radiatore) e assegna. Rinominare, spostare, eliminare e l'ordine delle stanze modificano i metadati del Cube e vanno confermati. Poi aiuta «Ricarica stato».", "Nieuwe apparaten: start het zoeken, druk op de koppelknop, geef een naam, kies een ruimte (een nieuwe ruimte heeft een radiatorthermostaat nodig) en wijs toe. Hernoemen, verplaatsen, verwijderen en de volgorde van ruimtes wijzigen de metadata van de Cube en moeten worden bevestigd. Daarna helpt „Status opnieuw laden”.", "Nowe urządzenia: uruchom wyszukiwanie, naciśnij przycisk parowania, nadaj nazwę, wybierz pomieszczenie (nowe pomieszczenie wymaga termostatu grzejnikowego) i przypisz. Zmiana nazwy, przenoszenie, usuwanie i kolejność pomieszczeń zmieniają metadane Cube i wymagają potwierdzenia. Potem pomaga „Wczytaj stan ponownie”."),
         ["HelpCubeTitle"] = T("Zeit, Netzwerk und Diagnose", "Time, network and diagnostics", "Heure, réseau et diagnostic", "Ora, rete e diagnostica", "Tijd, netwerk en diagnose", "Czas, sieć i diagnostyka"),
         ["HelpCubeBody"] = T("Zeitzone und Sommerzeit wählen, Cube-Zeit auf die PC-Zeit setzen, NTP-Server pflegen. Die Netzwerkkonfiguration (UDP) kann den Cube unerreichbar machen und braucht eine Bestätigung. Der Diagnosebericht bleibt lokal. Firmware wird nie geschrieben.", "Choose the time zone and daylight saving, set the cube time to the PC time, maintain NTP servers. The network configuration (UDP) can make the cube unreachable and needs confirmation. The diagnostic report stays local. Firmware is never written.", "Choisissez le fuseau horaire et l'heure d'été, réglez l'heure du Cube sur celle du PC, gérez les serveurs NTP. La configuration réseau (UDP) peut rendre le Cube injoignable et exige une confirmation. Le rapport de diagnostic reste local. Le firmware n'est jamais écrit.", "Scegli fuso orario e ora legale, imposta l'ora del Cube su quella del PC, gestisci i server NTP. La configurazione di rete (UDP) può rendere il Cube irraggiungibile e richiede conferma. Il rapporto diagnostico resta locale. Il firmware non viene mai scritto.", "Kies tijdzone en zomertijd, zet de Cube-tijd op de pc-tijd, beheer NTP-servers. De netwerkconfiguratie (UDP) kan de Cube onbereikbaar maken en vraagt om bevestiging. Het diagnoserapport blijft lokaal. Firmware wordt nooit geschreven.", "Wybierz strefę czasową i czas letni, ustaw czas Cube na czas komputera, zarządzaj serwerami NTP. Konfiguracja sieci (UDP) może uczynić Cube nieosiągalnym i wymaga potwierdzenia. Raport diagnostyczny pozostaje lokalny. Oprogramowanie nigdy nie jest zapisywane."),
+
+        // --- Lokalisierte Enums und Auswahlwerte (0.6.3) ---
+        ["DayMonday"] = T("Montag", "Monday", "Lundi", "Lunedì", "Maandag", "Poniedziałek"),
+        ["DayTuesday"] = T("Dienstag", "Tuesday", "Mardi", "Martedì", "Dinsdag", "Wtorek"),
+        ["DayWednesday"] = T("Mittwoch", "Wednesday", "Mercredi", "Mercoledì", "Woensdag", "Środa"),
+        ["DayThursday"] = T("Donnerstag", "Thursday", "Jeudi", "Giovedì", "Donderdag", "Czwartek"),
+        ["DayFriday"] = T("Freitag", "Friday", "Vendredi", "Venerdì", "Vrijdag", "Piątek"),
+        ["DaySaturday"] = T("Samstag", "Saturday", "Samedi", "Sabato", "Zaterdag", "Sobota"),
+        ["DaySunday"] = T("Sonntag", "Sunday", "Dimanche", "Domenica", "Zondag", "Niedziela"),
+
+        ["ModePermanent"] = T("Dauerhaft", "Permanent", "Permanent", "Permanente", "Permanent", "Stały"),
+        ["ModeNormal"] = T("Normal", "Normal", "Normal", "Normale", "Normaal", "Normalny"),
+        ["ModeNotAvailable"] = T("Nicht verfügbar", "Not available", "Indisponible", "Non disponibile", "Niet beschikbaar", "Niedostępne"),
+        ["PushButtonAutoWithTemperature"] = T("Auto mit Temperatur", "Auto with temperature", "Auto avec température", "Auto con temperatura", "Auto met temperatuur", "Auto z temperaturą"),
+        ["PushButtonManual"] = T("Manuell", "Manual", "Manuel", "Manuale", "Handmatig", "Ręczny"),
+
+        ["DeviceInvalid"] = T("Ungültig", "Invalid", "Invalide", "Non valido", "Ongeldig", "Nieprawidłowy"),
+        ["DeviceHeatingThermostat"] = T("Heizkörperthermostat", "Heating thermostat", "Thermostat de radiateur", "Termostato radiatore", "Radiatorthermostaat", "Termostat grzejnikowy"),
+        ["DeviceHeatingThermostatPlus"] = T("Heizkörperthermostat Plus", "Heating thermostat Plus", "Thermostat de radiateur Plus", "Termostato radiatore Plus", "Radiatorthermostaat Plus", "Termostat grzejnikowy Plus"),
+        ["DeviceWallMountedThermostat"] = T("Wandthermostat", "Wall thermostat", "Thermostat mural", "Termostato a parete", "Wandthermostaat", "Termostat ścienny"),
+        ["DeviceShutterContact"] = T("Fensterkontakt", "Shutter contact", "Contact de fenêtre", "Contatto finestra", "Raamcontact", "Czujnik okna"),
+        ["DevicePushButton"] = T("Taster", "Push button", "Bouton poussoir", "Pulsante", "Drukknop", "Przycisk"),
+
+        ["StateValid"] = T("OK", "OK", "OK", "OK", "OK", "OK"),
+        ["StateNotInitialized"] = T("Nicht initialisiert", "Not initialized", "Non initialisé", "Non inizializzato", "Niet geïnitialiseerd", "Niezainicjowany"),
+        ["StateOutOfDate"] = T("Veraltet", "Out of date", "Obsolète", "Obsoleto", "Verouderd", "Nieaktualny"),
+        ["RadioOk"] = T("OK", "OK", "OK", "OK", "OK", "OK"),
+        ["RadioError"] = T("Fehler", "Error", "Erreur", "Errore", "Fout", "Błąd"),
+        ["RadioControlFailed"] = T("Steuerung fehlgeschlagen", "Control failed", "Contrôle échoué", "Controllo non riuscito", "Besturing mislukt", "Sterowanie nieudane"),
+        ["RadioConfigFailed"] = T("Konfiguration fehlgeschlagen", "Configuration failed", "Configuration échouée", "Configurazione non riuscita", "Configuratie mislukt", "Konfiguracja nieudana"),
+        ["RadioAssignFailed"] = T("Zuordnung fehlgeschlagen", "Assignment failed", "Affectation échouée", "Assegnazione non riuscita", "Toewijzing mislukt", "Przypisanie nieudane"),
+        ["RadioDeleteFailed"] = T("Löschen fehlgeschlagen", "Deletion failed", "Suppression échouée", "Eliminazione non riuscita", "Verwijderen mislukt", "Usuwanie nieudane"),
+
+        ["ZoneCentralEurope"] = T("Mitteleuropa (CET/CEST)", "Central Europe (CET/CEST)", "Europe centrale (CET/CEST)", "Europa centrale (CET/CEST)", "Centraal-Europa (CET/CEST)", "Europa Środkowa (CET/CEST)"),
+        ["ZoneWesternEurope"] = T("Westeuropa (GMT/BST)", "Western Europe (GMT/BST)", "Europe de l'Ouest (GMT/BST)", "Europa occidentale (GMT/BST)", "West-Europa (GMT/BST)", "Europa Zachodnia (GMT/BST)"),
+        ["ZoneEasternEurope"] = T("Osteuropa (EET/EEST)", "Eastern Europe (EET/EEST)", "Europe de l'Est (EET/EEST)", "Europa orientale (EET/EEST)", "Oost-Europa (EET/EEST)", "Europa Wschodnia (EET/EEST)"),
+        ["ZoneCentralEuropeNoDst"] = T("Mitteleuropa ohne Sommerzeit", "Central Europe without daylight saving", "Europe centrale sans heure d'été", "Europa centrale senza ora legale", "Centraal-Europa zonder zomertijd", "Europa Środkowa bez czasu letniego"),
+
+        ["FirmwareShort"] = T("FW", "FW", "FW", "FW", "FW", "FW"),
+        ["Bootloader"] = T("Bootloader", "Bootloader", "Bootloader", "Bootloader", "Bootloader", "Bootloader"),
+        ["ErrorCatalogHint"] = T("Fehlercode {0} – Details im Protokoll", "Error code {0} – see log for details", "Code d'erreur {0} – détails dans le journal", "Codice errore {0} – dettagli nel log", "Foutcode {0} – details in het logboek", "Kod błędu {0} – szczegóły w dzienniku"),
+        ["ErrorCommandDiscarded"] = T("MAX1008: Funkbefehl vom Cube verworfen – Funkauslastung prüfen und später erneut senden.", "MAX1008: Radio command rejected by the Cube – check airtime and retry later.", "MAX1008 : commande radio rejetée par le Cube – vérifier l'occupation radio et réessayer.", "MAX1008: comando radio rifiutato dal Cube – controllare l'occupazione radio e riprovare.", "MAX1008: radiocommando door de Cube verworpen – radiobelasting controleren en later opnieuw proberen.", "MAX1008: polecenie radiowe odrzucone przez Cube – sprawdź obciążenie radia i spróbuj ponownie."),
     };
 }
