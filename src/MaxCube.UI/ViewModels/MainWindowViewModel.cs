@@ -231,6 +231,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _service.StateChanged += OnStateChanged;
         _service.ConnectionChanged += OnConnectionChanged;
         _service.Warning += OnWarning;
+        _service.WarningCode += OnWarningCode;
         _service.StaleChanged += OnStaleChanged;
         _service.AirtimeChanged += OnAirtimeChanged;
         InitializeAdminState();
@@ -284,10 +285,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadNetworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendNetworkCommand))]
     private string host = "127.0.0.1";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReadNetworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendNetworkCommand))]
     private int port = 62910;
 
     [ObservableProperty]
@@ -799,7 +804,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
 
             await RefreshAuditAsync();
-        }, L("ErrHouseMode", mode), L("OkHouseMode", mode));
+        }, L(localizer => localizer.Format("ErrHouseMode", localizer.Get(EnumLabels.Key(mode)))),
+           L(localizer => localizer.Format("OkHouseMode", localizer.Get(EnumLabels.Key(mode)))));
     }
 
     /// <summary>
@@ -1020,7 +1026,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private LocalizedValue PreviewWeek(DayProfile profile, LocalizedValue action)
         => L(localizer => localizer.Format("PreviewWeek", action.In(localizer).Current, SelectedRoom!.Name,
-            profile.Day, profile.Points.Count,
+            localizer.Get(EnumLabels.Key(profile.Day)), profile.Points.Count,
             string.Join(", ", profile.Points.Select(point =>
                 $"{point.Until:HH:mm}={FormatNumber(point.Temperature.Value)}"))));
 
@@ -1040,7 +1046,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             await _service.SetRoomControlModeAsync(roomId, mode, new Temperature(RequestedTemperature), until, token);
             await RefreshAuditAsync();
-        }, L("ErrMode", mode), L("OkMode", mode));
+        }, L(localizer => localizer.Format("ErrMode", localizer.Get(EnumLabels.Key(mode)))),
+           L(localizer => localizer.Format("OkMode", localizer.Get(EnumLabels.Key(mode)))));
     }
 
     /// <summary>
@@ -1127,7 +1134,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            var message = L(localizer => $"{errorPrefix.In(localizer).Current}: {exception.Message}");
+            // Die rohe Ausnahme bleibt im Log; der sichtbare Dialog bekommt einen
+            // vollständig lokalisierten Fehlerhinweis über den Code (0.6.4).
+            var code = ErrorCatalog.FindFirstCode(exception.Message);
+            var message = code is null
+                ? L(localizer => $"{errorPrefix.In(localizer).Current}: {localizer.Get("ErrorGeneric")}")
+                : L("ErrorWithCode", errorPrefix, code);
             OnUiThread(() =>
             {
                 if (!quiet)
@@ -1239,11 +1251,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void OnStateChanged(object? sender, Cube cube) => OnUiThread(() => UpdateRooms(cube));
 
-    private void OnWarning(object? sender, string message) => OnUiThread(() =>
-    {
-        SetWarning(new LocalizedValue(message));
-        _log.Write("WARN", message);
-    });
+    private void OnWarning(object? sender, string message) => _log.Write("WARN", message);
+
+    private void OnWarningCode(object? sender, ServiceWarning warning) => OnUiThread(() =>
+        SetWarning(warning.Parameter is null
+            ? L(warning.Code)
+            : L(warning.Code, warning.Parameter)));
 
     private void OnStaleChanged(object? sender, bool stale) => OnUiThread(() =>
     {
@@ -1503,6 +1516,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _service.StateChanged -= OnStateChanged;
         _service.ConnectionChanged -= OnConnectionChanged;
         _service.Warning -= OnWarning;
+        _service.WarningCode -= OnWarningCode;
         _service.StaleChanged -= OnStaleChanged;
         foreach (var status in _statuses)
         {

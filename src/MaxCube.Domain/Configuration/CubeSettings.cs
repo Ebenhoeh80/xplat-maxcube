@@ -43,4 +43,5 @@ public sealed record CubeNetworkConfiguration(
     string Gateway,
     string Dns1,
     string Dns2,
-    bool Dhcp);
+    bool Dhcp,
+    string? ActiveIp = null);

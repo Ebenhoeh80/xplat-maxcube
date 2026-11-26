@@ -32,7 +32,9 @@ public sealed class LocalizedValue
 
     /// <summary>Neue Instanz mit dem Text in der jetzt gewählten Sprache.</summary>
     public LocalizedValue In(Localizer localizer)
-        => new(_render is null ? Current : _render(localizer));
+        => _render is null
+            ? new LocalizedValue(Current)
+            : new LocalizedValue(_render(localizer), _render);
 
     /// <summary>Hängt ein sprachneutrales Suffix an, ohne die Renderfunktion zu verlieren.</summary>
     public LocalizedValue Append(string suffix)

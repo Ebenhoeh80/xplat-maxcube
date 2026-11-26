@@ -30,6 +30,8 @@ internal static class Composition
         services.AddSingleton<ICubeGateway>(provider => provider.GetRequiredService<CubeGateway>());
         services.AddSingleton<ICubeAdminGateway>(provider => provider.GetRequiredService<CubeGateway>());
         services.AddSingleton<ICubeNetworkConfigurator, UdpNetworkConfigurator>();
+        services.AddSingleton<ICubeMaintenanceGateway>(provider =>
+            new CubeMaintenanceGateway(provider.GetRequiredService<CubeGateway>()));
         services.AddSingleton<IDiscoveryTransport, UdpDiscoveryTransport>();
         services.AddSingleton<ICubeDiscovery, CubeDiscoveryService>();
         services.AddSingleton<ICubeStateStore>(provider => new SqliteStateStore(

@@ -416,10 +416,15 @@
               <TextBlock Text="{Binding NetworkStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[Network]}" FontSize="16" FontWeight="Bold" />
               <TextBlock Text="{Binding Loc[NetworkWarning]}" Foreground="#B0712A" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Loc[NetDhcpNote]}" Foreground="Gray" TextWrapping="Wrap" />
               <WrapPanel ItemSpacing="10" LineSpacing="8">
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[NetIp]}" />
                   <TextBox Width="150" Text="{Binding NetworkIp}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Loc[NetActiveIp]}" />
+                  <TextBox Width="150" Text="{Binding NetworkActiveIp}" IsReadOnly="True" />
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding Loc[NetMask]}" />
@@ -443,6 +448,17 @@
                 <CheckBox Content="{Binding Loc[ConfirmNetwork]}" IsChecked="{Binding ConfirmNetwork}" />
                 <Button Content="{Binding Loc[ReadNetwork]}" Command="{Binding ReadNetworkCommand}" />
                 <Button Content="{Binding Loc[SendNetwork]}" Command="{Binding SendNetworkCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Loc[Maintenance]}" FontSize="16" FontWeight="Bold" />
+              <TextBlock Text="{Binding Loc[MaintenanceWarning]}" Foreground="#B0712A" TextWrapping="Wrap" />
+              <WrapPanel ItemSpacing="12" LineSpacing="8">
+                <CheckBox Content="{Binding Loc[ConfirmReboot]}" IsChecked="{Binding ConfirmReboot}" />
+                <Button Content="{Binding Loc[RebootCube]}" Command="{Binding RebootCubeCommand}" />
+              </WrapPanel>
+              <WrapPanel ItemSpacing="12" LineSpacing="8">
+                <CheckBox Content="{Binding Loc[ConfirmFactoryReset]}" IsChecked="{Binding ConfirmFactoryReset}" />
+                <Button Content="{Binding Loc[FactoryResetCube]}" Command="{Binding FactoryResetCubeCommand}" />
               </WrapPanel>
 
               <TextBlock Text="{Binding DiagnosticsStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
