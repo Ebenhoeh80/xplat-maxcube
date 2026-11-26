@@ -255,6 +255,12 @@ public class AdminViewModelTests : IDisposable
 
         await h.ViewModel.ApplyRoomConfigurationCommand.ExecuteAsync(null);
 
+        h.ViewModel.IsWritePreviewVisible.Should().BeTrue();
+        h.ViewModel.WritePreviewText.Should().Contain("23.0").And.Contain("Wohnen");
+        h.Admin.Configurations.Should().BeEmpty("die Vorschau darf noch nicht senden");
+
+        await h.ViewModel.ConfirmWriteCommand.ExecuteAsync(null);
+
         var sent = h.Admin.Configurations.Should().ContainSingle().Subject;
         sent.Comfort.Value.Should().Be(23.0);
         sent.WindowOpenMinutes.Should().Be(5);
@@ -270,6 +276,7 @@ public class AdminViewModelTests : IDisposable
         h.ViewModel.ConfigMaximum = 25.0;
 
         await h.ViewModel.ApplyRoomConfigurationCommand.ExecuteAsync(null);
+        await h.ViewModel.ConfirmWriteCommand.ExecuteAsync(null);
 
         h.ViewModel.HasError.Should().BeTrue();
         h.ViewModel.ErrorMessage.Should().Contain("MAX1050");
@@ -279,6 +286,65 @@ public class AdminViewModelTests : IDisposable
         h.ViewModel.DismissErrorCommand.Execute(null);
         h.ViewModel.HasError.Should().BeFalse();
         h.ViewModel.ErrorHint.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Cancelling_a_preview_sends_nothing_and_keeps_edit_unsaved()
+    {
+        var h = await CreateAsync();
+        h.ViewModel.ConfigComfort = 24.0;
+
+        await h.ViewModel.ApplyRoomConfigurationCommand.ExecuteAsync(null);
+
+        h.ViewModel.IsWritePreviewVisible.Should().BeTrue();
+        h.ViewModel.CancelWriteCommand.Execute(null);
+        h.ViewModel.IsWritePreviewVisible.Should().BeFalse();
+        h.ViewModel.ConfirmWriteCommand.CanExecute(null).Should().BeFalse();
+        h.Admin.Configurations.Should().BeEmpty();
+        h.ViewModel.DirtyText.Should().Contain("Konfiguration");
+    }
+
+    [Fact]
+    public async Task Editing_shows_dirty_and_a_successful_save_clears_only_that_area()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        vm.HasDirty.Should().BeFalse();
+
+        vm.SelectedDay.Points[0].Temperature = 18.5;
+        vm.ConfigComfort = 23.0;
+
+        vm.DirtyText.Should().Contain("Wochenprofil").And.Contain("Konfiguration");
+
+        await vm.SaveWeekProfileCommand.ExecuteAsync(null);
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+
+        vm.DirtyText.Should().NotContain("Wochenprofil").And.Contain("Konfiguration");
+
+        await vm.ApplyRoomConfigurationCommand.ExecuteAsync(null);
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+
+        vm.HasDirty.Should().BeFalse();
+        vm.DirtyText.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Disabled_write_buttons_show_a_localized_reason()
+    {
+        var h = await CreateAsync(connect: false);
+        h.ViewModel.WeekWriteHint.Should().Contain("keine Verbindung");
+        h.ViewModel.ConfigWriteHint.Should().Contain("keine Verbindung");
+        h.ViewModel.HouseWriteHint.Should().Be("Keine Räume ausgewählt.");
+
+        await h.ViewModel.ConnectCommand.ExecuteAsync(null);
+
+        h.ViewModel.WeekWriteHint.Should().Be("Bereit zum Senden");
+        h.ViewModel.SelectedDay = h.ViewModel.WeekDays.First(day => day.Day == DayOfWeek.Tuesday);
+        h.ViewModel.WeekWriteHint.Should().Contain("Wochenprofil nicht gelesen");
+        h.ViewModel.ConfigWriteHint.Should().Be("Bereit zum Senden");
+
+        var withoutAdmin = await CreateAsync(withAdmin: false);
+        withoutAdmin.ViewModel.ConfigWriteHint.Should().Contain("unterstützt keine Konfiguration");
     }
 
     [Fact]
@@ -501,6 +567,11 @@ public class AdminViewModelTests : IDisposable
 
         await h.ViewModel.CopyWeekToSelectedRoomsCommand.ExecuteAsync(null);
 
+        h.ViewModel.IsWritePreviewVisible.Should().BeTrue();
+        h.Core.ProfileCalls.Should().BeEmpty();
+
+        await h.ViewModel.ConfirmWriteCommand.ExecuteAsync(null);
+
         h.Core.ProfileCalls.Should().ContainSingle().Which.Should().Be((2, DayOfWeek.Monday));
         h.ViewModel.SuccessText.Should().Be("1 Tagesprofile auf 1 Raum/Räume kopiert.");
     }
@@ -513,6 +584,11 @@ public class AdminViewModelTests : IDisposable
         h.ViewModel.CopyConfigurationToSelectedRoomsCommand.NotifyCanExecuteChanged();
 
         await h.ViewModel.CopyConfigurationToSelectedRoomsCommand.ExecuteAsync(null);
+
+        h.ViewModel.IsWritePreviewVisible.Should().BeTrue();
+        h.Admin.Calls.Should().NotContain("config:2");
+
+        await h.ViewModel.ConfirmWriteCommand.ExecuteAsync(null);
 
         h.Admin.Calls.Should().Contain("config:2");
         h.Cube.GetRoom(2)!.ComfortTemperature.Value.Should().Be(22.0);

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.Net.Sockets;
@@ -13,6 +14,7 @@ using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
 using MaxCube.UI.Fakes;
 using MaxCube.UI.Localization;
+using MaxCube.UI.Services;
 using MaxCube.UI;
 using DayOfWeek = MaxCube.Domain.Enums.DayOfWeek;
 
@@ -59,6 +61,30 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _actionCts;
     private string? _statusBeforeCancel;
 
+    /// <summary>
+    ///cwd 0.6.2: Ein riskanter Schreibbefehl wird erst nach einer sichtbaren Vorschau
+    /// ausgeführt. Die Aktion wird dafür zwischengespeichert, nicht sofort gesendet.
+    /// </summary>
+    private PendingWrite? _pendingWrite;
+
+    /// <summary>Letzte als gespeichert betrachtete Bearbeitung für den Dirty-Schutz, je Raum.</summary>
+    private string? _savedWeekSignature;
+    private int? _savedWeekRoomId;
+    private string? _savedConfigSignature;
+    private int? _savedConfigRoomId;
+
+    private static readonly HashSet<string> ConfigSignatureProperties = new(StringComparer.Ordinal)
+    {
+        nameof(ConfigComfort), nameof(ConfigEco), nameof(ConfigMaximum), nameof(ConfigMinimum),
+        nameof(ConfigWindowTemperature), nameof(ConfigWindowMinutes), nameof(ConfigOffset),
+        nameof(BoostMinutes), nameof(BoostValveAngle), nameof(DecalcificationDay),
+        nameof(DecalcificationHour), nameof(ValveOffsetPercent),
+    };
+
+    private sealed record PendingWrite(
+        Func<CancellationToken, Task> Action, string ErrorPrefix, string? SuccessText,
+        DataStatusViewModel? Status);
+
     /// <summary>Herence und Alter pro Bereich; nie in der Domäne, immer im ViewModel.</summary>
     private readonly DataStatusViewModel[] _statuses;
 
@@ -91,13 +117,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IAppVersionProvider? versionProvider = null,
         Localizer? localizer = null,
         IAppLog? log = null,
-        ILogStore? logStore = null)
+        ILogStore? logStore = null,
+        IUrlOpener? urlOpener = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _dispatcher = dispatcher ?? new ImmediateUiDispatcher();
         _discovery = discovery ?? new DesignTimeDiscovery();
         _loc = localizer ?? new Localizer("de");
+        _urlOpener = urlOpener ?? new DesktopUrlOpener();
         _logStore = logStore ?? log as ILogStore;
         _log = log ?? _logStore ?? (IAppLog)new NullAppLog();
         if (_logStore is not null)
@@ -149,7 +177,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         SelectedDay = WeekDays.First();
+        PropertyChanged += OnEditableValueChanged;
+        foreach (var day in WeekDays)
+        {
+            day.Points.CollectionChanged += OnWeekPointsChanged;
+        }
+
         RefreshStatusBar();
+        RefreshDirtyState();
     }
 
     [ObservableProperty]
@@ -230,6 +265,34 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(SetHouseComfortCommand))]
     [NotifyCanExecuteChangedFor(nameof(SetHouseTemporaryCommand))]
     private bool isBusy;
+
+    /// <summary>Kontext des laufenden Vorgangs für das modale „Beschäftigt“-Overlay.</summary>
+    [ObservableProperty]
+    private string busyText = "";
+
+    /// <summary>Vorschau eines riskanten Schreibbefehls vor dem eigentlichen Senden.</summary>
+    [ObservableProperty]
+    private string writePreviewText = "";
+
+    [ObservableProperty]
+    private bool isWritePreviewVisible;
+
+    /// <summary>Sichtbarer Hinweis auf ungespeicherte Bearbeitungen.</summary>
+    [ObservableProperty]
+    private string dirtyText = "";
+
+    [ObservableProperty]
+    private bool hasDirty;
+
+    /// <summary>Begründung, warum eine Schreibaktion gerade gesperrt ist.</summary>
+    [ObservableProperty]
+    private string weekWriteHint = "";
+
+    [ObservableProperty]
+    private string configWriteHint = "";
+
+    [ObservableProperty]
+    private string houseWriteHint = "";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DisconnectCommand))]
@@ -712,7 +775,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
 
             await RefreshAuditAsync();
-        }, L("ErrCopyProfile"), L("OkCopyProfile", days.Length));
+            MarkWeekSaved();
+        }, L("ErrCopyProfile"), L("OkCopyProfile", days.Length),
+            previewText: PreviewWeekCopy(days.Length), contextText: L("CopyDay") + " …");
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveWeekProfile))]
@@ -739,7 +804,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             await _service.SetWeekDayProfileAsync(room.Id, profile, token);
             await RefreshAuditAsync();
-        }, L("ErrSendProfile"), L("OkSendProfile"));
+            MarkWeekSaved();
+        }, L("ErrSendProfile"), L("OkSendProfile"),
+            previewText: PreviewWeek(profile, L("SendProfile")), contextText: L("SendProfile") + " …");
     }
 
     [RelayCommand]
@@ -753,6 +820,150 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             SelectedDay.RemovePoint(point);
         }
     }
+
+    private static string FormatNumber(double value)
+        => value.ToString("0.0", CultureInfo.InvariantCulture);
+
+    // --- Dirty-Schutz und verständliche Sperrhinweise (0.6.2) -------------------------
+
+    private void OnEditableValueChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is not null && ConfigSignatureProperties.Contains(args.PropertyName))
+        {
+            RefreshDirtyState();
+        }
+    }
+
+    private void OnWeekPointsChanged(object? sender, NotifyCollectionChangedEventArgs args)
+    {
+        if (args.OldItems is not null)
+        {
+            foreach (SwitchPointViewModel point in args.OldItems)
+            {
+                point.PropertyChanged -= OnWeekPointChanged;
+            }
+        }
+
+        if (args.NewItems is not null)
+        {
+            foreach (SwitchPointViewModel point in args.NewItems)
+            {
+                point.PropertyChanged += OnWeekPointChanged;
+            }
+        }
+
+        RefreshDirtyState();
+    }
+
+    private void OnWeekPointChanged(object? sender, PropertyChangedEventArgs args)
+        => RefreshDirtyState();
+
+    private string WeekSignature()
+        => string.Join("|", WeekDays.Select(day => string.Join(",",
+            day.Points.Select(point => $"{point.UntilText}={FormatNumber(point.Temperature)}"))));
+
+    private string ConfigSignature()
+        => string.Join("|",
+            FormatNumber(ConfigComfort), FormatNumber(ConfigEco), FormatNumber(ConfigMaximum),
+            FormatNumber(ConfigMinimum), FormatNumber(ConfigWindowTemperature), ConfigWindowMinutes,
+            FormatNumber(ConfigOffset), BoostMinutes, BoostValveAngle, DecalcificationDay,
+            DecalcificationHour, ValveOffsetPercent);
+
+    /// <summary>Nach Laden oder erfolgreichem Senden: current state becomes the saved baseline.</summary>
+    internal void MarkWeekSaved()
+    {
+        _savedWeekRoomId = SelectedRoom?.Id;
+        _savedWeekSignature = WeekSignature();
+        RefreshDirtyState();
+    }
+
+    internal void MarkConfigurationSaved()
+    {
+        _savedConfigRoomId = SelectedRoom?.Id;
+        _savedConfigSignature = ConfigSignature();
+        RefreshDirtyState();
+    }
+
+    private void RefreshDirtyState()
+    {
+        var weekDirty = SelectedRoom is not null && _savedWeekRoomId == SelectedRoom.Id
+            && _savedWeekSignature is not null
+            && !string.Equals(_savedWeekSignature, WeekSignature(), StringComparison.Ordinal);
+        var configDirty = SelectedRoom is not null && _savedConfigRoomId == SelectedRoom.Id
+            && _savedConfigSignature is not null
+            && !string.Equals(_savedConfigSignature, ConfigSignature(), StringComparison.Ordinal);
+
+        HasDirty = weekDirty || configDirty;
+        DirtyText = (weekDirty, configDirty) switch
+        {
+            (true, true) => L("DirtyBoth"),
+            (true, false) => L("DirtyWeek"),
+            (false, true) => L("DirtyConfig"),
+            _ => string.Empty,
+        };
+    }
+
+    /// <summary>Ein Grund statt einer stumm deaktivierten Schaltfläche.</summary>
+    private string WriteHint(bool needsRoom, bool needsLoadedWeek, bool needsConfigStatus)
+    {
+        if (IsBusy)
+        {
+            return L("WriteBlockedBusy");
+        }
+
+        if (!IsConnected)
+        {
+            return L("WriteBlockedOffline");
+        }
+
+        if (IsStale)
+        {
+            return L("WriteBlockedStale");
+        }
+
+        if (!CanWriteFrom(RoomsStatus) || (needsConfigStatus && !CanWriteFrom(ConfigStatus)))
+        {
+            return L("WriteBlockedNotRead");
+        }
+
+        if (needsRoom && SelectedRoom is null)
+        {
+            return L("WriteBlockedNoRoom");
+        }
+
+        if (needsLoadedWeek && (SelectedRoom is null || !SelectedDay.WasReadFromCube))
+        {
+            return L("WriteBlockedWeekNotLoaded");
+        }
+
+        return L("WriteReady");
+    }
+
+    internal void RefreshWriteHints()
+    {
+        WeekWriteHint = WriteHint(needsRoom: true, needsLoadedWeek: true, needsConfigStatus: false);
+        ConfigWriteHint = !SupportsAdministration
+            ? L("WriteBlockedUnsupported")
+            : WriteHint(needsRoom: true, needsLoadedWeek: false, needsConfigStatus: true);
+        HouseWriteHint = Rooms.Any(room => room.IsHouseSelected)
+            ? WriteHint(needsRoom: false, needsLoadedWeek: false, needsConfigStatus: false)
+            : L("NoRoomsChosen");
+    }
+
+    private string PreviewWeek(DayProfile profile, string action)
+        => L("PreviewWeek", action, SelectedRoom!.Name, profile.Day, profile.Points.Count,
+            string.Join(", ", profile.Points.Select(point =>
+                $"{point.Until:HH:mm}={FormatNumber(point.Temperature.Value)}")));
+
+    private string PreviewWeekCopy(int count)
+        => L("PreviewWeekCopy", count, SelectedRoom!.Name);
+
+    private string PreviewConfiguration(string action)
+        => L("PreviewConfig", action, SelectedRoom!.Name, FormatNumber(ConfigComfort),
+            FormatNumber(ConfigEco), FormatNumber(ConfigOffset));
+
+    private string PreviewConfigurationCopy(int count)
+        => L("PreviewConfigCopy", count, SelectedRoom!.Name, FormatNumber(ConfigComfort));
 
     private async Task SetModeAsync(int roomId, RoomControlMode mode, DateTimeOffset? until)
     {
@@ -773,10 +984,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task RunAsync(
         Func<CancellationToken, Task> action, string errorPrefix, string? successText = null,
-        bool quiet = false, DataStatusViewModel? status = null)
+        bool quiet = false, DataStatusViewModel? status = null, string? previewText = null,
+        string? contextText = null)
     {
         if (IsBusy)
         {
+            return;
+        }
+
+        // 0.6.2: Riskante Schreibbefehle werden nicht sofort gesendet. Die Aktion liegt
+        // bis zur ausdrücklichen Bestätigung lokal im ViewModel; ein Abbruch sendet nichts.
+        if (!quiet && !string.IsNullOrWhiteSpace(previewText))
+        {
+            _pendingWrite = new PendingWrite(action, errorPrefix, successText, status);
+            WritePreviewText = previewText;
+            IsWritePreviewVisible = true;
+            ConfirmWriteCommand.NotifyCanExecuteChanged();
+            CancelWriteCommand.NotifyCanExecuteChanged();
             return;
         }
 
@@ -787,11 +1011,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 _actionCts = cts;
                 IsBusy = true;
+                BusyText = string.IsNullOrWhiteSpace(contextText) ? L("Busy") : contextText;
                 ErrorMessage = string.Empty;
                 SuccessText = string.Empty;
                 // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
                 // stehen bleiben (Sonnet N10).
                 WarningText = string.Empty;
+            }
+            else if (!string.IsNullOrWhiteSpace(contextText))
+            {
+                BusyText = contextText;
             }
 
             status?.MarkLoading();
@@ -859,6 +1088,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     IsBusy = false;
                 }
 
+                BusyText = string.Empty;
+
                 if (_cubeTabReadPending && !IsBusy && SelectedTabIndex == TabIndex.Cube)
                 {
                     _cubeTabReadPending = false;
@@ -887,6 +1118,37 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         StatusText = L("StatusCancelling");
         _actionCts?.Cancel();
         _service.CancelActiveOperation();
+    }
+
+    private bool HasPendingWrite => _pendingWrite is not null;
+
+    /// <summary>Führt genau die zuvor angezeigte Aktion aus; ohne Klick kein Sendevorgang.</summary>
+    [RelayCommand(CanExecute = nameof(HasPendingWrite))]
+    private async Task ConfirmWriteAsync()
+    {
+        var pending = _pendingWrite;
+        if (pending is null)
+        {
+            return;
+        }
+
+        _pendingWrite = null;
+        IsWritePreviewVisible = false;
+        WritePreviewText = string.Empty;
+        ConfirmWriteCommand.NotifyCanExecuteChanged();
+        CancelWriteCommand.NotifyCanExecuteChanged();
+        await RunAsync(pending.Action, pending.ErrorPrefix, pending.SuccessText, status: pending.Status);
+    }
+
+    /// <summary>Verwirft eine Vorschau; der Cube bleibt unverändert.</summary>
+    [RelayCommand(CanExecute = nameof(HasPendingWrite))]
+    private void CancelWrite()
+    {
+        _pendingWrite = null;
+        IsWritePreviewVisible = false;
+        WritePreviewText = string.Empty;
+        ConfirmWriteCommand.NotifyCanExecuteChanged();
+        CancelWriteCommand.NotifyCanExecuteChanged();
     }
 
     private async Task RefreshAuditAsync()
@@ -1082,6 +1344,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             ProfileRoomName = L("NoRoomSelected");
             WeekStatus.Reset();
+            MarkWeekSaved();
             return;
         }
 
@@ -1106,6 +1369,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         _weekProfileLoadedFor = room.Id;
+        MarkWeekSaved();
         UpdateWeekStatus();
         SaveWeekProfileCommand.NotifyCanExecuteChanged();
     }
@@ -1147,6 +1411,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _actionCts?.Cancel();
         _actionCts?.Dispose();
+        PropertyChanged -= OnEditableValueChanged;
+        foreach (var day in WeekDays)
+        {
+            day.Points.CollectionChanged -= OnWeekPointsChanged;
+            foreach (var point in day.Points)
+            {
+                point.PropertyChanged -= OnWeekPointChanged;
+            }
+        }
+
         _loc.PropertyChanged -= OnLanguageChanged;
         _service.AirtimeChanged -= OnAirtimeChanged;
         _service.StateChanged -= OnStateChanged;

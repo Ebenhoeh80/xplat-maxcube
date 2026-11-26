@@ -18,7 +18,8 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.1** (`Directory.Build.props:3`), released **2026-11-25**. See
+Version **0.6.2** (`Directory.Build.props:3`), **not released yet** (work in
+progress as of 2026-11-25). The last published release is 0.6.1. See
 [CHANGELOG.md](CHANGELOG.md).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
@@ -98,7 +99,12 @@ the connection fails.
 
 - An **eQ-3 MAX! Cube LAN gateway** reachable on the local network (default port
   `62910`). No flashing, no CUL/CUN, no cloud.
-- Windows 10+ or Linux with X11/Wayland for the desktop UI.
+- Windows 10+ or Linux with X11/Wayland for the desktop UI. On Debian/Ubuntu
+  SkiaSharp/Avalonia need system libraries that are not part of the ZIP:
+  `sudo apt-get update && sudo apt-get install -y libfontconfig1 libx11-6 libxcursor1 libxext6 libxfixes3 libxi6 libxrandr2 libice6 libsm6 libgl1 libvulkan1 xdg-utils` (`xdg-utils` only for external links).
+  Check with `./MaxCube.UI.Desktop --check-linux-deps`. Opening the project link
+  needs `xdg-open`, `gio` or `wslview`; without them the URL is shown in the
+  status bar instead of terminating the app.
 - For building from source: **.NET 10 SDK**. The released ZIPs do not need it.
 
 ## Installation
@@ -111,8 +117,11 @@ built by GitHub Actions for every `v*` [tag](https://github.com/Ebenhoeh80/xplat
 checked with the headless self-test and attached to the release.
 
 - **Windows:** unzip and run `MaxCube.UI.Desktop.exe`.
-- **Linux:** unzip, run `chmod +x MaxCube.UI.Desktop`, then
-  `./MaxCube.UI.Desktop`. An X11 or Wayland session is required.
+- **Linux:** install the system libraries first (see Requirements), unzip, run
+  `chmod +x MaxCube.UI.Desktop`, then `./MaxCube.UI.Desktop`. An X11 or Wayland
+  session is required. Missing system libraries produce a concrete hint instead
+  of a stack trace. For a source checkout, `./start.sh --install-deps` installs
+  them with your sudo password.
 
 ### Build from source
 

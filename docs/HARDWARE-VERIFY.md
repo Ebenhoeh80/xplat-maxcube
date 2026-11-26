@@ -224,3 +224,61 @@ Nur-Lese-Modus: kein Schreibbefehl gesendet.
 ```
 
 **FAKT:** Die Baseline aus §8/§9 ist unverändert. 0.6.1 betrifft ausschließlich ViewModel-Fortsetzungen, Protokollierung und Fehlerhinweise; es wurde kein Schreibbefehl gesendet.
+
+## 11. Deep-QA-Schreibtests 25.11.2026 (kontrolliert)
+
+**FAKT:** Mit demselben `CubeGateway` wie die App wurden am Original-Cube über `0x11` alle sieben Konfigurationsfelder (Komfort, Eco, Max, Min, Offset, Fenster-auf-Temperatur, Fenster-auf-Dauer), über `0x12` alle sechs Ventilfelder (Boost-Minuten/-Winkel, Entkalkungstag/-stunde, Max-Ventil, Ventil-Offset) und ein neun-Punkt-Wochenprofil als `7 + 6`-Telegramme gesendet und nach 6 s Funkübernahme im Read-back bestätigt. Der entscheidende Lauf veränderte nur Raum 1 (Testhelfer wählt `Rooms.First(...)`); der Read-back zeigte z. B. `22,0/17,0/29,5/5,0/0,5/13,0/30`. Der anschließende Restore setzte Raum 1 auf `21,5/16,5/30,5/4,5/0/12,0/15` zurück; `S:` meldete `dutyCycle=0`, `freeSlots=30`.
+
+**BEOBACHTUNG:** Ein früher Lauf mit 33 fehlgeschlagenen Prüfungen war kein Protokollfehler: Bei hoher Funkauslastung reichten 6 s Settle nicht, und eine zweite Restore-Serie mit dichten Retries verschlimmerte den Zustand (verzögerte/verworfene Kommandos, `Command discarded`, `dutyCycle=62` ≈ 98 %). Nach 120 s Wartezeit war der Cube wieder lesbar. **Konsequenz:** Keine Burst-Retries; zwischen Schreibversuchen 90–180 s Pause und vorher `S:`-Duty-Cycle prüfen.
+
+**FAKT (Sollwert-Read-back, siehe auch `ha-maxcube/docs/ENGINEERING.md` §4/§8):** Kontrollierte Probe mit `0x40` in Raum 2 (`Permanently`, 17,0 → 17,5 °C):
+
+```text
+S: dutyCycle=3, freeSlots=31
+Read-back nach +0,0 s:  Modus=Permanently, Soll=17,0
+Read-back nach +4,1 s:  Modus=Permanently, Soll=17,5
+Read-back nach +10,8 s: Modus=Permanently, Soll=17,5
+Ruecksetzung gesendet, warte 6 s ... Nach Ruecksetzung: Soll=17,0
+SETPOINT RESTORE OK
+```
+
+**INFERENZ:** Die Funkübernahme für Sollwerte braucht auf diesem Cube mehrere Sekunden. `S:` quittiert nur den Sendevorgang, nicht die fachliche Annahme; ein sofortiger Read-back darf veraltet sein. Das ist hardwaremäßig **nicht** als Bestätigung nutzbar – die HA-Read-back-Logik aktualisiert nur den Anzeigezustand.
+
+## 12. Zustand nach den Schreibtests und Mehrgeräte-Räume
+
+**FAKT:** Die Roh-`C:`-Blöcke (nur-lesend, 25.11.2026) zeigen für alle sechs Master-Heizkörperthermostate die dokumentierte Basiskonfiguration:
+
+```text
+1ab088 2b 21 3d 09 07 18 03 30   (21,5/16,5/ON/OFF/0/12,0/15)
+098e54 2b 21 3d 09 07 18 03 30   (21,5/16,5/ON/OFF/0/12,0/15)
+09a434 2a 22 3d 09 07 18 03 30   (21,0/17,0/ON/OFF/0/12,0/15)
+0991b6 2b 21 3d 09 07 18 03 30
+099186 2a 22 3d 09 07 18 03 30
+098eab 2b 21 3d 09 07 18 03 30
+```
+
+**FAKT:** `CubeStateAssembler.cs:108-135` wendet **jeden** `C:`-Block eines Raums an; bei mehreren konfigurierbaren Geräten gewinnt der zuletzt gelesene Block. Raum 2 enthält zusätzlich `098e57` (basiskonform) und den Wandthermostaten `07076a` (`29 22 3d 09 44 48 44 6d`), Raum 3 zusätzlich den Wandthermostaten `19c15a` (`2a 22 3d 09 44 48 55 08`). Die raumweise Anzeige (`20,5/17,0/−1,5/4,5/20` bzw. `21,0/17,0/−1,5/4,5/25`) stammt daher aus diesen Wandthermostat-Blöcken, nicht aus einer Mutation der Master.
+
+**BEOBACHTUNG:** Versuche, die Wandthermostate mit den Master-Werten zu überschreiben, wurden mit `S:` quittiert (`dutyCycle=4` → `1d`), aber nach 180 s blieben ihre `C:`-Blöcke unverändert. **INFERENZ:** Wandthermostate behalten geräteeigene Konfigurationswerte; die Raumansicht ist bei Mehrgeräte-Räumen keine verlässliche Kopie der Master-Konfiguration. Es wurden danach keine weiteren Schreibversuche unternommen.
+
+**FAKT:** Nach den Tests ist der Cube wieder im dokumentierten Ursprungszustand, soweit er in §8/§10 belegt ist: Serie `JEQ0355273`, FW 275, 6 Räume, 9 Geräte, alle Master-Basiskonfiguration, Raum 1/4/5/6 auch in der Raumansicht baseline. Räume 2/3 weichen in der Raumansicht nur durch die eigenen Wandthermostat-Werte ab. Ein abschließender nur-lesender HwCheck war wegen eines einzelnen Timeouts beim `L:`-Empfang nicht vollständig; die Roh-`C:`-Lesung oben ersetzt ihn für die Konfigurationsaussage. **UNBEKANNT:** ob die Wandthermostat-Werte vor allen Tests exakt dieselben waren (kein vollständiger Vorab-Capture aller `C:`-Blöcke vorhanden).
+
+## 13. Hardwarefreie Abnahme der UX v0.6.2 (25.11.2026)
+
+**FAKT:** Die Vorschau vor Wochenprofil-/Konfigurations-Schreiben, der Dirty-Hinweis und die Sperrbegründungen wurden ohne Cube-Zugriff geprüft: Build 0 Warnungen/0 Fehler, 486/486 Tests, `--selfcheck OK`. Der erste Selbsttest lief noch vor der Versionserhöhung und meldete `0.6.1`; nach `Directory.Build.props:3` ist der Build nun `0.6.2`, und der erneute hardwarefreie `--selfcheck` bestätigt `SELFCHECK OK … 0.6.2 | … | SQLite ok`. **INFERENZ:** Die Änderung betrifft nur Bestätigung und Anzeige; sie erzeugt ohne Klick auf „Jetzt senden“ kein Telegramm und verändert damit den Cube nicht.
+
+## 14. Linux-Startfehler: fehlende Systembibliotheken (25.11.2026)
+
+**FAKT (Nutzerprotokoll, Runde 1, WSL2 Debian 13):** `./start.sh` baute erfolgreich, der GUI-Start brach mit `System.TypeInitializationException` in `SkiaSharp.SKImageInfo` ab. Ursache war `libfontconfig.so.1: cannot open shared object file`. **FAKT (eigene Reproduktion):** `ldd …/libSkiaSharp.so` meldete genau diese Bibliothek als fehlend; `libfontconfig1` war nicht installiert. Aus den DllImports von `Avalonia.X11.dll` waren zusätzlich sechs X11-Bibliotheken belegt, die ebenfalls fehlten (`libX11`, `libXcursor`, `libXext`, `libXfixes`, `libXi`, `libXrandr`). `DISPLAY=:0` und der WSLg-Socket `/tmp/.X11-unix/X0` sind vorhanden – betroffen sind die Client-Bibliotheken, nicht der Display-Server.
+
+**FAKT (Nutzerprotokoll, Runde 2):** Nach Installation der ersten sieben Pakete startete die App erneut nicht: `Native Bibliothek fehlt: Unable to load shared library 'libICE.so.6'`. **FAKT (eigene Prüfung):** `libICE.so.6` und `libSM.so.6` sind in `Avalonia.X11.dll` per DllImport belegt, ebenso `libGL.so.1`; `Avalonia.Skia.dll` importiert `libvulkan.so.1`. Alle vier fehlten in der WSL. Die vollständige Liste umfasst elf Bibliotheken: fontconfig, sechs X11, ICE, SM, GL und Vulkan.
+
+**FAKT (Maßnahmen):** `Program.cs` prüft alle elf Bibliotheken vor dem Avalonia-Start via `NativeLibrary.TryLoad` und nennt bei Fehlern den kompletten Debian/Ubuntu-Installationsbefehl; ein `DllNotFoundException`-Handler fängt weitere Fälle ab. `--check-linux-deps` macht die Prüfung fensterlos auch im Release-ZIP nutzbar. `start.sh` prüft vor dem (teuren) Build und bietet `--install-deps` an, das `sudo apt-get` nach Eingabe des Nutzerpassworts ausführt. Beide READMEs nennen die Systemvoraussetzung; zwei Regressionstests halten Code, Skript und Doku zusammen (`LinuxDependencyTests.cs`). Verifikation: Build 0/0, 486/486 Tests, `--selfcheck OK` unter Windows **und** Debian 13; `./start.sh` brach in der WSL vor der Erweiterung sofort mit Exit 2 ab statt mit Stacktrace nach ~59 s.
+
+**FAKT (Nutzerprotokoll, Runde 3):** Nach `./start.sh --install-deps` startete die Oberfläche unter WSLg; der nächste und letzte Abbruch kam erst vom Klick auf den Projekt-Link (§15). Die elf Bibliotheken sind damit als sufficient für den GUI-Start belegt. **FAKT (Nutzerbestätigung 26.11.2026):** „ja das klappt“ – `./start.sh` startet die Oberfläche in WSLg und der Link-Klick funktioniert; kein Abbruch mehr. **UNBEKANNT:** Die visuelle Prüfung der 0.6.2-Bedienelemente (Vorschau, Dirty, Busy) unter echter Avalonia-Last steht weiter aus. Kein Cube-Zugriff, kein Commit/Tag/Release.
+
+## 15. Absturz beim Öffnen des Projekt-Links (25.11.2026)
+
+**FAKT (Nutzerprotokoll):** Nach dem erfolgreichen GUI-Start in WSLg beendete ein Klick auf den GitHub-Link die App: `System.ComponentModel.Win32Exception (2): An error occurred trying to start process 'https://github.com/Ebenhoeh80/xplat-maxcube' … No such file or directory`, aus `MainWindowViewModel.OpenProjectUrl()` in `MainWindowViewModel.About.cs:61`. **FAKT (eigene Prüfung):** In der WSL sind `xdg-open`, `gio`, `wslview`, `gnome-open` und `kde-open` nicht vorhanden, `BROWSER` ist leer. .NETs `UseShellExecute = true` braucht auf Linux genau solch einen Opener und wirft sonst eine ungehandelte `Win32Exception` bis in den Dispatcher.
+
+**FAKT (Maßnahmen):** Neuer `IUrlOpener`/`DesktopUrlOpener` (`src/MaxCube.UI/Services/UrlOpener.cs`) versucht Windows-Shell, `xdg-open`, `gio open`, `wslview` bzw. macOS `open` und fängt jeden Startfehler ab. `OpenProjectUrlCommand` und `OpenLogFolderCommand` nutzen ihn; bei Fehlern steht die lokalisierte Meldung „Öffnen fehlgeschlagen – bitte manuell öffnen: {0}" mit der URL bzw. dem Pfad in der Statusleiste. Der neue Katalogschlüssel `OpenExternalFailed` existiert in DE/EN/FR/IT/NL/PL; zwei ViewModel-Tests prüfen Erfolgs- und Fehlerpfad ohne echten Prozessstart. `start.sh --install-deps` und beide READMEs nennen jetzt auch `xdg-utils` als Opener-Paket. Verifikation: Build 0/0, 486/486 Tests, `--selfcheck OK 0.6.2`. **FAKT (Nutzerbestätigung 26.11.2026):** „ja das klappt“ – Start und Link-Klick in WSLg funktionieren, die App bleibt stabil. Die zuvor befürchtete `Win32Exception` ist behoben. **UNBEKANNT:** ob der Browser tatsächlich geöffnet oder die URL in der Statusleiste angezeigt wurde – beide Pfade sind akzeptiert und absturzsicher. Kein Cube-Zugriff, kein Commit/Tag/Release.

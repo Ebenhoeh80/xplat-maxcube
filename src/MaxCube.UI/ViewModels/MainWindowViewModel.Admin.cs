@@ -176,6 +176,7 @@ public partial class MainWindowViewModel
         if (room is null)
         {
             HasValveConfiguration = false;
+            MarkConfigurationSaved();
             RefreshAdminCommands();
             return;
         }
@@ -196,6 +197,13 @@ public partial class MainWindowViewModel
             DecalcificationHour = room.DecalcificationHour;
             ValveOffsetPercent = CubeApplicationService.ValveOffsetToPercent(room.ValveOffsetRaw);
             RenameRoomText = room.Name;
+        }
+
+        // Nur die tatsächlich übernommenen Cube-Werte sind die Basis. Bei keepEdited
+        // bleiben getippte Werte stehen und dürfen nicht als gespeichert markiert werden.
+        if (!keepEdited)
+        {
+            MarkConfigurationSaved();
         }
 
         RefreshAdminCommands();
@@ -322,7 +330,9 @@ public partial class MainWindowViewModel
         {
             await _service.SetRoomConfigurationAsync(room.Id, CurrentConfigurationValues(), token);
             await RefreshAuditAsync();
-        }, L("ErrConfig"), L("OkConfig"));
+            MarkConfigurationSaved();
+        }, L("ErrConfig"), L("OkConfig"),
+            previewText: PreviewConfiguration(L("SendConfig")), contextText: L("SendConfig") + " …");
     }
 
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
@@ -339,6 +349,7 @@ public partial class MainWindowViewModel
             await _service.SetBoostAndDecalcificationAsync(
                 room.Id, BoostMinutes, BoostValveAngle, DecalcificationDay, DecalcificationHour, token);
             await RefreshAuditAsync();
+            MarkConfigurationSaved();
         }, L("ErrBoost"), L("OkBoost"));
     }
 
@@ -355,6 +366,7 @@ public partial class MainWindowViewModel
         {
             await _service.SetValveOffsetAsync(room.Id, ValveOffsetPercent, token);
             await RefreshAuditAsync();
+            MarkConfigurationSaved();
         }, L("ErrValveOffset"), L("OkValveOffset"));
     }
 
@@ -381,7 +393,9 @@ public partial class MainWindowViewModel
             }
 
             await RefreshAuditAsync();
-        }, L("ErrConfig"), L("OkCopyConfig", targets.Length));
+        }, L("ErrConfig"), L("OkCopyConfig", targets.Length),
+            previewText: PreviewConfigurationCopy(targets.Length),
+            contextText: L("CopyConfig") + " …");
     }
 
     private RoomConfigurationValues CurrentConfigurationValues() => new(
@@ -484,6 +498,7 @@ public partial class MainWindowViewModel
             }
 
             await RefreshAuditAsync();
-        }, L("ErrCopyProfile"), L("OkCopyWeek", plan.Length, targets.Length));
+        }, L("ErrCopyProfile"), L("OkCopyWeek", plan.Length, targets.Length),
+            previewText: PreviewWeekCopy(plan.Length), contextText: L("CopyWeek") + " …");
     }
 }

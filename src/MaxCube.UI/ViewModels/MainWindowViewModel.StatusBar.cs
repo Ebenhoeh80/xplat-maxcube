@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -119,6 +118,7 @@ public partial class MainWindowViewModel
             : L("StatusBarLastAction", $"{action} ({(_lastActionAt ?? _clock.Now).ToLocalTime():HH:mm:ss})");
 
         StatusBarLogText = LogEnabled ? L("StatusBarLogOn") : L("StatusBarLogOff");
+        RefreshWriteHints();
     }
 
     public void LoadLog()
@@ -172,21 +172,9 @@ public partial class MainWindowViewModel
             return;
         }
 
-        try
+        if (!_urlOpener.TryOpen(directory))
         {
-            if (OperatingSystem.IsWindows())
-            {
-                Process.Start(new ProcessStartInfo("explorer.exe", directory) { UseShellExecute = true });
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                Process.Start(new ProcessStartInfo("xdg-open", directory) { UseShellExecute = true });
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
-                                              or System.ComponentModel.Win32Exception)
-        {
-            SuccessText = L("LogExportFailed", exception.Message);
+            StatusText = L("OpenExternalFailed", directory);
         }
     }
 }

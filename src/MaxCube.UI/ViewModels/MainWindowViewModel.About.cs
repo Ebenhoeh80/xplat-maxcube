@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.Input;
+using MaxCube.UI.Services;
 
 namespace MaxCube.UI.ViewModels;
 
@@ -13,6 +13,8 @@ public partial class MainWindowViewModel
     public const string AuthorName = "Ebenhoeh80";
     public const string LicenseName = "MIT";
     public const string ProjectUrl = "https://github.com/Ebenhoeh80/xplat-maxcube";
+
+    private readonly IUrlOpener _urlOpener;
 
     /// <summary>Volltext der MIT-Lizenz, wie er auch im Repository liegt.</summary>
     public const string LicenseText = """
@@ -53,11 +55,18 @@ public partial class MainWindowViewModel
 
     public string AboutPrivacyText => L("AboutPrivacy");
 
-    /// <summary>Öffnet die Projektseite nur auf ausdrücklichen Benutzerklick.</summary>
+    /// <summary>
+    /// Öffnet die Projektseite nur auf ausdrücklichen Benutzerklick. Fehlt auf Linux ein
+    /// Browser-Opener, wird die URL als Status gemeldet statt die App zu beenden.
+    /// </summary>
     [RelayCommand]
     private void OpenProjectUrl()
     {
-        var start = new ProcessStartInfo(ProjectUrl) { UseShellExecute = true };
-        Process.Start(start);
+        if (_urlOpener.TryOpen(ProjectUrl))
+        {
+            return;
+        }
+
+        StatusText = L("OpenExternalFailed", ProjectUrl);
     }
 }

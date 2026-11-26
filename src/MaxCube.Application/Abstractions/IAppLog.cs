@@ -1,5 +1,29 @@
 namespace MaxCube.Application.Abstractions;
 
+/// <summary>Mindeststufe für einen gefilterten Log-Export.</summary>
+public enum LogExportLevel
+{
+    Info = 0,
+    Warn = 1,
+    Error = 2,
+}
+
+/// <summary>
+/// Optionen für den lokalen Log-Export. Standardmäßig werden alle protokollierten Stufen
+/// unverändert exportiert; personenbezogene Angaben werden nur auf Wunsch redigiert.
+/// </summary>
+public sealed record LogExportOptions
+{
+    /// <summary>Nur Zeilen ab dieser Stufe aufnehmen (INFO &lt; WARN &lt; ERROR).</summary>
+    public LogExportLevel MinLevel { get; init; } = LogExportLevel.Info;
+
+    /// <summary>IP-Adressen, Seriennummern und bekannte Namen durch Platzhalter ersetzen.</summary>
+    public bool RedactPersonalData { get; init; }
+
+    /// <summary>Bekannte Raum- und Gerätenamen, die bei der Redaktion ersetzt werden.</summary>
+    public IReadOnlyList<string> KnownNames { get; init; } = Array.Empty<string>();
+}
+
 /// <summary>
 /// Lokales Anwendungsprotokoll (nur Datei, kein Versand). Ersetzt die Logdatei des
 /// Originals; Zugangsdaten und Funknutzlasten gehören nie hinein.
@@ -27,6 +51,12 @@ public interface ILogStore : IAppLog
 
     /// <summary>Schreibt alle Logdateien in ein ZIP im Zielordner und gibt den Pfad zurück.</summary>
     string Export(string targetDirectory);
+
+    /// <summary>
+    /// Schreibt die gefilterten und optional redigierten Logzeilen konsolidiert in ein ZIP.
+    /// Bei keinen passenden Zeilen wird kein Archiv erzeugt und ein leerer Pfad zurückgegeben.
+    /// </summary>
+    string Export(string targetDirectory, LogExportOptions options);
 }
 
 /// <summary>Verwirft alle Einträge; für Tests und die Designzeit.</summary>
@@ -61,5 +91,7 @@ public sealed class NullLogStore : ILogStore
     public IReadOnlyList<string> ReadRecent(int maxEntries)
         => Entries.TakeLast(Math.Max(0, maxEntries)).ToArray();
 
-    public string Export(string targetDirectory) => string.Empty;
+    public string Export(string targetDirectory) => Export(targetDirectory, new LogExportOptions());
+
+    public string Export(string targetDirectory, LogExportOptions options) => string.Empty;
 }

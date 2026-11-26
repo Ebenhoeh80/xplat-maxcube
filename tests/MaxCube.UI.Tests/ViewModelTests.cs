@@ -7,6 +7,7 @@ using MaxCube.Domain.Enums;
 using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
 using MaxCube.UI.Localization;
+using MaxCube.UI.Services;
 using MaxCube.UI.ViewModels;
 using Xunit;
 using DayOfWeek = MaxCube.Domain.Enums.DayOfWeek;
@@ -388,9 +389,16 @@ public class ViewModelTests
 
         await viewModel.CopyDayToWeekCommand.ExecuteAsync(null);
 
+        viewModel.IsWritePreviewVisible.Should().BeTrue();
+        viewModel.WritePreviewText.Should().Contain("Wohnen");
+        gateway.ProfileCalls.Should().BeEmpty("vor der Bestätigung darf nichts gesendet werden");
+
+        await viewModel.ConfirmWriteCommand.ExecuteAsync(null);
+
         gateway.ProfileCalls.Should().ContainSingle()
             .Which.Day.Should().Be(DayOfWeek.Monday);
         viewModel.SuccessText.Should().Be("Profil auf 1 Tag(e) kopiert.");
+        viewModel.IsWritePreviewVisible.Should().BeFalse();
     }
 
     [Fact]
@@ -486,6 +494,31 @@ public class ViewModelTests
         viewModel.LicenseFullText.Should().Contain("MIT License").And.Contain("Permission is hereby granted");
         viewModel.AboutDisclaimerText.Should().Contain("eQ-3");
         viewModel.OpenProjectUrlCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Project_link_without_a_browser_reports_the_url_instead_of_crashing()
+    {
+        var opener = new FakeUrlOpener(succeeds: false);
+        using var viewModel = CreateViewModel(urlOpener: opener);
+
+        viewModel.OpenProjectUrlCommand.Execute(null);
+
+        opener.Target.Should().Be(MainWindowViewModel.ProjectUrl);
+        viewModel.StatusText.Should().Contain(MainWindowViewModel.ProjectUrl);
+    }
+
+    [Fact]
+    public void Project_link_with_a_browser_leaves_the_status_untouched()
+    {
+        var opener = new FakeUrlOpener(succeeds: true);
+        using var viewModel = CreateViewModel(urlOpener: opener);
+        var before = viewModel.StatusText;
+
+        viewModel.OpenProjectUrlCommand.Execute(null);
+
+        opener.Target.Should().Be(MainWindowViewModel.ProjectUrl);
+        viewModel.StatusText.Should().Be(before);
     }
 
     [Fact]
@@ -663,6 +696,9 @@ public class ViewModelTests
 
     private static MainWindowViewModel CreateViewModel() => CreateViewModel(out _, out _);
 
+    private static MainWindowViewModel CreateViewModel(IUrlOpener urlOpener)
+        => CreateViewModel(out _, out _, out _, urlOpener: urlOpener);
+
     private static MainWindowViewModel CreateViewModel(out Cube cube) => CreateViewModel(out cube, out _);
 
     private static MainWindowViewModel CreateViewModelWithGateway(out Cube cube, out FakeGateway gateway)
@@ -684,7 +720,8 @@ public class ViewModelTests
         ICubeDiscovery? discovery = null,
         IAppVersionProvider? versionProvider = null,
         ILogStore? logStore = null,
-        IUiDispatcher? dispatcher = null)
+        IUiDispatcher? dispatcher = null,
+        IUrlOpener? urlOpener = null)
     {
         cube = new Cube(new SerialNumber("JEQ0001234"), 275, new RadioAddress(0x1D2A3C), true);
         cube.AddRoom(new Room(1, "Wohnen", new RadioAddress(0x1D2A3C)));
@@ -697,7 +734,18 @@ public class ViewModelTests
         var clock = new FakeClock();
         var service = new CubeApplicationService(gateway, store, clock);
         return new MainWindowViewModel(service, clock, discovery: discovery, dispatcher: dispatcher,
-            versionProvider: versionProvider, logStore: logStore);
+            versionProvider: versionProvider, logStore: logStore, urlOpener: urlOpener);
+    }
+
+    private sealed class FakeUrlOpener(bool succeeds) : IUrlOpener
+    {
+        public string? Target { get; private set; }
+
+        public bool TryOpen(string target)
+        {
+            Target = target;
+            return succeeds;
+        }
     }
 
     private sealed class FakeClock : IClock

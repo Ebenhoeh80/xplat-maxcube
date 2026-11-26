@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:MaxCube.UI.Controls"
+        xmlns:automation="using:Avalonia.Automation"
         x:Class="MaxCube.UI.Views.MainWindow"
         Title="{Binding WindowTitle}"
         Width="1120"
@@ -158,7 +159,10 @@
               <TextBlock Text="{Binding ProfileRoomName}" FontWeight="Bold" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[WeekHint1]}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding Loc[WeekHint2]}" TextWrapping="Wrap" Foreground="#B0712A" />
-              <Button Content="{Binding Loc[SendProfile]}" Command="{Binding SaveWeekProfileCommand}" />
+              <TextBlock Text="{Binding WeekWriteHint}" Foreground="Gray" TextWrapping="Wrap"
+                        automation:AutomationProperties.Name="{Binding WeekWriteHint}" />
+              <Button Content="{Binding Loc[SendProfile]}" Command="{Binding SaveWeekProfileCommand}"
+                      automation:AutomationProperties.Name="{Binding Loc[SendProfile]}" />
               <Button Content="{Binding Loc[CopyDay]}" Command="{Binding CopyDayToWeekCommand}"
                       ToolTip.Tip="{Binding Loc[CopyDayTip]}" />
               <Button Content="{Binding Loc[CopyWeek]}" Command="{Binding CopyWeekToSelectedRoomsCommand}"
@@ -189,6 +193,8 @@
                                Value="{Binding RequestedTemperature}" />
               </WrapPanel>
               <TextBlock Text="{Binding Loc[HouseHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding HouseWriteHint}" Foreground="Gray" TextWrapping="Wrap"
+                        automation:AutomationProperties.Name="{Binding HouseWriteHint}" />
             </StackPanel>
           </ScrollViewer>
         </TabItem>
@@ -203,6 +209,8 @@
                         ToolTip.Tip="{Binding Loc[HelpButton]}" />
               </WrapPanel>
               <TextBlock Text="{Binding ConfigStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding ConfigWriteHint}" Foreground="Gray" TextWrapping="Wrap"
+                        automation:AutomationProperties.Name="{Binding ConfigWriteHint}" />
               <TextBlock Text="{Binding Loc[ConfigNote]}" Foreground="#B0712A" TextWrapping="Wrap" />
 
               <TextBlock Text="{Binding Loc[ConfigTemperatures]}" FontSize="16" FontWeight="Bold" />
@@ -551,6 +559,9 @@
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
                       HorizontalAlignment="Center">
             <TextBlock Text="{Binding StatusBarDataText}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding DirtyText}" Foreground="#B0712A" TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding HasDirty}"
+                       automation:AutomationProperties.Name="{Binding DirtyText}" />
             <TextBlock Text="{Binding StatusBarActionText}" TextTrimming="CharacterEllipsis" />
           </StackPanel>
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
@@ -568,6 +579,8 @@
               Background="{DynamicResource SystemControlBackgroundAltHighBrush}" MinWidth="280">
         <StackPanel Spacing="14">
           <TextBlock Text="{Binding Loc[Busy]}" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding BusyText}" TextWrapping="Wrap"
+                    automation:AutomationProperties.Name="{Binding BusyText}" />
           <ProgressBar IsIndeterminate="True" />
           <Button Content="{Binding Loc[Cancel]}" Command="{Binding CancelCommand}" HorizontalAlignment="Right" />
         </StackPanel>
@@ -586,6 +599,24 @@
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="{Binding Loc[ErrorOpenLog]}" Command="{Binding ShowLogCommand}" />
             <Button Content="{Binding Loc[Ok]}" Command="{Binding DismissErrorCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Vorschau riskanter Schreibbefehle: erst Bestätigung, dann Sendung. -->
+    <Border Background="#99000000" IsVisible="{Binding IsWritePreviewVisible}">
+      <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="8"
+              Background="{DynamicResource SystemControlBackgroundAltHighBrush}" MinWidth="320" MaxWidth="600">
+        <StackPanel Spacing="14">
+          <TextBlock Text="{Binding Loc[WritePreview]}" FontSize="16" FontWeight="SemiBold" Foreground="#B0712A" />
+          <TextBlock Text="{Binding WritePreviewText}" TextWrapping="Wrap"
+                    automation:AutomationProperties.Name="{Binding WritePreviewText}" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="{Binding Loc[Cancel]}" Command="{Binding CancelWriteCommand}"
+                    automation:AutomationProperties.Name="{Binding Loc[Cancel]}" />
+            <Button Content="{Binding Loc[ConfirmWrite]}" Command="{Binding ConfirmWriteCommand}"
+                    automation:AutomationProperties.Name="{Binding Loc[ConfirmWrite]}" />
           </StackPanel>
         </StackPanel>
       </Border>

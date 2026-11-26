@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using System.Runtime.InteropServices;
 using Avalonia;
 using MaxCube.Application.Abstractions;
 using MaxCube.Infrastructure.Platform;
@@ -10,6 +12,22 @@ namespace MaxCube.UI.Desktop;
 /// <summary>Nativer Einstiegspunkt ohne Java, Browser oder Administratorrechte (Windows und Linux).</summary>
 internal static class Program
 {
+    // Aus den DllImports der Avalonia.X11/Skia-Assemblies belegte Systembibliotheken.
+    private static readonly (string Library, string Package)[] LinuxLibraries =
+    {
+        ("libfontconfig.so.1", "libfontconfig1"),
+        ("libX11.so.6", "libx11-6"),
+        ("libXcursor.so.1", "libxcursor1"),
+        ("libXext.so.6", "libxext6"),
+        ("libXfixes.so.3", "libxfixes3"),
+        ("libXi.so.6", "libxi6"),
+        ("libXrandr.so.2", "libxrandr2"),
+        ("libICE.so.6", "libice6"),
+        ("libSM.so.6", "libsm6"),
+        ("libGL.so.1", "libgl1"),
+        ("libvulkan.so.1", "libvulkan1"),
+    };
+
     [STAThread]
     public static int Main(string[] args)
     {
@@ -18,7 +36,77 @@ internal static class Program
             return SelfCheck();
         }
 
-        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        if (args.Contains("--check-linux-deps", StringComparer.Ordinal))
+        {
+            return CheckLinuxDependencies();
+        }
+
+        // SkiaSharp lädt libfontconfig.so.1 dynamisch. Ohne das Desktop-Paket bricht
+        // Avalonia sonst mit einer schwer verständlichen TypeInitializationException ab.
+        if (OperatingSystem.IsLinux() && CheckLinuxDependencies(verbose: false) != 0)
+        {
+            return 2;
+        }
+
+        try
+        {
+            return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (DllNotFoundException exception)
+        {
+            Console.Error.WriteLine("Native Bibliothek fehlt: " + exception.Message);
+            Console.Error.WriteLine("Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y "
+                + string.Join(" ", LinuxLibraries.Select(entry => entry.Package)));
+            return 2;
+        }
+    }
+
+    /// <summary>
+    /// Fensterloser Abhängigkeitscheck für Linux (auch im veröffentlichten ZIP nutzbar):
+    /// SkiaSharp und Avalonia.X11 laden diese Systembibliotheken dynamisch; sie sind nicht
+    /// Teil des selbstständigen Pakets und fehlen auf schlanken Debian-Installationen.
+    /// </summary>
+    private static int CheckLinuxDependencies(bool verbose = true)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            if (verbose)
+            {
+                Console.WriteLine("LINUX DEPS: unter diesem Betriebssystem nicht erforderlich – OK.");
+            }
+            return 0;
+        }
+
+        var missing = new List<string>();
+        foreach (var (library, _) in LinuxLibraries)
+        {
+            if (NativeLibrary.TryLoad(library, out var handle))
+            {
+                NativeLibrary.Free(handle);
+            }
+            else
+            {
+                missing.Add(library);
+            }
+        }
+
+        if (missing.Count == 0)
+        {
+            if (verbose)
+            {
+                Console.WriteLine("LINUX DEPS OK: fontconfig und X11-Bibliotheken vorhanden.");
+            }
+            return 0;
+        }
+
+        var packages = LinuxLibraries
+            .Where(entry => missing.Contains(entry.Library, StringComparer.Ordinal))
+            .Select(entry => entry.Package);
+        Console.Error.WriteLine(
+            "LINUX DEPS FEHLER: fehlende Bibliotheken: " + string.Join(", ", missing) + "\n"
+            + "Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y " + string.Join(" ", packages) + "\n"
+            + "Danach die App erneut starten.");
+        return 2;
     }
 
     public static AppBuilder BuildAvaloniaApp()
@@ -92,6 +180,34 @@ internal static class Program
         foreach (var entry in logEntries.Where(entry => entry.Contains("Protokoll ", StringComparison.Ordinal)))
         {
             Console.WriteLine("SELFCHECK LOG: " + entry);
+        }
+
+        // 0.6.2: der redigierte Export muss lokal funktionieren und mindestens eine Zeile enthalten.
+        var exportPath = provider.GetRequiredService<ILogStore>().Export(
+            Path.Combine(paths.Root, "export"), new LogExportOptions { RedactPersonalData = true });
+        if (string.IsNullOrWhiteSpace(exportPath) || !File.Exists(exportPath))
+        {
+            Console.Error.WriteLine("SELFCHECK FEHLER: Log-Export wurde nicht erzeugt.");
+            return 6;
+        }
+
+        using (var zip = ZipFile.OpenRead(exportPath))
+        {
+            var exportedEntry = zip.Entries.FirstOrDefault();
+            if (exportedEntry is null)
+            {
+                Console.Error.WriteLine("SELFCHECK FEHLER: Log-Export enthält keine Datei.");
+                return 6;
+            }
+
+            using var reader = new StreamReader(exportedEntry.Open());
+            var exportedText = reader.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(exportedText)
+                || !exportedText.Contains("[INFO] Protokoll", StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine("SELFCHECK FEHLER: Log-Export enthält keine Protokollzeile.");
+                return 6;
+            }
         }
 
         var localizer = provider.GetRequiredService<Localizer>();
