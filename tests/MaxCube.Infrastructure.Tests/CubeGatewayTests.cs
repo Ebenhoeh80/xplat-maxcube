@@ -94,6 +94,38 @@ public class CubeGatewayTests
     }
 
     [Fact]
+    public async Task Hardware_disconnect_releases_the_only_cube_session()
+    {
+        // Opt-in: nur mit MAXCUBE_HARDWARE_ENDPOINT=<host>:<port> ausfuehren.
+        // Rein lesend: H:-Handshake, L:/C:/M:-Zustand, q: zum Trennen. Keine Schreibbefehle.
+        var endpointText = Environment.GetEnvironmentVariable("MAXCUBE_HARDWARE_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpointText))
+        {
+            return;
+        }
+
+        var separator = endpointText.LastIndexOf(':');
+        if (separator <= 0 || !int.TryParse(endpointText[(separator + 1)..], out var port))
+        {
+            throw new InvalidOperationException("MAXCUBE_HARDWARE_ENDPOINT must be <host>:<port>.");
+        }
+
+        var endpoint = new CubeEndpoint(endpointText[..separator], port);
+        await using var first = new CubeGateway();
+        await first.ConnectAsync(endpoint);
+        first.State.Should().Be(CubeConnectionState.Connected);
+        await first.DisconnectAsync();
+        first.State.Should().Be(CubeConnectionState.Disconnected);
+
+        // Genau hier haengte der Cube vor dem EOF-Fix (26.11.2026, 17:20 Uhr).
+        await using var second = new CubeGateway();
+        await second.ConnectAsync(endpoint);
+        second.State.Should().Be(CubeConnectionState.Connected);
+        await second.DisconnectAsync();
+        second.State.Should().Be(CubeConnectionState.Disconnected);
+    }
+
+    [Fact]
     public async Task A_transport_that_ignores_cancellation_cannot_block_disconnect()
     {
         var transport = new HangingTransport();
