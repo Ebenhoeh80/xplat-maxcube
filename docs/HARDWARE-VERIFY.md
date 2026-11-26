@@ -305,7 +305,7 @@ SETPOINT RESTORE OK
 
 **FAKT (Hardware 25.11.2026):** Der Cube war unter `192.168.10.60` erreichbar; die `c`-Antwort trug `192.168.0.222`, Gateway `192.168.0.1`, Maske `255.255.0.0` und DHCP-Flag `01` (Rohhex in `tests/MaxCube.Infrastructure.Tests/UdpNetworkConfiguratorTests.cs:74-82`).
 
-**INFERENZ (hohe Konfidenz):** Die Anzeige „IP“ zeigte die gespeicherte Konfigurations-IP, nicht die aktive Adresse. Der Decoder ist bitweise korrekt; eine Vertauschung der Byte-Reihenfolge würde den in `CHANGELOG.md:201-202` behobenen Fehler zurückbringen. Seit 0.6.4 werden „Konfigurierte IP“ und „Aktive IP (verbinden)“ getrennt angezeigt, und Netzwerklesen ist gesperrt, wenn die angezeigte Host-Zeile nicht mehr zum verbundenen Endpoint passt.
+**INFERENZ (hohe Konfidenz):** Die Anzeige „IP“ zeigte die gespeicherte Konfigurations-IP, nicht die aktive Adresse. Der Decoder ist bitweise korrekt; eine Vertauschung der Byte-Reihenfolge würde den in `CHANGELOG.md` Abschnitt 0.4.0 behobenen Fehler zurückbringen. Seit 0.6.4 werden „Konfigurierte IP“ und „Aktive IP (verbinden)“ getrennt angezeigt, und Netzwerklesen ist gesperrt, wenn die angezeigte Host-Zeile nicht mehr zum verbundenen Endpoint passt.
 
 **UNBEKANNT:** Ob der Cube die aktive Adresse zusätzlich über UDP-Opcode `N` (`GetNetworkAddress`, `CubeUdpProxy.java:79-90`) zuverlässig meldet; das wurde nicht gegen Hardware geprüft. Die aktive Adresse wird daher aus dem verbundenen Endpoint abgeleitet, nicht geraten.
 
