@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-11-26
+
+### Fixed
+
+- Trennen liest nach `q:` jetzt bis zum echten EOF statt nur bis zur ersten Zeile. Der Cube
+  sendet eine Abschlusszeile (z. B. `M:…`) und erst danach EOF; die frühere Implementierung
+  schloss den Socket nach der Abschlusszeile und konnte die einzige TCP-Session am Cube
+  hängen lassen. `CubeGateway.AwaitDisconnectEofAsync` nutzt nun ein gemeinsames 200-ms-Budget
+  für alle Zeilen bis EOF (`CubeGateway.cs:453-474`).
+- Neuer opt-in Hardware-Regressionstest `Hardware_disconnect_releases_the_only_cube_session`
+  (`CubeGatewayTests.cs:97-125`): Connect → Trennen → Connect am Originalgerät. Der Endpoint
+  kommt ausschließlich aus `MAXCUBE_HARDWARE_ENDPOINT=<host>:<port>`; im Code und im
+  Connect-/Reconnect-Pfad ist keine feste Adresse verdrahtet.
+
+### Verification
+
+- Build 0 Warnungen/0 Fehler; Debian 13 (WSL2) **514/514** Tests ohne Hardware-Endpoint und
+  **515/515** mit gesetztem Endpoint. Der neue simulierte Test
+  `Disposal_drains_the_final_cube_line_before_eof` (`CubeGatewayTests.cs:65`) bildet `M:`-Zeile
+  plus EOF nach `q:` ab.
+- Nutzerbericht 17:19–17:20 Uhr: Nach `Verbinden → Trennen` per Schaltfläche blieb der Cube
+  über 20 Minuten auf TCP 62910 unerreichbar (`maxcube-20261126.log:76-82`), obwohl Ping
+  funktionierte und kein anderer Client lief. Nach der Wiedererreichbarkeit um 18:36 Uhr
+  schloss der Hardwaretest **1/1** grün ab: zwei vollständige Connect-/Trenn-Zyklen hintereinander.
+  Kein Schreib-, Reboot- oder Werksresetbefehl; `nmap` bleibt außerhalb des App-Pfads.
+- PR [#27](https://github.com/Ebenhoeh80/xplat-maxcube/pull/27) hat **7/7** Checks grün;
+  der Hardwarebeleg lag vor dem Merge vor. Tag und Release werden nach dem Merge erstellt.
+
 ## [0.6.7] - 2026-11-26
 
 ### Fixed

@@ -454,7 +454,18 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
     {
         try
         {
-            await transport.ReadLineAsync(DisconnectEofTimeout, token).ConfigureAwait(false);
+            // Der Cube schickt nach q: erst eine Abschlusszeile (z. B. M:...) und
+            // danach EOF. Ein einzelner Read würde die M-Zeile als EOF missverstehen
+            // und den Socket schließen, bevor der Cube die Session freigibt.
+            using var budget = CancellationTokenSource.CreateLinkedTokenSource(token);
+            budget.CancelAfter(DisconnectEofTimeout);
+            while (!budget.IsCancellationRequested)
+            {
+                if (await transport.ReadLineAsync(budget.Token).ConfigureAwait(false) is null)
+                {
+                    return;
+                }
+            }
         }
         catch (Exception exception)
         {

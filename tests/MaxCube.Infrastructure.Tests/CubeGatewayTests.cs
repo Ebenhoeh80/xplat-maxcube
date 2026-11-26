@@ -62,6 +62,25 @@ public class CubeGatewayTests
     }
 
     [Fact]
+    public async Task Disposal_drains_the_final_cube_line_before_eof()
+    {
+        // Der echte Cube antwortet auf q: mit einer M:-Zeile und erst danach mit EOF.
+        // Wird nur die M-Zeile gelesen, schließt die App zu früh und die einzige
+        // TCP-Session bleibt am Cube hängen (26.11.2026).
+        var transport = new ScriptedTransport(
+            "H:JEQ0001234,1d2a3c,0113", "L:", "M:00,01,VgIGAQlFc3N6aW1tZXI.");
+        var gateway = new CubeGateway(transportFactory: (_, _) => transport);
+        await gateway.ConnectAsync(new CubeEndpoint("fake", 62910));
+        var readsBeforeDispose = transport.ReadCount;
+
+        await gateway.DisposeAsync();
+
+        transport.ReadCount.Should().Be(readsBeforeDispose + 2);
+        transport.SentLines.Should().ContainSingle().Which.Should().Be("q:");
+        gateway.State.Should().Be(CubeConnectionState.Disconnected);
+    }
+
+    [Fact]
     public async Task A_reconnect_after_dispose_cannot_open_a_new_socket()
     {
         var transport = new ScriptedTransport("H:JEQ0001234,1d2a3c,0113", "L:");
@@ -72,6 +91,38 @@ public class CubeGatewayTests
         Func<Task> reconnect = () => gateway.ConnectAsync(new CubeEndpoint("fake", 62910));
 
         await reconnect.Should().ThrowAsync<ObjectDisposedException>();
+    }
+
+    [Fact]
+    public async Task Hardware_disconnect_releases_the_only_cube_session()
+    {
+        // Opt-in: nur mit MAXCUBE_HARDWARE_ENDPOINT=<host>:<port> ausfuehren.
+        // Rein lesend: H:-Handshake, L:/C:/M:-Zustand, q: zum Trennen. Keine Schreibbefehle.
+        var endpointText = Environment.GetEnvironmentVariable("MAXCUBE_HARDWARE_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(endpointText))
+        {
+            return;
+        }
+
+        var separator = endpointText.LastIndexOf(':');
+        if (separator <= 0 || !int.TryParse(endpointText[(separator + 1)..], out var port))
+        {
+            throw new InvalidOperationException("MAXCUBE_HARDWARE_ENDPOINT must be <host>:<port>.");
+        }
+
+        var endpoint = new CubeEndpoint(endpointText[..separator], port);
+        await using var first = new CubeGateway();
+        await first.ConnectAsync(endpoint);
+        first.State.Should().Be(CubeConnectionState.Connected);
+        await first.DisconnectAsync();
+        first.State.Should().Be(CubeConnectionState.Disconnected);
+
+        // Genau hier haengte der Cube vor dem EOF-Fix (26.11.2026, 17:20 Uhr).
+        await using var second = new CubeGateway();
+        await second.ConnectAsync(endpoint);
+        second.State.Should().Be(CubeConnectionState.Connected);
+        await second.DisconnectAsync();
+        second.State.Should().Be(CubeConnectionState.Disconnected);
     }
 
     [Fact]
