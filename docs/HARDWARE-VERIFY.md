@@ -346,3 +346,11 @@ SETPOINT RESTORE OK
 **FAKT (Verifikation):** Regressionstests für Fehlerdialog de→en→fr und Zahlenformate aller sechs Sprachen grün; 501/501 Tests auf Windows und Debian 13. **FAKT (bewusst nicht umgesetzt):** Ein kompletter Prozess-Neustart bei Sprachwechsel wurde verworfen: er würde die unbestätigte Schreibvorschau (`_pendingWrite`), Dirty-Baselines und getippte Werte verwerfen, den Cube-Endpoint nicht automatisch wiederherstellen und die rohen Audit-/Diagnosetexte trotzdem nicht übersetzen.
 
 **UNBEKANNT:** Die Avalonia-Sichtprüfung aller sechs Sprachen und eine Muttersprachlerprüfung stehen weiter aus. Audit- und Diagnosetexte bleiben historische Rohtexte in der Sprache ihrer Entstehung.
+
+## 23. Release 0.6.5
+
+**FAKT:** PR [#20](https://github.com/Ebenhoeh80/xplat-maxcube/pull/20) wurde als Squash `5af4edd` in `main` gemergt; alle sieben PR-Checks waren grün. Der annotierte Tag `v0.6.5` zeigt auf diesen Merge-Commit und wurde erst nach dem Merge erstellt. Der Release-Lauf `45803317941` war grün; das Release [v0.6.5](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.5) enthält `xplat-maxcube-0.6.5-win-x64.zip` (SHA-256 `6163152c75eea9b83a4508d022be9959242aefe4d19708b418d52a901115e36b`) und `xplat-maxcube-0.6.5-linux-x64.zip` (SHA-256 `2e16bb6df70d35fe571db8af39bd5fdaebf6cdef10bc3a99c529b820fa98b36b`).
+
+**FAKT:** Beide heruntergeladenen Pakete liefen fensterlos mit `SELFCHECK OK … 0.6.5 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie). Lokal: Build 0 Warnungen/0 Fehler, **501/501** Tests grün auf Windows und Debian 13.
+
+**UNBEKANNT:** Ob der physische Cube nach `q:` tatsächlich EOF liefert und die Session sofort freigibt, blieb wie in §21 ungemessen. Eine Avalonia-Sichtprüfung aller sechs Sprachen und eine Muttersprachlerprüfung stehen weiter aus; der fensterlose Selbsttest ersetzt sie nicht. Audit- und Diagnosetexte bleiben historische Rohtexte.
