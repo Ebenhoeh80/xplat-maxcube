@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-11-26
+
+### Fixed
+
+- Sprachwechsel aktualisiert jetzt auch die von Avalonia gerenderten Überschriften, Reiter und
+  Gerätetexte. Ursache war nicht der Textkatalog, sondern die XAML-Indexerbindung: Ein
+  `PropertyChanged("Item[]")` auf dem `Localizer` lässt Avalonia `{Binding Loc[…]}` nicht neu
+  auswerten. Die Ansicht bindet nun an ein austauschbares `Labels`-Objekt
+  (`MainWindow.axaml`, `MainWindowViewModel.cs`, `MainWindowViewModel.Admin.cs`).
+- Der interne `Localizer` bleibt stabil, damit Tray-Menü und abonnierende Kind-Viewmodels den
+  Sprachwechsel weiterhin erhalten; nur die XAML-Bindungsquelle wird ersetzt.
+
+### Verification
+
+- Build 0 Warnungen/0 Fehler; Debian 13 (WSL2) **513/513** Tests grün;
+  `SELFCHECK OK … 0.6.7 … SQLite ok`.
+- Neue Headless-Render-Tests mit echtem `MainWindow` und Fluent-Theme: DE→EN für Verbinden,
+  Trennen, Reiter „Geräte“, Überschrift „Gerät“ und Gerätetyp sowie DE→EN/FR/IT/NL/PL für
+  dieselben Gerätetexte (`HeadlessLanguageTests.cs`).
+- Hardwaresonde am Original-Cube: nach `q:` EOF in 9–16 ms, anschließend TCP-Connect mit
+  `H:`-Handshake nach 2 s erfolgreich; auch ein harter Socket-Close wurde nach 2 s sofort
+  wieder angenommen. Der Cube hält die Session also nicht lange nach dem Beenden.
+  Details in [HARDWARE-VERIFY.md](docs/HARDWARE-VERIFY.md#25-sprachwechsel-und-session-release-067).
+- **FAKT (Nutzeraussage 26.11.2026):** Der native Linux-Desktop funktioniert. Damit ist der
+  frühere Punkt „außerhalb WSLg nicht geprüft“ geklärt.
+- **UNBEKANNT:** Eine Muttersprachlerprüfung der sechs Sprachen wurde nicht durchgeführt;
+  Vollständigkeit und Platzhalter bleiben weiterhin maschinell geprüft.
+
 ## [0.6.6] - 2026-11-26
 
 ### Fixed

@@ -357,7 +357,7 @@ SETPOINT RESTORE OK
 
 ## 24. nmap-Frage und lokalisierter Verbindungsfehler 0.6.6
 
-**FAKT (Gremium 3/3):** Auf die Frage, ob beim Verbinden `nmap -p 62910 192.168.10.60` eingebaut werden soll, rieten Technik/Code, Betrieb/Sicherheit und Release/Strategie einheitlich ab. Der vorhandene TCP-Connect mit 30-s-Grenze und anschließendem `H:`/`L:`/`C:`/`M:`-Handshake ist die maßgebliche Prüfung (`TcpCubeTransport.cs:23-59`, `CubeGateway.cs:103-106`); ein Portscan beweist nur „Port offen“, nicht die Cube-Funktion. `nmap` kommt im Repo nicht vor; die App verspricht Betrieb ohne Administratorrechte (`Program.cs:12`) und der Selbsttest bleibt hardwarefrei (`Program.cs:118`). Die Bediener-Checks „IP/Ping/TCP 62910 prüfen“ stehen bereits in `docs/RUNBOOK.md:168` und `docs/TROUBLESHOOTING.md:64-65`.
+**FAKT (Gremium 3/3):** Auf die Frage, ob beim Verbinden `nmap -p 62910 <Cube-IP>` eingebaut werden soll, rieten Technik/Code, Betrieb/Sicherheit und Release/Strategie einheitlich ab. Bei einem rein lesenden Bediener-Schritt außerhalb der App ist ebenfalls nur der Platzhalter `<Cube-IP>` zu verwenden, nie eine fest in der App oder Doku verdrahtete Adresse. Der vorhandene TCP-Connect mit 30-s-Grenze und anschließendem `H:`/`L:`/`C:`/`M:`-Handshake ist die maßgebliche Prüfung (`TcpCubeTransport.cs:23-59`, `CubeGateway.cs:103-106`); ein Portscan beweist nur „Port offen“, nicht die Cube-Funktion. `nmap` kommt im Repo nicht vor; die App verspricht Betrieb ohne Administratorrechte (`Program.cs:12`) und der Selbsttest bleibt hardwarefrei (`Program.cs:118`). Die Bediener-Checks „IP/Ping/TCP 62910 prüfen“ stehen bereits in `docs/RUNBOOK.md:168` und `docs/TROUBLESHOOTING.md:64-65`.
 
 **FAKT (Ursache der Dialog-Lücke):** Bis 0.6.5 zeigte der Dialog bei Verbindungsfehlern ohne MAX-Code nur den generischen Hinweis; die genaue Ursache (z. B. „Cannot connect to cube at …“, „Timed out connecting …“) stand nur im Protokoll und im Datenstatus (`MainWindowViewModel.cs:1148-1166`, Stand 0.6.5).
 
@@ -367,4 +367,25 @@ SETPOINT RESTORE OK
 
 **FAKT (Release):** PR [#23](https://github.com/Ebenhoeh80/xplat-maxcube/pull/23) wurde als Squash `05fa4c6` gemergt, alle sieben Checks waren grün; der annotierte Tag `v0.6.6` zeigt auf den Merge-Commit und wurde erst danach erstellt. Der Release-Lauf `45845522904` und das Release [v0.6.6](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.6) sind veröffentlicht. `xplat-maxcube-0.6.6-win-x64.zip` hat SHA-256 `8565d463dadfb3f1768ed4fff62a15ee52f9d05f32a40e953f7f7bb785e01ffd`, `xplat-maxcube-0.6.6-linux-x64.zip` SHA-256 `aefb701ee6074873bc1bb898da20d3dd73b526447ebb5881af33dd2ad68a9e80`; beide Hashes stimmen mit den GitHub-Digests überein, und beide heruntergeladenen Pakete liefen fensterlos mit `SELFCHECK OK … 0.6.6 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie). Der Doku-Nachtrag der Belege erfolgt ohne neues Tag.
 
-**UNBEKANNT:** Der nmap-Befehl wurde nicht ausgeführt; die Reaktion des Original-Cube auf einen halboffenen SYN-/connect-Scan ohne `q:` blieb ungemessen. Avalonia-Sichtprüfung und Muttersprachlerprüfung der sechs Sprachen stehen weiter aus. Der Scan bleibt als lesender Bediener-Schritt außerhalb der App optional; er darf nie parallel zur einen Cube-TCP-Session laufen.
+**UNBEKANNT (Stand 0.6.6):** Der nmap-Befehl wurde nicht ausgeführt; die Reaktion des Original-Cube auf einen halboffenen SYN-/connect-Scan ohne `q:` blieb ungemessen. Die Avalonia-Sichtprüfung wurde in 0.6.7 automatisiert und ist in §25 geklärt; die Muttersprachlerprüfung der sechs Sprachen steht weiter aus. Der Scan bleibt als lesender Bediener-Schritt außerhalb der App optional; er darf nie parallel zur einen Cube-TCP-Session laufen.
+
+## 25. Sprachwechsel und Session-Release 0.6.7
+
+**FAKT (Avalonia-Ursache):** Die VM-Tests waren grün, obwohl die Oberfläche deutsch blieb. Ein Headless-Render-Test mit dem echten `MainWindow` und `FluentTheme` zeigte: `{Binding Loc[Schlüssel]}` wird durch `PropertyChanged("Item[]")` des `Localizer` nicht neu ausgewertet; auch `Item[Schlüssel]` und eine bloße Benachrichtigung der VM-Eigenschaft `Loc` mit demselben Objekt genügen nicht. Erst ein neues Objekt auf der gebundenen Eigenschaft aktualisiert alle Texte (`HeadlessBindingProbeTests`, temporär; dauerhaft `HeadlessLanguageTests.cs`). Der Fix bindet die XAML an `Labels` und ersetzt dieses Objekt in `OnLanguageChanged` (`MainWindowViewModel.Admin.cs:367-374`), während der interne `Localizer` für Tray und Kind-Viewmodels stabil bleibt.
+
+**FAKT (Sichtprüfung jetzt hardwarefrei automatisiert):** Der Headless-Test rendert den echten `MainWindow` mit Fluent-Theme und prüft DE→EN für „Verbinden“/`Connect`, „Trennen“/`Disconnect`, Reiter „Geräte“/`Devices`, Überschrift „Gerät“/`Device` und Gerätetyp „Heizkörperthermostat“/`Heating thermostat`. Eine Theory wiederholt die Gerätetexte für EN, FR, IT, NL und PL. Damit ist die frühere UNBEKANNT-Markierung „Avalonia-Sichtprüfung“ aufgehoben. Die Muttersprachlerprüfung bleibt offen.
+
+**FAKT (Hardwaresonde 26.11.2026):** Eine lesende Protokollsonde an `192.168.10.60:62910` mit `H:`-Handshake, anschließendem `q:` und EOF-Lesen ergab:
+
+| Messung | Ergebnis |
+|---|---|
+| Connect + `H:` | 0,344 s; `H:JEQ0355273,…` |
+| EOF nach `q:` | ja, 0,009 s; Restzeile `M:00,01,VgIGAQlFc3N6aW1tZXI…` |
+| erneuter Connect nach 2 s | 0,289 s, neuer `H:`-Handshake, EOF erneut in 0,010 s |
+| harter Close ohne `q:` | erneuter Connect nach 2 s in 0,299 s, EOF nach `q:` in 0,016 s |
+
+Der Cube gab die einzige TCP-Session also unmittelbar frei; ein mehrsekündiges Halten der Session nach `q:` oder nach hartem Close ist auf diesem Gerät nicht reproduzierbar. Der App-Cleanup sendet `q:` genau einmal, wartet begrenzt auf EOF und schließt den Socket (`CubeGateway.cs:234-255`, `CubeGatewayTests.cs:35-62`). Der Shutdown läuft über `TryShutdown()` und damit über `ShutdownRequested` (`App.axaml.cs:62-76,94-96`). **INFERENZ:** Eine beobachtete Verzögerung nach dem Schließen stammt daher eher aus der App/Sitzungsebene (z. B. Reconnect-Backoff oder eine zweite Instanz mit der einen Cube-Session) als aus einem Cube-Session-Timeout.
+
+**FAKT (Linux-Desktop):** Der Nutzer bestätigte am 26.11.2026 ausdrücklich: „Linux Desktop funktiojniert auch“. Damit ist der frühere UNBEKANNT-Punkt zum nativen Linux-Desktop außerhalb WSLg geklärt; automatisiert geprüft bleiben weiterhin Build, Selbsttest und Paketstart unter Debian 13 (WSL2).
+
+**UNBEKANNT:** Die Reaktion des Original-Cube auf einen nmap-Scan ohne `q:` wurde weiterhin nicht gemessen; sie ist für den Verbindungs- und Reconnect-Pfad nicht relevant. Eine Muttersprachlerprüfung der sechs Sprachen steht aus. Audit-, Log-, Diagnose- und Strukturtexte bleiben historische Rohtexte und werden nicht nachträglich übersetzt.
