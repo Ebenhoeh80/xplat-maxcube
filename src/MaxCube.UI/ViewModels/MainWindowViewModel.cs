@@ -41,6 +41,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly ICubeDiscovery _discovery;
     private readonly Localizer _loc;
     private readonly IAppLog _log;
+    // Avalonia aktualisiert {Binding Labels[Schlüssel]} nicht, wenn der Indexer nur Item[]
+    // meldet. Die XAML bindet deshalb an dieses Objekt; es wird beim Sprachwechsel ersetzt.
+    private Localizer _labels;
 
     /// <summary>Zeitbudget des Cube-Finders; entspricht dem Original (cubeScanTime=1800 ms).</summary>
     private static readonly TimeSpan DiscoveryDuration = TimeSpan.FromMilliseconds(1800);
@@ -205,6 +208,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _dispatcher = dispatcher ?? new ImmediateUiDispatcher();
         _discovery = discovery ?? new DesignTimeDiscovery();
         _loc = localizer ?? new Localizer("de");
+        _labels = new Localizer(_loc.Language);
         _urlOpener = urlOpener ?? new DesktopUrlOpener();
         _logStore = logStore ?? log as ILogStore;
         _log = log ?? _logStore ?? (IAppLog)new NullAppLog();

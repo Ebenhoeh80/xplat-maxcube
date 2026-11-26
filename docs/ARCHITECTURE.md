@@ -276,7 +276,7 @@ Der Cache wird bei jedem Connect vollständig überschrieben (`SqliteStateStore.
 
 1. Hardwaretest mit Paketmitschnitt für alle `INFERENZ`-Formate; anschließend Belegstatus in `docs/features.md` heben oder Kodierung korrigieren.
 2. Golden-Capture eines echten Cubes inklusive `S:`-Quittung und UDP-Antwort; Testfixtures daraus ableiten.
-3. Linux-Desktop-Sichtprüfung auf X11 **und** Wayland, inklusive Tray und „Schließen versteckt Fenster“.
+3. Linux-Desktop-Sichtprüfung auf X11 **und** Wayland, inklusive Tray und „Schließen versteckt Fenster“. Der Nutzer bestätigte am 26.11.2026 grundsätzlich „Linux Desktop funktiojniert auch“ (`HARDWARE-VERIFY.md:389`); die protokollspezifische Prüfung bleibt offen.
 4. Audit-Rotation oder konfigurierbare Aufbewahrung analog zu `FileAppLog`.
 5. Drag-and-drop im Wochenprogramm-Editor als Ergänzung zur Tagesleiste.
 6. Fehlercatalog-Einträge mit Herstellersprachen statt Deutungen ergänzen, sobald belegbar.

@@ -43,6 +43,13 @@ public partial class MainWindowViewModel
 {
     public Localizer Loc => _loc;
 
+    /// <summary>
+    /// XAML-Bindungsquelle für lokalisierte Texte. Avalonia wertet einen Indexerpfad nicht
+    /// erneut aus, wenn nur <c>Item[]</c> auf dem Indexer gemeldet wird; ein neues Objekt
+    /// mit <c>PropertyChanged(nameof(Labels))</c> aktualisiert dagegen alle Bindings.
+    /// </summary>
+    public Localizer Labels => _labels;
+
     public bool SupportsAdministration => _service.SupportsAdministration;
 
     public bool SupportsNetwork => _service.SupportsNetworkConfiguration;
@@ -366,6 +373,10 @@ public partial class MainWindowViewModel
 
         OnUiThread(() =>
         {
+            // Ein neues Labels-Objekt zwingt Avalonia zur Neubewertung aller
+            // {Binding Labels[Schlüssel]}-Pfade. Item[] allein genügt nicht (Headless-Test).
+            _labels = new Localizer(_loc.Language);
+            OnPropertyChanged(nameof(Labels));
             WindowTitle = $"{L("AppTitle").Current} {AppVersion}";
             AppVersionText = L("AppVersion", AppVersion);
             OnPropertyChanged(nameof(AboutVersionText));
