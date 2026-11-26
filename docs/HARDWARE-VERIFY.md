@@ -180,22 +180,6 @@ Selfcheck: SELFCHECK OK: MAX! Cube - Aplikacja lokalna 0.3.0 | Microsoft Windows
 
 - Soll das Ergebnis zusätzlich in `wiki/projekte/app-maxcube.md` und `wiki/log.md` übernommen werden? Dafür ist die Nutzerentscheidung aus [SECOND_BRAIN.md](SECOND_BRAIN.md) §7 erforderlich; dieses Dokument ist zunächst nur Projekt-dokumentation.
 - Soll die Wartezeit nach Konfigurationssendung in der UI explizit angezeigt werden? Derzeitige `0x11`-Sende-Logik ist hardwarewirksam, das Read-back-Verhalten ist `BEOBACHTUNG`.
-
-## 8. Netzbefund 0.6.4: gespeicherte vs. aktive IP
-
-**FAKT (Hardware 25.11.2026):** Der Cube war unter `192.168.10.60` erreichbar; die `c`-Antwort trug `192.168.0.222`, Gateway `192.168.0.1`, Maske `255.255.0.0` und DHCP-Flag `01` (Rohhex in `tests/MaxCube.Infrastructure.Tests/UdpNetworkConfiguratorTests.cs:74-82`).
-
-**INFERENZ (hohe Konfidenz):** Die Anzeige „IP“ zeigte die gespeicherte Konfigurations-IP, nicht die aktive Adresse. Der Decoder ist bitweise korrekt; eine Vertauschung der Byte-Reihenfolge würde den in `CHANGELOG.md:201-202` behobenen Fehler zurückbringen. Seit 0.6.4 werden „Konfigurierte IP“ und „Aktive IP (verbinden)“ getrennt angezeigt, und Netzwerklesen ist gesperrt, wenn die angezeigte Host-Zeile nicht mehr zum verbundenen Endpoint passt.
-
-**UNBEKANNT:** Ob der Cube die aktive Adresse zusätzlich über UDP-Opcode `N` (`GetNetworkAddress`, `CubeUdpProxy.java:79-90`) zuverlässig meldet; das wurde nicht contre Hardware geprüft. Die aktive Adresse wird daher aus dem verbundenen Endpoint abgeleitet, nicht geraten.
-
-## 9. Wartungsbefehle 0.6.4 (nicht an Hardware ausgeführt)
-
-**FAKT (Quelle):** `decompiled/controller/sources/de/eq3/max/al/local/update/CubeUdpOpcode.java:10` definiert `Reboot('R')`; `ResetGatewayCubeCommand.java:11-12` sendet `a:` ohne ACK-Erwartung. `src/MaxCube.Protocol/Commands/CubeCommands.cs:276-284` bildet das bereits ab.
-
-**FAKT (Implementierung):** Seit 0.6.4 liegen beide Befehle hinter Wartungs-UI, eigener Checkbox, Vorschau, separater Bestätigung, Operation Gate und Audit-Eintrag. Der Reboot wird genau einmal per Unicast an den verbundenen Endpoint gesendet (`CubeMaintenanceGateway.RebootAsync`), der Werksreset läuft über die bestehende Command-Queue (`CubeGateway.ResetGatewayAsync`). Es gibt keinen automatischen Aufruf, keinen Broadcast und keine Wiederholung.
-
-**UNBEKANNT:** Die tatsächliche Hardwarewirkung von `a:` und `R` am Original-Cube wurde **nicht** ausgeführt, um die installierte Konfiguration nicht zu zerstören. Vor einem Feldeinsatz ist ein gezielter Test an einem Ersatz-Cube erforderlich; die Quellbelege ersetzen keine Hardwareprüfung.
 - Weitere Räume, Bootloader-Antwort und Delphi-/Firmware-Abweichungen wurden nicht geprüft.
 
 ## 8. Lesende Verifikation für 0.5.0 (25.11.2026)
@@ -316,3 +300,27 @@ SETPOINT RESTORE OK
 **FAKT (Release):** PR #15 wurde um 06:49 UTC als Squash `16598dc` in `main` gemergt; alle sieben Checks (CodeQL, Analyze actions/csharp, CI Windows/Linux, Publish win-x64/linux-x64) waren grün. Der annotierte Tag `v0.6.3` zeigt erst **nach dem Merge** auf `16598dc` (nicht auf den PR-Head wie bei v0.6.2). Der nachgelagerte CI-Lauf `45770827270` und der Release-Lauf `45770905644` waren ebenfalls `success`; das Release [v0.6.3](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.3) enthält `xplat-maxcube-0.6.3-win-x64.zip` (SHA-256 `ce65d16bba9e3107681268f938a005eeeb7c19959b29b04c3ff75c6c688ec8d8`) und `xplat-maxcube-0.6.3-linux-x64.zip` (SHA-256 `b88be3838ddd12d2b00fe1ea46ae8c4dccb51cb0166dcb8d523e11c33fcdb53f`). Beide Assets wurden erneut heruntergeladen: die Digests stimmen mit der GitHub-API überein und `SELFCHECK OK … 0.6.3 … SQLite ok` läuft in beiden self-contained Paketen (Windows 10.0.26300, Debian GNU/Linux 13 trixie). **INFERENZ:** Der fensterlose Selbsttest der heruntergeladenen Pakete ersetzt weiterhin keine Sichtprüfung der Avalonia-Oberfläche.
 
 **UNBEKANNT:** Eine erneute Avalonia-Sichtprüfung aller sechs Sprachen unter echter Last nach v0.6.3 steht aus; der fensterlose Selfcheck ersetzt sie nicht. Die Übersetzungsqualität wurde nicht durch Muttersprachler geprüft. Kein Geheimnis, kein `SecondBrain/raw/`-Eintrag und kein Wiki-Upload in diesem Schritt.
+
+## 18. Netzbefund 0.6.4: gespeicherte vs. aktive IP
+
+**FAKT (Hardware 25.11.2026):** Der Cube war unter `192.168.10.60` erreichbar; die `c`-Antwort trug `192.168.0.222`, Gateway `192.168.0.1`, Maske `255.255.0.0` und DHCP-Flag `01` (Rohhex in `tests/MaxCube.Infrastructure.Tests/UdpNetworkConfiguratorTests.cs:74-82`).
+
+**INFERENZ (hohe Konfidenz):** Die Anzeige „IP“ zeigte die gespeicherte Konfigurations-IP, nicht die aktive Adresse. Der Decoder ist bitweise korrekt; eine Vertauschung der Byte-Reihenfolge würde den in `CHANGELOG.md:201-202` behobenen Fehler zurückbringen. Seit 0.6.4 werden „Konfigurierte IP“ und „Aktive IP (verbinden)“ getrennt angezeigt, und Netzwerklesen ist gesperrt, wenn die angezeigte Host-Zeile nicht mehr zum verbundenen Endpoint passt.
+
+**UNBEKANNT:** Ob der Cube die aktive Adresse zusätzlich über UDP-Opcode `N` (`GetNetworkAddress`, `CubeUdpProxy.java:79-90`) zuverlässig meldet; das wurde nicht gegen Hardware geprüft. Die aktive Adresse wird daher aus dem verbundenen Endpoint abgeleitet, nicht geraten.
+
+## 19. Wartungsbefehle 0.6.4 (nicht an Hardware ausgeführt)
+
+**FAKT (Quelle):** `decompiled/controller/sources/de/eq3/max/al/local/update/CubeUdpOpcode.java:10` definiert `Reboot('R')`; `ResetGatewayCubeCommand.java:11-12` sendet `a:` ohne ACK-Erwartung. `src/MaxCube.Protocol/Commands/CubeCommands.cs:276-284` bildet das bereits ab.
+
+**FAKT (Implementierung):** Seit 0.6.4 liegen beide Befehle hinter Wartungs-UI, eigener Checkbox, Vorschau, separater Bestätigung, Operation Gate und Audit-Eintrag. Der Reboot wird genau einmal per Unicast an den verbundenen Endpoint gesendet (`CubeMaintenanceGateway.RebootAsync`), der Werksreset läuft über die bestehende Command-Queue (`CubeGateway.ResetGatewayAsync`). Es gibt keinen automatischen Aufruf, keinen Broadcast und keine Wiederholung.
+
+**UNBEKANNT:** Die tatsächliche Hardwarewirkung von `a:` und `R` am Original-Cube wurde **nicht** ausgeführt, um die installierte Konfiguration nicht zu zerstören. Vor einem Feldeinsatz ist ein gezielter Test an einem Ersatz-Cube erforderlich; die Quellbelege ersetzen keine Hardwareprüfung.
+
+## 20. Release 0.6.4
+
+**FAKT:** PR [#17](https://github.com/Ebenhoeh80/xplat-maxcube/pull/17) wurde als Squash `52dc39a` in `main` gemergt; alle sieben PR-Checks waren grün. Der annotierte Tag `v0.6.4` zeigt auf den Merge-Commit. Der Release-Lauf `45792581012` war grün; das Release [v0.6.4](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.4) enthält `xplat-maxcube-0.6.4-win-x64.zip` (SHA-256 `da40f485e3d070a61e99f9bc35217812013364d7f480e3fe3817f7aa27c00104`) und `xplat-maxcube-0.6.4-linux-x64.zip` (SHA-256 `3a514e0058fd2d715cb35895e207b2132c9371e5a2ff748cbe1cfdf5792e8ba3`).
+
+**FAKT:** Beide heruntergeladenen Pakete liefen fensterlos mit `SELFCHECK OK … 0.6.4 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie). Lokal: Build 0/0, 495/495 Tests grün auf Windows und Debian 13.
+
+**UNBEKANNT:** Eine erneute Avalonia-Sichtprüfung aller sechs Sprachen unter echter Last und eine Muttersprachlerprüfung der Übersetzungen stehen weiter aus; der fensterlose Selbsttest ersetzt sie nicht.
