@@ -37,8 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Verification
 
-- Build 0 Warnungen/0 Fehler; Windows-Tests grün. Hardwarewirkung von `a:`/`R` bleibt
-  `UNBEKANNT`, weil bewusst kein zerstörender Test am Produktiv-Cube ausgeführt wurde.
+- Build 0 Warnungen/0 Fehler; Windows und Debian 13 (WSL2) 495/495 Tests grün;
+  `--selfcheck OK … 0.6.4 … SQLite ok` auf beiden Systemen und in beiden heruntergeladenen
+  Release-Paketen. Release-Lauf `45792581012` und Post-Merge-CI/CodeQL grün.
+- Assets: `xplat-maxcube-0.6.4-win-x64.zip` SHA-256
+  `da40f485e3d070a61e99f9bc35217812013364d7f480e3fe3817f7aa27c00104`;
+  `xplat-maxcube-0.6.4-linux-x64.zip` SHA-256
+  `3a514e0058fd2d715cb35895e207b2132c9371e5a2ff748cbe1cfdf5792e8ba3`.
+- Hardwarewirkung von `a:`/`R` bleibt `UNBEKANNT`, weil bewusst kein zerstörender Test am
+  Produktiv-Cube ausgeführt wurde. Eine Avalonia-Sichtprüfung aller sechs Sprachen steht aus.
 
 ## [0.6.3] - 2026-11-26
 
