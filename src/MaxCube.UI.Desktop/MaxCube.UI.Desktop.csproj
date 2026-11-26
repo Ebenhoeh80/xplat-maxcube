@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.23" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.2.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.23" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
   </ItemGroup>
