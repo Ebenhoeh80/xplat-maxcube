@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Trennen liest nach `q:` jetzt bis zum echten EOF statt nur bis zur ersten Zeile. Der Cube
+  sendet eine Abschlusszeile (z. B. `M:…`) und erst danach EOF; die frühere Implementierung
+  schloss den Socket nach der Abschlusszeile und konnte die einzige TCP-Session am Cube
+  hängen lassen. `CubeGateway.AwaitDisconnectEofAsync` nutzt nun ein gemeinsames 200-ms-Budget
+  für alle Zeilen bis EOF (`CubeGateway.cs:453-474`).
+
+### Verification
+
+- Build 0 Warnungen/0 Fehler; Debian 13 (WSL2) **514/514** Tests grün. Neuer Test
+  `Disposal_drains_the_final_cube_line_before_eof` in `CubeGatewayTests.cs` bildet die
+  `M:`-Zeile plus EOF nach `q:` ab.
+
 ## [0.6.7] - 2026-11-26
 
 ### Fixed

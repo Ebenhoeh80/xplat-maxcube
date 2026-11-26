@@ -62,6 +62,25 @@ public class CubeGatewayTests
     }
 
     [Fact]
+    public async Task Disposal_drains_the_final_cube_line_before_eof()
+    {
+        // Der echte Cube antwortet auf q: mit einer M:-Zeile und erst danach mit EOF.
+        // Wird nur die M-Zeile gelesen, schließt die App zu früh und die einzige
+        // TCP-Session bleibt am Cube hängen (26.11.2026).
+        var transport = new ScriptedTransport(
+            "H:JEQ0001234,1d2a3c,0113", "L:", "M:00,01,VgIGAQlFc3N6aW1tZXI.");
+        var gateway = new CubeGateway(transportFactory: (_, _) => transport);
+        await gateway.ConnectAsync(new CubeEndpoint("fake", 62910));
+        var readsBeforeDispose = transport.ReadCount;
+
+        await gateway.DisposeAsync();
+
+        transport.ReadCount.Should().Be(readsBeforeDispose + 2);
+        transport.SentLines.Should().ContainSingle().Which.Should().Be("q:");
+        gateway.State.Should().Be(CubeConnectionState.Disconnected);
+    }
+
+    [Fact]
     public async Task A_reconnect_after_dispose_cannot_open_a_new_socket()
     {
         var transport = new ScriptedTransport("H:JEQ0001234,1d2a3c,0113", "L:");
