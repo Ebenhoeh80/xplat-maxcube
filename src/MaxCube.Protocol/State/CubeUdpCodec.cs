@@ -9,13 +9,16 @@ namespace MaxCube.Protocol.State;
 /// UDP-Datagramme des Cubes auf Port 23272 (docs/maxcube-protocol.md:476-519): Signatur
 /// <c>eQ3Max*\0</c>, 10 Byte Seriennummer (mit <c>*</c> aufgefüllt), 1 Byte Opcode, Nutzlast;
 /// die Antwort trägt zusätzlich die Kennung <c>&gt;</c> und denselben Opcode.
-/// Firmware-Schreiben (Opcodes B/U/W/R) ist bewusst NICHT enthalten.
+/// Firmware-Schreiben (Opcodes B/U/W) ist bewusst NICHT enthalten; R wird nur als
+/// benutzerbestätigter Neustart unterstützt.
 /// </summary>
 public static class CubeUdpCodec
 {
     public const int Port = 23272;
     public const byte GetNetworkConfiguration = (byte)'c';
     public const byte SetNetworkConfiguration = (byte)'C';
+    /// <summary>Nur Neustart, keine Firmware-Aktualisierung (CubeUdpOpcode.java:10).</summary>
+    public const byte Reboot = (byte)'R';
 
     private static readonly byte[] Signature = Encoding.ASCII.GetBytes("eQ3Max*\0");
     private const int SerialLength = 10;

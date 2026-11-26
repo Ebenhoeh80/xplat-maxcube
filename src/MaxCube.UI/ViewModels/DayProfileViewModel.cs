@@ -73,6 +73,9 @@ public sealed partial class SwitchPointViewModel : ObservableObject
         OnPropertyChanged(nameof(Until));
         OnPropertyChanged(nameof(HasValidUntil));
     }
+
+    /// <summary>Neues Format nach einem Sprach-/Kulturwechsel, ohne den Wert zu ändern.</summary>
+    internal void RefreshCulture() => OnPropertyChanged(nameof(Temperature));
 }
 
 /// <summary>Ein Wochentag des Wochenprofils (1..13 Schaltpunkte).</summary>

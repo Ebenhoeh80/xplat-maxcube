@@ -109,6 +109,10 @@ public sealed class Localizer : INotifyPropertyChanged
             var culture = CultureInfo.GetCultureInfo(name);
             CultureInfo.CurrentCulture = culture;
             CultureInfo.CurrentUICulture = culture;
+            // Hintergrundtasks und Continuations dürfen nicht in der Sprache vor dem Wechsel
+            // weiterformatieren (0.6.4). Protokollpfade bleiben weiterhin explizit invariant.
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
         }
         catch (CultureNotFoundException)
         {

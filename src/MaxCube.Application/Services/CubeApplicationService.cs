@@ -19,6 +19,7 @@ public sealed partial class CubeApplicationService
     private readonly ICubeStateStore _store;
     private readonly IClock _clock;
     private readonly TimeProvider _timeProvider;
+    private readonly ICubeMaintenanceGateway? _maintenance;
     private readonly OperationGate _gate = new();
 
     /// <summary>Obergrenze für den Gateway-Trennaufruf (N7).</summary>
@@ -42,7 +43,8 @@ public sealed partial class CubeApplicationService
         IClock clock,
         TimeProvider? timeProvider = null,
         ICubeAdminGateway? admin = null,
-        ICubeNetworkConfigurator? network = null)
+        ICubeNetworkConfigurator? network = null,
+        ICubeMaintenanceGateway? maintenance = null)
     {
         _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -50,6 +52,7 @@ public sealed partial class CubeApplicationService
         _timeProvider = timeProvider ?? TimeProvider.System;
         _admin = admin;
         _network = network;
+        _maintenance = maintenance;
         _gateway.StateChanged += OnGatewayStateChanged;
         _gateway.CubeRefreshed += OnCubeRefreshed;
         _gateway.SessionUnreachable += OnSessionUnreachable;
@@ -69,11 +72,26 @@ public sealed partial class CubeApplicationService
     /// </summary>
     public event EventHandler<string>? Warning;
 
+    /// <summary>
+    /// Strukturierte Warnung für die UI: Code + Parameter statt eines bereits gerenderten
+    /// Satzes. Das rohe <see cref="Warning"/> bleibt für Log und Support erhalten (0.6.4).
+    /// </summary>
+    public event EventHandler<ServiceWarning>? WarningCode;
+
+    private void RaiseWarning(string code, string message, string? parameter = null)
+    {
+        Warning?.Invoke(this, message);
+        WarningCode?.Invoke(this, new ServiceWarning(code, parameter));
+    }
+
     /// <summary>Wird beim Wechsel zwischen aktuell und veraltet ausgelöst.</summary>
     public event EventHandler<bool>? StaleChanged;
 
     /// <summary>Letzter bekannter Zustand; null vor connect und nach Disconnect.</summary>
     public Cube? Current => _current;
+
+    /// <summary>Endpoint, über den die aktuelle Verbindung tatsächlich läuft.</summary>
+    public CubeEndpoint? ConnectedEndpoint => _lastEndpoint;
 
     /// <summary>
     /// Zeitpunkt, zu dem die aktuell angezeigten Daten vom Cube gelesen (oder aus dem Cache
@@ -109,7 +127,7 @@ public sealed partial class CubeApplicationService
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Warning?.Invoke(this, "Live-Zustand angezeigt, Cache nicht aktualisiert.");
+            RaiseWarning("WarnCacheNotUpdated", "Live-Zustand angezeigt, Cache nicht aktualisiert.");
         }
 
         StateChanged?.Invoke(this, refreshed);
@@ -118,7 +136,7 @@ public sealed partial class CubeApplicationService
     private void OnSessionUnreachable(object? sender, EventArgs args)
     {
         SetStale(true);
-        Warning?.Invoke(this, "Cube nicht erreichbar – versuche erneut zu verbinden.");
+        RaiseWarning("WarnCubeUnreachable", "Cube nicht erreichbar – versuche erneut zu verbinden.");
         StartReconnect();
     }
 
@@ -176,7 +194,7 @@ public sealed partial class CubeApplicationService
                     _reconnecting = false;
                 }
 
-                Warning?.Invoke(this, "Verbindung wiederhergestellt.");
+                RaiseWarning("WarnReconnected", "Verbindung wiederhergestellt.");
                 return;
             }
             catch (OperationCanceledException)
@@ -186,7 +204,7 @@ public sealed partial class CubeApplicationService
             catch (Exception)
             {
                 delay = delay < ReconnectMaxDelay / 2 ? delay * 2 : ReconnectMaxDelay;
-                Warning?.Invoke(this, $"Reconnect fehlgeschlagen – nächster Versuch in {delay.TotalSeconds:0} s.");
+                RaiseWarning("WarnReconnectFailed", $"Reconnect fehlgeschlagen – nächster Versuch in {delay.TotalSeconds:0} s.", delay.TotalSeconds.ToString("0"));
             }
         }
     }
@@ -450,7 +468,7 @@ public sealed partial class CubeApplicationService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                Warning?.Invoke(this, "Profil gesendet, Audit nicht aktualisiert.");
+                RaiseWarning("WarnAuditNotUpdated", "Profil gesendet, Audit nicht aktualisiert.");
             }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -513,7 +531,7 @@ public sealed partial class CubeApplicationService
             catch (Exception exception) when (exception is TimeoutException
                 or OperationCanceledException or InvalidOperationException)
             {
-                Warning?.Invoke(this, "Trennen hat länger als erwartet gedauert; Verbindung local zurückgesetzt.");
+                RaiseWarning("WarnDisconnectSlow", "Trennen hat länger als erwartet gedauert; Verbindung local zurückgesetzt.");
             }
             _current = null;
             LastReadAt = null;
@@ -524,7 +542,7 @@ public sealed partial class CubeApplicationService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                Warning?.Invoke(this, "Verbindung getrennt, Audit nicht aktualisiert.");
+                RaiseWarning("WarnDisconnectedAudit", "Verbindung getrennt, Audit nicht aktualisiert.");
             }
         }
     }
@@ -568,7 +586,7 @@ public sealed partial class CubeApplicationService
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Warning?.Invoke(this, "Gesendet, aber lokaler Cache nicht aktualisiert.");
+            RaiseWarning("WarnCacheNotUpdated", "Gesendet, aber lokaler Cache nicht aktualisiert.");
         }
 
         StateChanged?.Invoke(this, _current!);

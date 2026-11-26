@@ -180,6 +180,22 @@ Selfcheck: SELFCHECK OK: MAX! Cube - Aplikacja lokalna 0.3.0 | Microsoft Windows
 
 - Soll das Ergebnis zusätzlich in `wiki/projekte/app-maxcube.md` und `wiki/log.md` übernommen werden? Dafür ist die Nutzerentscheidung aus [SECOND_BRAIN.md](SECOND_BRAIN.md) §7 erforderlich; dieses Dokument ist zunächst nur Projekt-dokumentation.
 - Soll die Wartezeit nach Konfigurationssendung in der UI explizit angezeigt werden? Derzeitige `0x11`-Sende-Logik ist hardwarewirksam, das Read-back-Verhalten ist `BEOBACHTUNG`.
+
+## 8. Netzbefund 0.6.4: gespeicherte vs. aktive IP
+
+**FAKT (Hardware 25.11.2026):** Der Cube war unter `192.168.10.60` erreichbar; die `c`-Antwort trug `192.168.0.222`, Gateway `192.168.0.1`, Maske `255.255.0.0` und DHCP-Flag `01` (Rohhex in `tests/MaxCube.Infrastructure.Tests/UdpNetworkConfiguratorTests.cs:74-82`).
+
+**INFERENZ (hohe Konfidenz):** Die Anzeige „IP“ zeigte die gespeicherte Konfigurations-IP, nicht die aktive Adresse. Der Decoder ist bitweise korrekt; eine Vertauschung der Byte-Reihenfolge würde den in `CHANGELOG.md:201-202` behobenen Fehler zurückbringen. Seit 0.6.4 werden „Konfigurierte IP“ und „Aktive IP (verbinden)“ getrennt angezeigt, und Netzwerklesen ist gesperrt, wenn die angezeigte Host-Zeile nicht mehr zum verbundenen Endpoint passt.
+
+**UNBEKANNT:** Ob der Cube die aktive Adresse zusätzlich über UDP-Opcode `N` (`GetNetworkAddress`, `CubeUdpProxy.java:79-90`) zuverlässig meldet; das wurde nicht contre Hardware geprüft. Die aktive Adresse wird daher aus dem verbundenen Endpoint abgeleitet, nicht geraten.
+
+## 9. Wartungsbefehle 0.6.4 (nicht an Hardware ausgeführt)
+
+**FAKT (Quelle):** `decompiled/controller/sources/de/eq3/max/al/local/update/CubeUdpOpcode.java:10` definiert `Reboot('R')`; `ResetGatewayCubeCommand.java:11-12` sendet `a:` ohne ACK-Erwartung. `src/MaxCube.Protocol/Commands/CubeCommands.cs:276-284` bildet das bereits ab.
+
+**FAKT (Implementierung):** Seit 0.6.4 liegen beide Befehle hinter Wartungs-UI, eigener Checkbox, Vorschau, separater Bestätigung, Operation Gate und Audit-Eintrag. Der Reboot wird genau einmal per Unicast an den verbundenen Endpoint gesendet (`CubeMaintenanceGateway.RebootAsync`), der Werksreset läuft über die bestehende Command-Queue (`CubeGateway.ResetGatewayAsync`). Es gibt keinen automatischen Aufruf, keinen Broadcast und keine Wiederholung.
+
+**UNBEKANNT:** Die tatsächliche Hardwarewirkung von `a:` und `R` am Original-Cube wurde **nicht** ausgeführt, um die installierte Konfiguration nicht zu zerstören. Vor einem Feldeinsatz ist ein gezielter Test an einem Ersatz-Cube erforderlich; die Quellbelege ersetzen keine Hardwareprüfung.
 - Weitere Räume, Bootloader-Antwort und Delphi-/Firmware-Abweichungen wurden nicht geprüft.
 
 ## 8. Lesende Verifikation für 0.5.0 (25.11.2026)

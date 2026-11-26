@@ -116,7 +116,7 @@ flowchart TB
 2. Audit-Nachrichten um Quelle („Benutzer“, „Reconnect“) ergänzen.
 3. Optionalen Hardware-Testmodus mit nur-Lese-Kommandos anbieten (kein Schreiben).
 4. Artefakte signieren und SHA-256 veröffentlichen.
-5. Protoklassen `SetUrlCommand`, `SetIntervalCommand`, `EncryptCommand`, `DecryptCommand`, `ResetGatewayCommand` aus dem öffentlichen Kommando-Pfad entfernen oder mit `[Obsolete("Cloud-only, nicht lokal verwendet")]` markieren, damit niemand sie versehentlich verdrahtet.
+5. Protoklassen `SetUrlCommand`, `SetIntervalCommand`, `EncryptCommand`, `DecryptCommand` aus dem öffentlichen Kommando-Pfad entfernen oder mit `[Obsolete("Cloud-only, nicht lokal verwendet")]` markieren, damit niemand sie versehentlich verdrahtet. `ResetGatewayCommand` bleibt bewusst verdrahtet: seit 0.6.4 nur über die Wartungsseite, mit Warnung, gesonderter Werksreset-Checkbox, Vorschau, zweiter Bestätigung und Audit-Eintrag (`CubeMaintenanceGateway`, `CubeApplicationService.FactoryResetCubeAsync`). Ein automatischer Aufruf existiert nicht.
 
 ## 10. Offene Fragen
 

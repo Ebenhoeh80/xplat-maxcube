@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MaxCube.Application.Abstractions;
 using MaxCube.Application.Services;
 using MaxCube.Domain.ValueObjects;
+using MaxCube.UI.Localization;
 
 namespace MaxCube.UI.ViewModels;
 
@@ -213,10 +214,12 @@ public partial class MainWindowViewModel
             FoundDevice = found;
             SetFoundDevice(found is null
                 ? L("SearchNone")
-                : L("SearchFound", found.Type, found.Address, found.SerialNumber));
+                : L(localizer => localizer.Format("SearchFound",
+                    localizer.Get(EnumLabels.Key(found.Type)), found.Address, found.SerialNumber)));
             if (found is not null && AssignDeviceName.Trim().Length == 0)
             {
-                AssignDeviceName = $"{found.Type} {found.SerialNumber}";
+                // Der Name kann zum Cube gesendet werden; er darf nicht von der UI-Sprache abhängen.
+                AssignDeviceName = found.SerialNumber;
             }
 
             await RefreshAuditAsync();

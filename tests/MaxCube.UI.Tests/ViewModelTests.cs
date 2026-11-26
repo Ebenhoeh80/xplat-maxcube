@@ -177,6 +177,19 @@ public class ViewModelTests
     }
 
     [Fact]
+    public async Task Service_warnings_follow_the_selected_language()
+    {
+        using var viewModel = CreateViewModel(out _, out var store);
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+        viewModel.SelectedLanguage = viewModel.Languages.Single(language => language.Code == "fr");
+        store.ThrowOnSave = true;
+
+        await viewModel.ApplyTemperatureCommand.ExecuteAsync(null);
+
+        viewModel.WarningText.Should().Be("Envoyé, mais le cache local n'a pas été mis à jour.");
+    }
+
+    [Fact]
     public async Task Cancelling_restores_the_status_text()
     {
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

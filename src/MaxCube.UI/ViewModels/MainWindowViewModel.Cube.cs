@@ -46,6 +46,10 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private string networkIp = string.Empty;
 
+    /// <summary>Aktive IP des verbundenen Cubes, getrennt von der gespeicherten Konfigurations-IP.</summary>
+    [ObservableProperty]
+    private string networkActiveIp = string.Empty;
+
     [ObservableProperty]
     private string networkMask = "255.255.255.0";
 
@@ -73,7 +77,21 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private string diagnosticText = string.Empty;
 
-    private bool CanNetwork => CanAdmin && _service.SupportsNetworkConfiguration;
+    private bool CanNetwork
+    {
+        get
+        {
+            if (!CanAdmin || !_service.SupportsNetworkConfiguration)
+            {
+                return false;
+            }
+
+            var connected = _service.ConnectedEndpoint;
+            return connected is not null
+                && connected.Port == Port
+                && string.Equals(connected.Host, Host.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     /// <summary>Write setzt gelesene Werte voraus; Lesen bleibt auch ohne Lesung möglich.</summary>
     private bool CanWriteCubeSetting
@@ -161,6 +179,7 @@ public partial class MainWindowViewModel
     {
         var configuration = await _service.ReadNetworkConfigurationAsync(token);
         NetworkIp = configuration.IpAddress;
+        NetworkActiveIp = configuration.ActiveIp ?? Host.Trim();
         NetworkMask = configuration.SubnetMask;
         NetworkGateway = configuration.Gateway;
         NetworkDns1 = configuration.Dns1;
@@ -171,11 +190,18 @@ public partial class MainWindowViewModel
 
     [RelayCommand(CanExecute = nameof(CanNetwork))]
     private Task ReadNetworkAsync()
-        => RunAsync(ReadNetworkCoreAsync, L("ErrNetwork"), L("OkNetworkRead"), status: NetworkStatus);
+        => CanNetwork
+            ? RunAsync(ReadNetworkCoreAsync, L("ErrNetwork"), L("OkNetworkRead"), status: NetworkStatus)
+            : Task.CompletedTask;
 
     [RelayCommand(CanExecute = nameof(CanSendNetwork))]
     private async Task SendNetworkAsync()
     {
+        if (!CanSendNetwork)
+        {
+            return;
+        }
+
         await RunAsync(async token =>
         {
             var configuration = new CubeNetworkConfiguration(

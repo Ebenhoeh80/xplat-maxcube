@@ -49,6 +49,8 @@ public sealed partial class CubeApplicationService
 
     public bool SupportsNetworkConfiguration => _network is not null;
 
+    public bool SupportsMaintenance => _maintenance is not null;
+
     public int PendingTemperatureCount
     {
         get
@@ -65,7 +67,7 @@ public sealed partial class CubeApplicationService
         LastAirtime = status;
         if (status.DutyCycle >= HighDutyCycleThreshold)
         {
-            Warning?.Invoke(this, $"Hohe Funkauslastung ({status.DutyCycle}); weitere Befehle später senden.");
+            RaiseWarning("WarnAirtime", $"Hohe Funkauslastung ({status.DutyCycle}); weitere Befehle später senden.", status.DutyCycle.ToString());
         }
 
         AirtimeChanged?.Invoke(this, status);
@@ -335,7 +337,7 @@ public sealed partial class CubeApplicationService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                Warning?.Invoke(this, $"Gebündelte Temperatur für Raum {roomId} nicht gesendet: {exception.Message}");
+                RaiseWarning("WarnBatchFailed", $"Gebündelte Temperatur für Raum {roomId} nicht gesendet: {exception.Message}", roomId.ToString());
             }
         }
 
@@ -397,7 +399,7 @@ public sealed partial class CubeApplicationService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                Warning?.Invoke(this, "Anlernmodus konnte nicht sauber beendet werden: " + exception.Message);
+                RaiseWarning("WarnInclusionStopFailed", "Anlernmodus konnte nicht sauber beendet werden: " + exception.Message);
             }
 
             lease.Dispose();
@@ -790,12 +792,43 @@ public sealed partial class CubeApplicationService
             cancellationToken);
     }
 
+    /// <summary>
+    /// Neustart und Werksreset sind die einzigen Befehle, die den Cube selbst neu starten
+    /// bzw. seine Konfiguration löschen. Beide verlangen eine explizite Bestätigung und
+    /// laufen über denselben Gate/Audit-Pfad wie andere Schreibzugriffe (0.6.4).
+    /// </summary>
+    public Task RebootCubeAsync(bool confirmed, CancellationToken cancellationToken = default)
+    {
+        var maintenance = _maintenance ?? throw new InvalidOperationException("Wartung ist nicht verfügbar.");
+        RequireConfirmed(confirmed);
+        var endpoint = _lastEndpoint ?? throw new InvalidOperationException("Es ist kein Cube-Endpoint bekannt.");
+        var cube = RequireCube();
+        return RunWriteAsync(
+            (_, _, token) => maintenance.RebootAsync(cube.SerialNumber.Value, endpoint.Host, token),
+            "Cube-Neustart angefordert",
+            cancellationToken);
+    }
+
+    public Task FactoryResetCubeAsync(bool confirmed, CancellationToken cancellationToken = default)
+    {
+        var maintenance = _maintenance ?? throw new InvalidOperationException("Wartung ist nicht verfügbar.");
+        RequireConfirmed(confirmed);
+        return RunWriteAsync(
+            (_, _, token) => maintenance.FactoryResetAsync(token),
+            "Cube-Werksreset angefordert",
+            cancellationToken);
+    }
+
     public async Task<CubeNetworkConfiguration> ReadNetworkConfigurationAsync(CancellationToken cancellationToken = default)
     {
         var network = _network ?? throw new InvalidOperationException("Die Netzwerkkonfiguration ist nicht verfügbar.");
         var cube = RequireCube();
         var endpoint = _lastEndpoint ?? throw new InvalidOperationException("Es ist kein Cube-Endpoint bekannt.");
-        return await network.ReadAsync(cube.SerialNumber.Value, endpoint.Host, cancellationToken).ConfigureAwait(false);
+        var configuration = await network.ReadAsync(cube.SerialNumber.Value, endpoint.Host, cancellationToken)
+            .ConfigureAwait(false);
+        // Die c-Antwort enthält die gespeicherte Konfigurations-IP. Bei DHCP weicht sie von der
+        // tatsächlich erreichbaren Adresse ab; beide Werte werden getrennt ausgewiesen (0.6.4).
+        return configuration with { ActiveIp = endpoint.Host };
     }
 
     public async Task WriteNetworkConfigurationAsync(
@@ -957,7 +990,7 @@ public sealed partial class CubeApplicationService
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Warning?.Invoke(this, "Gesendet, aber Audit nicht aktualisiert.");
+            RaiseWarning("WarnAuditNotUpdated", "Gesendet, aber Audit nicht aktualisiert.");
         }
     }
 

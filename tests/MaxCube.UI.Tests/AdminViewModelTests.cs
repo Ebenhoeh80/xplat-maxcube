@@ -203,6 +203,7 @@ public class AdminViewModelTests : IDisposable
         public required FakeStore Store { get; init; }
         public required Cube Cube { get; init; }
         public required FakeNetwork Network { get; init; }
+        public required FakeMaintenance Maintenance { get; init; }
     }
 
     private static async Task<Harness> CreateAsync(bool withAdmin = true, bool connect = true)
@@ -212,16 +213,22 @@ public class AdminViewModelTests : IDisposable
         var store = new FakeStore();
         var admin = new FakeAdmin();
         var network = new FakeNetwork();
+        var maintenance = new FakeMaintenance();
         var clock = new FakeClock();
         var service = new CubeApplicationService(
-            core, store, clock, admin: withAdmin ? admin : null, network: withAdmin ? network : null);
+            core, store, clock, admin: withAdmin ? admin : null, network: withAdmin ? network : null,
+            maintenance: withAdmin ? maintenance : null);
         var viewModel = new MainWindowViewModel(service, clock);
         if (connect)
         {
             await viewModel.ConnectCommand.ExecuteAsync(null);
         }
 
-        return new Harness { ViewModel = viewModel, Core = core, Admin = admin, Store = store, Cube = cube, Network = network };
+        return new Harness
+        {
+            ViewModel = viewModel, Core = core, Admin = admin, Store = store, Cube = cube,
+            Network = network, Maintenance = maintenance,
+        };
     }
 
     [Fact]
@@ -268,6 +275,40 @@ public class AdminViewModelTests : IDisposable
 
         vm.SuccessText.Should().Contain("queued");
         vm.WritePreviewText.Should().Contain("Send configuration");
+    }
+
+    [Fact]
+    public async Task A_second_language_switch_keeps_the_render_function_of_cached_texts()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        vm.BundleTemperatures = true;
+        vm.RequestedTemperature = 19.5;
+        await vm.ApplyTemperatureCommand.ExecuteAsync(null);
+        await vm.ApplyRoomConfigurationCommand.ExecuteAsync(null);
+
+        vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "en");
+        vm.SuccessText.Should().Contain("queued");
+        vm.WritePreviewText.Should().Contain("Send configuration");
+
+        vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "fr");
+        vm.SuccessText.Should().Contain("Température en attente");
+        vm.WritePreviewText.Should().Contain("confort");
+        vm.StatusText.Should().StartWith("Connecté");
+    }
+
+    [Fact]
+    public async Task Mode_messages_use_localized_enum_labels_after_a_language_switch()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        vm.Rooms[0].IsHouseSelected = true;
+
+        await vm.SetHouseTemporaryCommand.ExecuteAsync(null);
+        vm.SuccessText.Should().Contain("Temporary (1 h)");
+
+        vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "fr");
+        vm.SuccessText.Should().Contain("Temporaire (1 h)").And.NotContain("Temporary");
     }
 
     [Fact]
@@ -481,8 +522,10 @@ public class AdminViewModelTests : IDisposable
         await h.ViewModel.SearchNewDeviceCommand.ExecuteAsync(null);
 
         h.ViewModel.FoundDevice.Should().NotBeNull();
-        h.ViewModel.FoundDeviceText.Should().Contain("0A0B0E").And.Contain("JEQ0000009");
-        h.ViewModel.AssignDeviceName.Should().Be("ShutterContact JEQ0000009");
+        h.ViewModel.FoundDeviceText.Should().Contain("0A0B0E").And.Contain("JEQ0000009")
+            .And.Contain("Fensterkontakt");
+        // Der vorbelegte Name wird zum Cube gesendet und darf nicht von der UI-Sprache abhängen.
+        h.ViewModel.AssignDeviceName.Should().Be("JEQ0000009");
         h.ViewModel.AssignFoundDeviceCommand.CanExecute(null).Should().BeFalse("ohne Bestätigung");
 
         h.ViewModel.SelectedAssignTarget = h.ViewModel.RoomOptions.Single(option => option.Id == 1);
@@ -544,6 +587,65 @@ public class AdminViewModelTests : IDisposable
         await h.ViewModel.SendNetworkCommand.ExecuteAsync(null);
         h.Network.Written.Should().ContainSingle();
         h.ViewModel.ConfirmNetwork.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Network_read_shows_configured_and_active_ip_separately()
+    {
+        var h = await CreateAsync();
+        // Hardwarebeleg: DHCP aktiv, gespeicherte IP 192.168.0.222, erreichbar unter 127.0.0.1.
+        h.Network.Configuration = new CubeNetworkConfiguration(
+            "192.168.0.222", "255.255.0.0", "192.168.0.1", "192.168.0.1", "0.0.0.0", true);
+
+        await h.ViewModel.ReadNetworkCommand.ExecuteAsync(null);
+
+        h.ViewModel.NetworkIp.Should().Be("192.168.0.222");
+        h.ViewModel.NetworkActiveIp.Should().Be("127.0.0.1");
+        h.ViewModel.NetworkDhcp.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Network_read_is_blocked_when_the_displayed_host_differs_from_the_connected_endpoint()
+    {
+        var h = await CreateAsync();
+        h.ViewModel.ReadNetworkCommand.CanExecute(null).Should().BeTrue();
+
+        h.ViewModel.Host = "192.168.10.60";
+
+        h.ViewModel.ReadNetworkCommand.CanExecute(null).Should().BeFalse();
+        await h.ViewModel.ReadNetworkCommand.ExecuteAsync(null);
+        h.Network.ReadCalls.Should().BeEmpty();
+
+        h.ViewModel.Host = "127.0.0.1";
+        h.ViewModel.ReadNetworkCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Maintenance_actions_require_checkbox_preview_and_separate_confirmation()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+
+        vm.RebootCubeCommand.CanExecute(null).Should().BeFalse();
+        vm.FactoryResetCubeCommand.CanExecute(null).Should().BeFalse();
+
+        vm.ConfirmReboot = true;
+        vm.RebootCubeCommand.CanExecute(null).Should().BeTrue();
+        await vm.RebootCubeCommand.ExecuteAsync(null);
+        h.Maintenance.Calls.Should().BeEmpty("die Vorschau darf noch nichts senden");
+        vm.WritePreviewText.Should().Contain("Neustart").And.Contain("Konfiguration");
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+        h.Maintenance.Calls.Should().ContainSingle().Which.Should().Be("reboot:JEQ0001234@127.0.0.1");
+        vm.ConfirmReboot.Should().BeFalse();
+
+        vm.ConfirmFactoryReset = true;
+        vm.FactoryResetCubeCommand.CanExecute(null).Should().BeTrue();
+        await vm.FactoryResetCubeCommand.ExecuteAsync(null);
+        h.Maintenance.Calls.Should().HaveCount(1, "auch der Werksreset braucht die Bestätigung");
+        vm.WritePreviewText.Should().Contain("Werksreset").And.Contain("unwiderruflich");
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+        h.Maintenance.Calls.Should().Contain("factory-reset");
+        vm.ConfirmFactoryReset.Should().BeFalse();
     }
 
     [Fact]
@@ -894,16 +996,39 @@ public class AdminViewModelTests : IDisposable
     private sealed class FakeNetwork : ICubeNetworkConfigurator
     {
         public List<CubeNetworkConfiguration> Written { get; } = new();
+        public List<string> ReadCalls { get; } = new();
+
+        public CubeNetworkConfiguration Configuration { get; set; } = new(
+            "192.168.178.3", "255.255.255.0", "192.168.178.1", "192.168.178.1", "8.8.8.8", true);
 
         public Task<CubeNetworkConfiguration> ReadAsync(string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
-            => Task.FromResult(new CubeNetworkConfiguration(
-                "192.168.178.3", "255.255.255.0", "192.168.178.1", "192.168.178.1", "8.8.8.8", true));
+        {
+            ReadCalls.Add(ipAddress);
+            return Task.FromResult(Configuration);
+        }
 
         public Task WriteAsync(
             string serialNumber, string ipAddress, CubeNetworkConfiguration configuration,
             CancellationToken cancellationToken = default)
         {
             Written.Add(configuration);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeMaintenance : ICubeMaintenanceGateway
+    {
+        public List<string> Calls { get; } = new();
+
+        public Task RebootAsync(string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
+        {
+            Calls.Add($"reboot:{serialNumber}@{ipAddress}");
+            return Task.CompletedTask;
+        }
+
+        public Task FactoryResetAsync(CancellationToken cancellationToken = default)
+        {
+            Calls.Add("factory-reset");
             return Task.CompletedTask;
         }
     }

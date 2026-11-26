@@ -96,6 +96,7 @@ public partial class MainWindowViewModel
 
     private LocalizedValue L(Func<Localizer, string> render) => new(render, _loc);
 
+
     [ObservableProperty]
     private int selectedTabIndex;
 
@@ -122,7 +123,7 @@ public partial class MainWindowViewModel
 
     /// <summary>
     /// DE/EN behalten die ausformulierten Katalogtexte; FR/IT/NL/PL erhalten einen
-    /// lokalisierten Hinweis mit Code, stattenglish zu bleiben (0.6.3).
+    /// lokalisierten Hinweis mit Code, statt unübersetzt zu bleiben (0.6.3/0.6.4).
     /// </summary>
     private string BuildErrorHint(string value)
     {
@@ -207,6 +208,39 @@ public partial class MainWindowViewModel
 
     [ObservableProperty]
     private double pushLowerTemperature = 17.0;
+
+    // --- Wartung: Neustart und Werksreset --------------------------------------------
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RebootCubeCommand))]
+    private bool confirmReboot;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(FactoryResetCubeCommand))]
+    private bool confirmFactoryReset;
+
+    private bool CanMaintenance
+        => IsConnected && !IsBusy && !IsStale && _service.SupportsMaintenance;
+
+    private bool CanRebootCube => CanMaintenance && ConfirmReboot;
+
+    private bool CanFactoryResetCube => CanMaintenance && ConfirmFactoryReset;
+
+    [RelayCommand(CanExecute = nameof(CanRebootCube))]
+    private Task RebootCubeAsync()
+        => RunAsync(async token =>
+        {
+            await _service.RebootCubeAsync(true, token);
+            OnUiThread(() => ConfirmReboot = false);
+        }, L("ErrReboot"), L("OkReboot"), previewText: L("PreviewReboot"));
+
+    [RelayCommand(CanExecute = nameof(CanFactoryResetCube))]
+    private Task FactoryResetCubeAsync()
+        => RunAsync(async token =>
+        {
+            await _service.FactoryResetCubeAsync(true, token);
+            OnUiThread(() => ConfirmFactoryReset = false);
+        }, L("ErrFactoryReset"), L("OkFactoryReset"), previewText: L("PreviewFactoryReset"));
 
     // --- Gemeinsame Zustandslogik ----------------------------------------------------
 
@@ -344,11 +378,36 @@ public partial class MainWindowViewModel
             // Gespeicherte Texte (Status, Erfolg, Fehler, Vorschau, Dirty …) werden in der
             // neuen Sprache neu erzeugt; der Cube wird dabei nicht angesprochen.
             RefreshLocalizedBindings();
+            RefreshNumericBindings();
             RefreshDirtyState();
             ErrorHint = BuildErrorHint(ErrorMessage);
             RefreshStatusBar();
             LoadLog();
         });
+    }
+
+    /// <summary>
+    /// Zahlenbindings werden von Avalonia nur bei einer PropertyChanged neu formatiert. Der
+    /// Sprachwechsel ändert die Kultur, aber nicht die Werte – daher explizit benachrichtigen.
+    /// </summary>
+    private void RefreshNumericBindings()
+    {
+        foreach (var property in new[]
+        {
+            nameof(RequestedTemperature),
+            nameof(ConfigComfort), nameof(ConfigEco), nameof(ConfigMaximum), nameof(ConfigMinimum),
+            nameof(ConfigWindowTemperature), nameof(ConfigOffset),
+            nameof(BoostMinutes), nameof(BoostValveAngle), nameof(ValveOffsetPercent),
+            nameof(PushUpperTemperature), nameof(PushLowerTemperature),
+        })
+        {
+            OnPropertyChanged(property);
+        }
+
+        foreach (var point in WeekDays.SelectMany(day => day.Points))
+        {
+            point.RefreshCulture();
+        }
     }
 
     private void RefreshAdminCommands()
@@ -387,6 +446,8 @@ public partial class MainWindowViewModel
         yield return SendNtpCommand;
         yield return ReadNetworkCommand;
         yield return SendNetworkCommand;
+        yield return RebootCubeCommand;
+        yield return FactoryResetCubeCommand;
         yield return ExportDiagnosticsCommand;
     }
 

@@ -235,6 +235,13 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
         }
     }
 
+    /// <summary>
+    /// a: setzt das Gateway zurück. Der Herstellerclient erwartet kein ACK
+    /// (ResetGatewayCubeCommand.java:11-12); die Queue schreibt nur die Zeile.
+    /// </summary>
+    public Task ResetGatewayAsync(CancellationToken cancellationToken = default)
+        => SendAsync(new ResetGatewayCommand(), cancellationToken);
+
     private async Task<TResult> SendAsync<TResult>(CubeCommand<TResult> command, CancellationToken cancellationToken)
     {
         using var lease = await _gate.EnterAsync(cancellationToken).ConfigureAwait(false);

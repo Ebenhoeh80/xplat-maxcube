@@ -1,4 +1,5 @@
 using MaxCube.Domain.Enums;
+using MaxCube.UI.ViewModels;
 using DayOfWeek = MaxCube.Domain.Enums.DayOfWeek;
 
 namespace MaxCube.UI.Localization;
@@ -35,6 +36,14 @@ public static class EnumLabels
         RoomTemperatureMode.Comfort => "ModeComfort",
         RoomTemperatureMode.Normal => "ModeNormal",
         _ => "ModeNotAvailable",
+    };
+
+    public static string Key(HouseMode mode) => mode switch
+    {
+        HouseMode.Auto => "ModeAuto",
+        HouseMode.Eco => "ModeEco",
+        HouseMode.Comfort => "ModeComfort",
+        _ => "ModeTemporary",
     };
 
     public static string Key(DeviceType type) => type switch

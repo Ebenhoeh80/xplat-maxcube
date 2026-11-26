@@ -51,6 +51,16 @@ public class UdpNetworkConfiguratorTests
     }
 
     [Fact]
+    public void The_reboot_request_uses_the_manufacturer_opcode_without_payload()
+    {
+        var request = CubeUdpCodec.BuildRequest("JEQ0001234", CubeUdpCodec.Reboot);
+
+        request.Should().HaveCount(19);
+        request[18].Should().Be((byte)'R');
+        Encoding.ASCII.GetString(request, 8, 10).Should().Be("JEQ0001234");
+    }
+
+    [Fact]
     public void The_network_block_round_trips_and_keeps_unknown_trailing_bytes()
     {
         var data = NetworkData(dhcp: false, encryption: 7);

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-26
+
+### Fixed
+
+- Sprachwechsel funktioniert jetzt auch beim zweiten und weiteren Wechsel: `LocalizedValue.In`
+  behält die Renderfunktion, damit zwischengespeicherte Erfolgs-, Fehler-, Warn-, Vorschau-,
+  Status- und Dirty-Texte nicht in der Sprache des ersten Wechsels erstarren.
+- Enum-Werte in lokalisierten Sätzen kommen nicht mehr aus `Enum.ToString()`: Wochenprofil,
+  Modusmeldungen und Gerätefund nutzen `EnumLabels`. Der für den Cube bestimmte vorbelegte
+  Gerätename bleibt sprachneutral (Seriennummer).
+- Service-Warnungen werden als Code + Parameter geliefert und in allen sechs Sprachen
+  gerendert; die rohe Meldung bleibt nur im Log. Fehlerdialoge zeigen keinen unübersetzten
+  Ausnahmetext mehr, sondern einen lokalisierten Code-Hinweis.
+- Numerische Anzeigen und Schaltpunkt-Temperaturen werden nach dem Sprachwechsel neu
+  formatiert; `DefaultThreadCurrentCulture` gilt auch für Hintergrundtasks.
+- „Netzwerkinfos“ zeigen „Konfigurierte IP“ und „Aktive IP (verbinden)“ getrennt. Bei DHCP
+  ist die gespeicherte IP nicht die erreichbare Adresse. Netzwerklesen wird gesperrt, wenn
+  die angezeigte Host-Zeile nicht mehr zum tatsächlich verbundenen Endpoint passt. Die
+  Byte-Reihenfolge des belegten `c`-Formats bleibt unverändert.
+
+### Added
+
+- Wartungsseite mit „Cube neu starten“ (UDP-Opcode `R`, genau einmal per Unicast) und
+  „Werksreset des Cubes“ (TCP-Opcode `a:` über die bestehende Command-Queue). Beide sind
+  nur mit eigener Checkbox, sichtbarer Vorschau und der separaten Bestätigung der
+  Schreibvorschau ausführbar; der Werksreset hat eine zusätzliche Warnung. Beide laufen
+  über Operation Gate und Audit. Es gibt keine automatische Ausführung.
+
+### Verification
+
+- Build 0 Warnungen/0 Fehler; Windows-Tests grün. Hardwarewirkung von `a:`/`R` bleibt
+  `UNBEKANNT`, weil bewusst kein zerstörender Test am Produktiv-Cube ausgeführt wurde.
+
 ## [0.6.3] - 2026-11-26
 
 ### Fixed
