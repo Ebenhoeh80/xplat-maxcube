@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using MaxCube.Application.Abstractions;
@@ -41,6 +42,48 @@ public class LocalizationTests
             var placeholders = texts.Select(text =>
                 string.Join(',', Regex.Matches(text, @"\{(\d+)(?::[^}]*)?\}").Select(match => match.Groups[1].Value).Distinct().Order()));
             placeholders.Distinct().Should().HaveCount(1, $"{key}: Platzhalter müssen in allen Sprachen gleich sein");
+        }
+    }
+
+    [Fact]
+    public void Number_formats_follow_the_selected_language_even_with_invariant_globalization()
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        var originalDefault = CultureInfo.DefaultThreadCurrentCulture;
+        var originalDefaultUi = CultureInfo.DefaultThreadCurrentUICulture;
+        try
+        {
+            var localizer = new Localizer("de");
+            12.5.ToString("N2", CultureInfo.CurrentCulture).Should().Be("12,50");
+            1234567.ToString("N0", CultureInfo.CurrentCulture).Should().Be("1.234.567");
+
+            localizer.SetLanguage("en");
+            12.5.ToString("N2", CultureInfo.CurrentCulture).Should().Be("12.50");
+            1234567.ToString("N0", CultureInfo.CurrentCulture).Should().Be("1,234,567");
+
+            localizer.SetLanguage("fr");
+            12.5.ToString("N2", CultureInfo.CurrentCulture).Should().Be("12,50");
+            1234567.ToString("N0", CultureInfo.CurrentCulture).Should().Be("1\u202F234\u202F567");
+
+            localizer.SetLanguage("it");
+            12.5.ToString("N2", CultureInfo.CurrentCulture).Should().Be("12,50");
+            1234567.ToString("N0", CultureInfo.CurrentCulture).Should().Be("1.234.567");
+
+            localizer.SetLanguage("nl");
+            12.5.ToString("N2", CultureInfo.CurrentCulture).Should().Be("12,50");
+            1234567.ToString("N0", CultureInfo.CurrentCulture).Should().Be("1.234.567");
+
+            localizer.SetLanguage("pl");
+            12.5.ToString("N2", CultureInfo.CurrentCulture).Should().Be("12,50");
+            1234567.ToString("N0", CultureInfo.CurrentCulture).Should().Be("1\u00A0234\u00A0567");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+            CultureInfo.CurrentUICulture = originalUiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = originalDefault;
+            CultureInfo.DefaultThreadCurrentUICulture = originalDefaultUi;
         }
     }
 
@@ -387,6 +430,26 @@ public class AdminViewModelTests : IDisposable
         h.ViewModel.DismissErrorCommand.Execute(null);
         h.ViewModel.HasError.Should().BeFalse();
         h.ViewModel.ErrorHint.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task An_open_error_dialog_follows_every_further_language_switch()
+    {
+        var h = await CreateAsync();
+        h.ViewModel.ConfigMinimum = 29.0;
+        h.ViewModel.ConfigMaximum = 25.0;
+        await h.ViewModel.ApplyRoomConfigurationCommand.ExecuteAsync(null);
+        await h.ViewModel.ConfirmWriteCommand.ExecuteAsync(null);
+
+        h.ViewModel.ErrorMessage.Should().Contain("Fehlercode").And.Contain("MAX1050");
+
+        h.ViewModel.SelectedLanguage = h.ViewModel.Languages.Single(language => language.Code == "en");
+        h.ViewModel.ErrorMessage.Should().Contain("error code").And.NotContain("Fehlercode");
+        h.ViewModel.ErrorMessage.Should().Contain("MAX1050");
+
+        h.ViewModel.SelectedLanguage = h.ViewModel.Languages.Single(language => language.Code == "fr");
+        h.ViewModel.ErrorMessage.Should().Contain("code d'erreur").And.NotContain("error code");
+        h.ViewModel.ErrorMessage.Should().Contain("MAX1050");
     }
 
     [Fact]

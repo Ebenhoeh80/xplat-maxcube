@@ -324,3 +324,25 @@ SETPOINT RESTORE OK
 **FAKT:** Beide heruntergeladenen Pakete liefen fensterlos mit `SELFCHECK OK … 0.6.4 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie). Lokal: Build 0/0, 495/495 Tests grün auf Windows und Debian 13.
 
 **UNBEKANNT:** Eine erneute Avalonia-Sichtprüfung aller sechs Sprachen unter echter Last und eine Muttersprachlerprüfung der Übersetzungen stehen weiter aus; der fensterlose Selbsttest ersetzt sie nicht.
+
+## 21. Trennung beim Beenden 0.6.5
+
+**FAKT (Nutzerbericht und Lokalprotokoll 26.11.2026):** Der Nutzer meldete, die App habe sich beim Schließen nicht sauber vom Cube getrennt; der Cube sei danach unerreichbar gewesen und habe auf ein Timeout gewartet. In `%LOCALAPPDATA%\MaxCube\logs\maxcube-20261126.log` folgt auf „Verbindung hergestellt.“ um 09:48:38 bis zum nächsten App-Start um 11:02:58 **keine** Trennungszeile. Die manuellen Trennversuche um 11:16:43 ergaben „Verbindung zum Cube getrennt.“ + „Disconnected.“ und sind damit protokolliert.
+
+**FAKT (Ursache):** Der Tray-Eintrag „Beenden“ rief `desktop.Shutdown()` auf (`App.axaml.cs:92`, Stand 0.6.4). In Avalonia 11.3.23 ist das ein forcierter Shutdown, der `ShutdownRequested` nicht auslöst. Der einzige Cleanup-Handler hing aber an diesem Event (`App.axaml.cs:62-74`): `provider.DisposeAsync()` und damit `CubeGateway.DisposeAsync()` → `q:` wurden beim Tray-Exit nie ausgeführt. Bei aktivem `closeToTray` war der Tray-Exit sogar der einzige normale Beendigungsweg (`docs/RUNBOOK.md:37-39`). Zusätzlich wartete das Gateway nach `q:` nicht auf EOF, sondern schloss den Socket sofort; der Herstellerclient liest dagegen explizit bis `null` (`DisconnectCubeCommand.java:15-19`).
+
+**FAKT (Fix):** Der Tray-Eintrag ruft jetzt `desktop.TryShutdown()`; ein zweites `ShutdownRequested` bricht das laufende Cleanup nicht mehr ab. `CubeApplicationService` ist `IAsyncDisposable` und stoppt vor dem Gateway den Reconnect-Loop sowie die Gateway-Event-Abos, ohne ein zweites `q:` zu schreiben. Das Gateway wartet nach `q:` maximal 200 ms auf EOF, schließt den Socket auch bei hängender Queue in jedem Pfad und verhindert Connect nach Dispose (`ObjectDisposedException`). Die äußere Shutdown-Kappe wurde auf 3 s angehoben, damit die Summe der Innenbudgets den Socket-Close nicht abschneidet.
+
+**FAKT (Verifikation):** Neue hardwarefreie Regressionstests prüfen `q:` + genau einen EOF-Read, genau ein `q:` über zwei Disposes, Ablehnung von Connect nach Dispose, Service-Entkopplung vom Gateway-Event und den Tray-Exit-Quellpfad. Build 0/0; Windows und Debian 13 (WSL2) **501/501** Tests, `SELFCHECK OK … 0.6.5 … SQLite ok` auf beiden Systemen. **INFERENZ:** Der zuvor beobachtete Cube-Timeout ist mit dem fehlenden `q:` und dem ausbleibenden EOF-Warten konsistent; ein Hardware-Gegenbeweis liegt nicht vor.
+
+**UNBEKANNT:** Ob der physische Cube nach `q:` tatsächlich EOF liefert und die Session sofort freigibt, wurde nicht gemessen. Ein harter Prozess-Kill bleibt ohne `q:`.
+
+## 22. Sprachwechsel-Reste 0.6.5
+
+**FAKT (Ursache):** Ein als `object` an `string.Format` übergebenes `LocalizedValue` wurde beim Re-Render nicht erneut lokalisiert: `L("ErrorWithCode", errorPrefix, code)` fror den Prefix über `ToString()` ein (`MainWindowViewModel.cs:1139-1142`, `MainWindowViewModel.Admin.cs:94-95`). Nach de→en→fr blieb im Fehlerdialog ein deutscher Prefix stehen, während `ErrorHint` korrekt wechselte. Zwei Wochenprofil-Fehler setzten außerdem `new LocalizedValue(exception.Message)` ohne Renderfunktion. `Localizer.ApplyCulture` nutzte `CultureInfo.GetCultureInfo`, was bei `InvariantGlobalization=true` (`Directory.Build.props:12`) keine echten Kulturen liefert – die angekündigten Zahlen-/Datumsformate blieben invariant.
+
+**FAKT (Fix):** `L(...)` wertet `LocalizedValue`-Argumente beim Re-Render in der aktuellen Sprache aus. Wochenprofil-Fehler laufen über denselben lokalisierten Code-Helfer wie andere Fehler; mehrere Protokollzeilen nutzen vorhandene Katalogkeys. `ApplyCulture` setzt auf eine beschreibbare Kopie der invarianten Kultur mit sprachspezifischen Dezimal-/Gruppentrennzeichen und Kurzdatumsmuster – ohne ICU-Voraussetzung. Protokoll- und Berechnungspfade bleiben explizit invariant.
+
+**FAKT (Verifikation):** Regressionstests für Fehlerdialog de→en→fr und Zahlenformate aller sechs Sprachen grün; 501/501 Tests auf Windows und Debian 13. **FAKT (bewusst nicht umgesetzt):** Ein kompletter Prozess-Neustart bei Sprachwechsel wurde verworfen: er würde die unbestätigte Schreibvorschau (`_pendingWrite`), Dirty-Baselines und getippte Werte verwerfen, den Cube-Endpoint nicht automatisch wiederherstellen und die rohen Audit-/Diagnosetexte trotzdem nicht übersetzen.
+
+**UNBEKANNT:** Die Avalonia-Sichtprüfung aller sechs Sprachen und eine Muttersprachlerprüfung stehen weiter aus. Audit- und Diagnosetexte bleiben historische Rohtexte in der Sprache ihrer Entstehung.

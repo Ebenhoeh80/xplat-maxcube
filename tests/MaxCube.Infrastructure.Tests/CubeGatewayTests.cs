@@ -47,6 +47,34 @@ public class CubeGatewayTests
     }
 
     [Fact]
+    public async Task Disposal_waits_for_the_cube_eof_after_q()
+    {
+        var transport = new ScriptedTransport("H:JEQ0001234,1d2a3c,0113", "L:");
+        var gateway = new CubeGateway(transportFactory: (_, _) => transport);
+        await gateway.ConnectAsync(new CubeEndpoint("fake", 62910));
+        var readsBeforeDispose = transport.ReadCount;
+
+        await gateway.DisposeAsync();
+
+        // Der Hersteller wartet nach q: auf EOF, bevor er die Session freigibt.
+        transport.ReadCount.Should().Be(readsBeforeDispose + 1);
+        transport.SentLines.Should().ContainSingle().Which.Should().Be("q:");
+    }
+
+    [Fact]
+    public async Task A_reconnect_after_dispose_cannot_open_a_new_socket()
+    {
+        var transport = new ScriptedTransport("H:JEQ0001234,1d2a3c,0113", "L:");
+        var gateway = new CubeGateway(transportFactory: (_, _) => transport);
+        await gateway.ConnectAsync(new CubeEndpoint("fake", 62910));
+        await gateway.DisposeAsync();
+
+        Func<Task> reconnect = () => gateway.ConnectAsync(new CubeEndpoint("fake", 62910));
+
+        await reconnect.Should().ThrowAsync<ObjectDisposedException>();
+    }
+
+    [Fact]
     public async Task A_transport_that_ignores_cancellation_cannot_block_disconnect()
     {
         var transport = new HangingTransport();
@@ -237,6 +265,8 @@ public class CubeGatewayTests
 
         public List<string> SentLines { get; } = new();
 
+        public int ReadCount { get; private set; }
+
         public bool IsConnected { get; private set; }
 
         public ValueTask ConnectAsync(CancellationToken cancellationToken = default)
@@ -246,7 +276,10 @@ public class CubeGatewayTests
         }
 
         public ValueTask<string?> ReadLineAsync(CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(_lines.Count > 0 ? _lines.Dequeue() : null);
+        {
+            ReadCount++;
+            return ValueTask.FromResult(_lines.Count > 0 ? _lines.Dequeue() : null);
+        }
 
         public ValueTask WriteLineAsync(string line, CancellationToken cancellationToken = default)
         {

@@ -92,7 +92,21 @@ public partial class MainWindowViewModel
     public ObservableCollection<RoomOption> RoomOptions { get; } = new();
 
     private LocalizedValue L(string key, params object[] arguments)
-        => new(arguments.Length == 0 ? loc => loc.Get(key) : loc => loc.Format(key, arguments), _loc);
+    {
+        if (arguments.Length == 0)
+        {
+            return new LocalizedValue(loc => loc.Get(key), _loc);
+        }
+
+        // Ein LocalizedValue als Format-Argument würde von string.Format über ToString()
+        // eingefroren. Beim Re-Render muss es in der jetzt gewählten Sprache neu
+        // ausgewertet werden, sonst bleibt z. B. der Fehlerprefix deutsch (0.6.5).
+        var snapshot = arguments.ToArray();
+        return new LocalizedValue(
+            loc => loc.Format(key, snapshot.Select(argument =>
+                argument is LocalizedValue localized ? localized.In(loc).Current : argument).ToArray()),
+            _loc);
+    }
 
     private LocalizedValue L(Func<Localizer, string> render) => new(render, _loc);
 

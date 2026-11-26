@@ -67,7 +67,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 | `StateReceiveTimeout`/`CubeCommunicationFailedException` vor `L:` | `C:`/`M:` unvollständig oder zu langsam | `StateReceiver.cs:23-71` | Verbindung trennen und erneut connecten; Log/Mitschnitt prüfen |
 | `CubeTransportException: Create a new transport to reconnect.` | fehlerhafter Transport wird wiederverwendet | `TcpCubeTransport.cs:25-28,184-189` | App trennen und neu verbinden; kein Code-Workaround |
 | Status „stale“ / Reconnect | `l:`-Refresh dreimal fehlgeschlagen oder 6 h keine Aktivität | `CubeGateway.cs:278-334`, `CubeApplicationService.cs:111-185` | Cube/Ping prüfen; Reconnect läuft mit 1→2→4…30 s; ggf. manuell trennen/verbinden |
-| `q:` fehlt beim Beenden | Gateway-Gate 250 ms nicht erreichbar | `CubeGateway.cs:185-235,441-459` | Prozessende akzeptieren; Cube-Session wird vom Socket-Close freigegeben |
+| `q:` fehlt beim Beenden / Cube danach nicht erreichbar | Vor 0.6.5: Tray → „Beenden“ nutzte den forcierten Shutdown; außerdem Gate-Timeout oder Prozess-Kill | `App.axaml.cs:91-95`, `CubeGateway.cs:185-235,448-466` | 0.6.5 nutzt `TryShutdown()`; bei hartem Prozessende bleibt nur das Cube-Timeout abwarten, kein Retry gegen den Cube |
 | Suche findet keinen Cube | lokaler UDP-Port nicht 23272 (**FAKT**, Hardware 25.11.2026), Broadcast/Multicast blockiert oder falsches Subnetz | `UdpDiscoveryTransport.cs:23`, `docs/HARDWARE-VERIFY.md` §3 | IP manuell eintragen; Korrektur des Bindungsports prüfen; „Cube suchen“ erneut ausführen |
 | Bootloader-Warnung „Firmware-Aktionen deaktiviert“ | Antwortsignatur `eQ3MaxBl` | `CubeDiscoveryService.cs:45-49`, `Strings.cs:249` | Normalfall; keine Firmware-Aktion starten |
 

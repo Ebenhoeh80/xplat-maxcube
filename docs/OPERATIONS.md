@@ -102,6 +102,8 @@ Enthalten: `maxcube.db`, `logs/`, `reports/`, `maxcube.lock` (`AppPaths.cs:3-28`
 
 Der Shutdown ist asynchron: Tray wird disposed, `ServiceProvider.DisposeAsync()` schließt SQLite und sendet über `CubeGateway` `q:`, danach wird das Lock freigegeben (`App.axaml.cs:124-143`, `CubeGateway.cs:23-26`). Ein blockierendes `GetResult` im UI-Thread wird bewusst vermieden (`App.axaml.cs:69-73`).
 
+**FAKT (0.6.5):** Sowohl Fenster-Schließen als auch Tray → „Beenden“ laufen über `ShutdownRequested`: der Tray-Eintrag ruft `desktop.TryShutdown()` statt des forcierten `desktop.Shutdown()` (`App.axaml.cs:91-95`). Der Service stoppt vor dem Gateway den Reconnect-Loop und löst seine Gateway-Event-Abos; das Gateway wartet nach `q:` begrenzt auf EOF (wie `DisconnectCubeCommand.java:15-19`) und schließt den Socket in jedem Pfad (`CubeGateway.cs`). Ein hartes Prozessende (Task-Manager, Absturz) bleibt die einzige Situation ohne `q:` – der Cube gibt die Session dann erst nach seinem eigenen Timeout frei.
+
 ## 5. Rollback
 
 Es gibt keinen Installer und keine Datenbankschema-Rückwärtsmigration. Rollback bedeutet:

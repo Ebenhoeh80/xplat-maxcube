@@ -61,6 +61,9 @@ public sealed partial class App : global::Avalonia.Application
 
             desktop.ShutdownRequested += (_, args) =>
             {
+                // Auch bei einem zweiten Request abbrechen: ein forcierter Shutdown
+                // würde sonst mitten im asynchronen Cleanup und damit vor q: enden.
+                args.Cancel = true;
                 if (_shuttingDown)
                 {
                     return;
@@ -68,7 +71,6 @@ public sealed partial class App : global::Avalonia.Application
 
                 // Avalonia erwartet einen synchronen Handler. Erst asynchron aufräumen,
                 // dann neu Shutdown auslösen – kein blockierendes GetResult (N7).
-                args.Cancel = true;
                 _shuttingDown = true;
                 _ = ShutdownAsync(desktop);
             };
@@ -89,7 +91,9 @@ public sealed partial class App : global::Avalonia.Application
                 main.Activate();
             };
             var exit = new NativeMenuItem(viewModel.Loc["TrayExit"]);
-            exit.Click += (_, _) => desktop.Shutdown();
+            // TryShutdown löst ShutdownRequested aus und damit den Cleanup-Pfad aus.
+            // Ein direkter Shutdown() wäre forciert: ohne q:, ohne Socket-Close.
+            exit.Click += (_, _) => desktop.TryShutdown();
             var menu = new NativeMenu { show, exit };
 
             _tray = new TrayIcon

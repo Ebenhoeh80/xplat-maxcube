@@ -94,31 +94,53 @@ public sealed class Localizer : INotifyPropertyChanged
     /// </summary>
     private static void ApplyCulture(string code)
     {
-        var name = code switch
+        // Die App läuft mit InvariantGlobalization=true (Directory.Build.props): echte
+        // Kulturnamen wären nicht verfügbar und würden CultureNotFoundException werfen.
+        // Eine beschreibbare Kopie der invarianten Kultur trägt die sprachspezifischen
+        // Formate – ohne ICU-Voraussetzung, also auch auf schlanken Linux-Systemen.
+        var culture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+        var number = culture.NumberFormat;
+        var date = culture.DateTimeFormat;
+        switch (code)
         {
-            "en" => "en-US",
-            "fr" => "fr-FR",
-            "it" => "it-IT",
-            "nl" => "nl-NL",
-            "pl" => "pl-PL",
-            _ => "de-DE",
-        };
+            case "en":
+                number.NumberDecimalSeparator = ".";
+                number.NumberGroupSeparator = ",";
+                date.ShortDatePattern = "MM/dd/yyyy";
+                break;
+            case "fr":
+                number.NumberDecimalSeparator = ",";
+                number.NumberGroupSeparator = "\u202F";
+                date.ShortDatePattern = "dd/MM/yyyy";
+                break;
+            case "it":
+                number.NumberDecimalSeparator = ",";
+                number.NumberGroupSeparator = ".";
+                date.ShortDatePattern = "dd/MM/yyyy";
+                break;
+            case "nl":
+                number.NumberDecimalSeparator = ",";
+                number.NumberGroupSeparator = ".";
+                date.ShortDatePattern = "dd-MM-yyyy";
+                break;
+            case "pl":
+                number.NumberDecimalSeparator = ",";
+                number.NumberGroupSeparator = "\u00A0";
+                date.ShortDatePattern = "dd.MM.yyyy";
+                break;
+            default:
+                number.NumberDecimalSeparator = ",";
+                number.NumberGroupSeparator = ".";
+                date.ShortDatePattern = "dd.MM.yyyy";
+                break;
+        }
 
-        try
-        {
-            var culture = CultureInfo.GetCultureInfo(name);
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = culture;
-            // Hintergrundtasks und Continuations dürfen nicht in der Sprache vor dem Wechsel
-            // weiterformatieren (0.6.4). Protokollpfade bleiben weiterhin explizit invariant.
-            CultureInfo.DefaultThreadCurrentCulture = culture;
-            CultureInfo.DefaultThreadCurrentUICulture = culture;
-        }
-        catch (CultureNotFoundException)
-        {
-            // Auf schlanken Linux-Systemen ohne ICU bleibt die Systemkultur stehen; die Texte
-            // werden trotzdem aus dem Katalog geliefert (SystemLanguage.cs:7-12).
-        }
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        // Hintergrundtasks und Continuations dürfen nicht in der Sprache vor dem Wechsel
+        // weiterformatieren (0.6.4). Protokollpfade bleiben weiterhin explizit invariant.
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
     }
 
     private static int IndexOf(string? language)

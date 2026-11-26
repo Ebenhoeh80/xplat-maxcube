@@ -23,8 +23,14 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
     /// <summary>q: darf den Shutdown nicht aufhalten (Java wartet hier 2 s).</summary>
     private static readonly TimeSpan DisconnectCommandTimeout = TimeSpan.FromMilliseconds(700);
 
+    /// <summary>Nach q: wartet der Hersteller auf EOF, bevor er die Session freigibt.</summary>
+    private static readonly TimeSpan DisconnectEofTimeout = TimeSpan.FromMilliseconds(200);
+
     /// <summary>Obergrenze für das Schließen von Queue und Socket.</summary>
     private static readonly TimeSpan CleanupTimeout = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Summe aus Gate, Monitor, q:, EOF und Socket-Close plus Reserve.</summary>
+    private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(3);
 
     private readonly CubeConnectionOptions _defaults;
     private readonly Func<CubeEndpoint, CubeConnectionOptions, ICubeTransport> _transportFactory;
@@ -72,6 +78,12 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
     public async Task<Cube> ConnectAsync(CubeEndpoint endpoint, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
+        // Ein Reconnect, der das Shutdown überlebt, darf keinen neuen Socket öffnen.
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            throw new ObjectDisposedException(nameof(CubeGateway));
+        }
+
         using var lease = await _gate.EnterAsync(cancellationToken).ConfigureAwait(false);
         var active = lease.Token;
         if (_queue is not null)
@@ -197,7 +209,10 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
             {
                 await DisposeBoundedAsync(queue.DisposeAsync).ConfigureAwait(false);
             }
-            else if (candidate is not null)
+
+            // Auch bei hängender Queue den Socket schließen: der Cube erlaubt nur
+            // eine TCP-Session und hält sie sonst bis zu seinem eigenen Timeout.
+            if (candidate is not null)
             {
                 await DisposeBoundedAsync(candidate.DisposeAsync).ConfigureAwait(false);
             }
@@ -224,9 +239,17 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
                 await ExecuteBoundedAsync(
                     queue.ExecuteAsync(new DisconnectCommand(DisconnectCommandTimeout), timeout.Token))
                     .ConfigureAwait(false);
+                if (transport is not null)
+                {
+                    await AwaitDisconnectEofAsync(transport, lease.Token).ConfigureAwait(false);
+                }
+
                 await DisposeBoundedAsync(queue.DisposeAsync).ConfigureAwait(false);
             }
-            else if (transport is not null)
+
+            // Die Queue disposed ihren Transport; zusätzlich direkt schließen, falls
+            // ihr Worker hängt. TcpCubeTransport.DisposeAsync ist idempotent.
+            if (transport is not null)
             {
                 await DisposeBoundedAsync(transport.DisposeAsync).ConfigureAwait(false);
             }
@@ -416,9 +439,26 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
         {
             await task.WaitAsync(DisconnectCommandTimeout).ConfigureAwait(false);
         }
-        catch
+        catch (Exception exception)
         {
-            // Ein fehlgeschlagener q:-Befehl darf die Trennung nicht verhindern.
+            System.Diagnostics.Trace.TraceWarning("Disconnect command failed: " + exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// Der Hersteller liest nach q: bis EOF, bevor er die einzige TCP-Session
+    /// freigibt (DisconnectCubeCommand.java:15-19). Begrenzt warten und das Ergebnis
+    /// ignorieren: ein Cube ohne EOF darf das Beenden nicht blockieren.
+    /// </summary>
+    private static async Task AwaitDisconnectEofAsync(ICubeTransport transport, CancellationToken token)
+    {
+        try
+        {
+            await transport.ReadLineAsync(DisconnectEofTimeout, token).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Trace.TraceWarning("Disconnect EOF not confirmed: " + exception.Message);
         }
     }
 
@@ -457,7 +497,7 @@ public sealed partial class CubeGateway : ICubeGateway, ICubeAdminGateway, IAsyn
             // Zusätzliche Obergrenze, damit ein fehlerhafter Socket das Beenden
             // der Anwendung unter keinen Umständen blockiert (Gremium Runde 1, N7).
             await DisconnectAsync(CancellationToken.None)
-                .WaitAsync(OperationGate.AcquireTimeout).ConfigureAwait(false);
+                .WaitAsync(ShutdownTimeout).ConfigureAwait(false);
         }
         catch
         {

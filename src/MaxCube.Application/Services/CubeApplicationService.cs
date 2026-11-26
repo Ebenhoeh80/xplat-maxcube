@@ -13,7 +13,7 @@ namespace MaxCube.Application.Services;
 /// Orchestriert Verbindung, Schreibbefehle und Cache. Alle fachlichen Mutationen laufen
 /// über dieses eine Objekt, damit UI und Protokoll sich nicht gegenseitig direkt sehen.
 /// </summary>
-public sealed partial class CubeApplicationService
+public sealed partial class CubeApplicationService : IAsyncDisposable
 {
     private readonly ICubeGateway _gateway;
     private readonly ICubeStateStore _store;
@@ -28,6 +28,9 @@ public sealed partial class CubeApplicationService
     /// <summary>Exponentielles Reconnect: 1, 2, 4, … bis 30 s.</summary>
     private static readonly TimeSpan ReconnectBaseDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan ReconnectMaxDelay = TimeSpan.FromSeconds(30);
+
+    /// <summary>Warten auf den abgebrochenen Reconnect-Task beim App-Ende.</summary>
+    private static readonly TimeSpan ReconnectShutdownTimeout = TimeSpan.FromMilliseconds(500);
 
     private Cube? _current;
     private bool _offline;
@@ -174,6 +177,43 @@ public sealed partial class CubeApplicationService
 
         cts.Cancel();
         // Bewusst nicht sofort Dispose: der Reconnect-Task nutzt das Token noch.
+    }
+
+    /// <summary>
+    /// Beim App-Ende den Reconnect-Loop stoppen und die Event-Abos lösen. Das Gateway
+    /// trennt die TCP-Session selbst und sendet dabei genau einmal q:; ein zweites
+    /// Disconnect an dieser Stelle würde eine doppelte Zeile auf den Draht schreiben.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        var reconnectCts = _reconnectCts;
+        StopReconnect();
+        var task = _reconnectTask;
+        if (task is not null)
+        {
+            try
+            {
+                await task.WaitAsync(ReconnectShutdownTimeout).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ein hängender Reconnect darf das Beenden nicht festhalten.
+            }
+        }
+
+        _gateway.StateChanged -= OnGatewayStateChanged;
+        _gateway.CubeRefreshed -= OnCubeRefreshed;
+        _gateway.SessionUnreachable -= OnSessionUnreachable;
+        if (_admin is not null)
+        {
+            _admin.AirtimeChanged -= OnAirtimeChanged;
+        }
+
+        if (task is { IsCompleted: true })
+        {
+            // Erst nach Ende des Tasks ist das Token nicht mehr in Verwendung.
+            reconnectCts?.Dispose();
+        }
     }
 
     private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
