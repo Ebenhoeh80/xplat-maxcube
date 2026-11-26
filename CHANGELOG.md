@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (0.6.2, noch nicht veröffentlicht)
+## [0.6.2] - 2026-11-26
+
+### Added
 
 - Vorschau vor riskanten Schreibbefehlen: Wochenprofil senden/kopieren und
   Konfiguration senden/kopieren zeigen zuerst die konkreten Werte; erst nach
@@ -48,7 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Version auf `0.6.2` (`Directory.Build.props:3`); Build 0 Warnungen/0 Fehler,
   486/486 Tests grün, `--selfcheck OK` unter Windows und Debian 13 (WSL2).
-  Noch kein Commit, Tag oder Release.
+  Veröffentlicht am 26.11.2026: Tag `v0.6.2` auf `7f45d5e`, Merge in `main`
+  als `04e5c63` via PR #13; Release-Workflow und alle vier Pflicht-Checks grün,
+  ZIPs für `win-x64` und `linux-x64` angehängt.
 
 ## [0.6.1] - 2026-11-25
 
