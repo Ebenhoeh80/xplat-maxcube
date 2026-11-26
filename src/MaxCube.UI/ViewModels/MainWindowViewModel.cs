@@ -139,6 +139,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void SetError(LocalizedValue? value) => SetLocalized(nameof(ErrorMessage), value, text => ErrorMessage = text);
 
+    /// <summary>
+    /// Wochenprofil-Fehler als lokalisierten Satz mit Renderfunktion statt als rohen
+    /// Ausnahmetext; der Rohtext bleibt nur im Protokoll (0.6.5).
+    /// </summary>
+    private void SetLocalizedProfileError(Exception exception, string prefixKey)
+    {
+        var prefix = L(prefixKey);
+        var code = ErrorCatalog.FindFirstCode(exception.Message);
+        SetError(code is null
+            ? L(localizer => $"{prefix.In(localizer).Current}: {localizer.Get("ErrorGeneric")}")
+            : L("ErrorWithCode", prefix, code));
+    }
+
     private void SetBusy(LocalizedValue? value) => SetLocalized(nameof(BusyText), value, text => BusyText = text);
 
     private void SetPreview(LocalizedValue? value) => SetLocalized(nameof(WritePreviewText), value, text => WritePreviewText = text);
@@ -635,7 +648,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             await _service.DisconnectAsync();
             IsConnected = false;
             SetStatus(L("StatusDisconnected"));
-            _log.Write("INFO", "Verbindung zum Cube getrennt.");
+            _log.Write("INFO", L("OkDisconnect"));
             foreach (var room in Rooms) room.Dispose();
             foreach (var device in Devices) device.Dispose();
             Rooms.Clear();
@@ -828,7 +841,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            SetError(new LocalizedValue(exception.Message));
+            SetLocalizedProfileError(exception, "ErrCopyProfile");
             return;
         }
 
@@ -870,7 +883,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            SetError(new LocalizedValue(exception.Message));
+            SetLocalizedProfileError(exception, "ErrSendProfile");
             return;
         }
 
@@ -1267,12 +1280,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (stale)
         {
             SetStatus(L("StatusReconnecting"));
-            _log.Write("WARN", "Veraltete Daten erkannt - automatische Reconnect läuft.");
+            _log.Write("WARN", L("StatusReconnecting"));
         }
         else if (StatusText == L("StatusReconnecting").Current)
         {
             SetStatus(IsConnected ? L("StatusRestored") : L("StatusDisconnected"));
-            _log.Write("INFO", "Verbindung wiederhergestellt.");
+            _log.Write("INFO", L("StatusRestored"));
         }
     });
 
@@ -1289,7 +1302,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 IsConnected = false;
                 SetStatus(L("StatusInterrupted"));
-                _log.Write("ERROR", "Verbindung zum Cube unterbrochen.");
+                _log.Write("ERROR", L("StatusInterrupted"));
                 MarkStatusesStale(true);
                 return;
             }

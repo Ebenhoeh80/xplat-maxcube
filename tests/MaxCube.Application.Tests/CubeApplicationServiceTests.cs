@@ -320,6 +320,21 @@ public class CubeApplicationServiceTests
     }
 
     [Fact]
+    public async Task Disposing_the_service_detaches_from_gateway_events()
+    {
+        var gateway = new FakeGateway { CubeToReturn = BuildCube() };
+        var service = new CubeApplicationService(gateway, new FakeStore(), new FakeClock());
+        await service.ConnectAsync(new CubeEndpoint("cube", 62910));
+        gateway.RaiseSessionUnreachable();
+        service.IsStale.Should().BeTrue();
+
+        await service.DisposeAsync();
+
+        gateway.RaiseCubeRefreshed(BuildCube());
+        service.IsStale.Should().BeTrue("nach dem Dispose darf kein Gateway-Event mehr wirken");
+    }
+
+    [Fact]
     public async Task Disconnect_is_bounded_even_when_the_gateway_hangs()
     {
         var gateway = new FakeGateway { CubeToReturn = BuildCube(), HangOnDisconnect = true };

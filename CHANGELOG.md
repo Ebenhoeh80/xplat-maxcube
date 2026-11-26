@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-26
+
+### Fixed
+
+- Beenden trennt jetzt in allen normalen Pfaden sauber vom Cube: Tray → „Beenden“ ruft
+  `desktop.TryShutdown()` statt des forcierten `desktop.Shutdown()`. Damit läuft der
+  Cleanup (Reconnect stoppen, `q:` senden, Socket/DB schließen, Lock freigeben) auch über
+  das Tray. Ein zweites `ShutdownRequested` bricht das laufende Cleanup nicht mehr ab.
+- Nach `q:` wartet das Gateway begrenzt auf EOF, bevor es den Socket schließt – wie der
+  Herstellerclient in `DisconnectCubeCommand.java:15-19`. Der Socket wird auch bei einer
+  hängenden Queue geschlossen; ein Reconnect nach dem Dispose kann keinen neuen Socket
+  mehr öffnen.
+- `CubeApplicationService` ist jetzt `IAsyncDisposable`: beim App-Ende werden
+  Reconnect-Loop und Gateway-Event-Abos beendet, ohne ein zweites `q:` zu senden.
+- Sprachwechsel: Formatargumente vom Typ `LocalizedValue` werden beim Re-Render in der
+  neuen Sprache ausgewertet. Fehlerdialoge mit Code bleiben nach de→en→fr vollständig
+  lokalisiert. Wochenprofil-Fehler und mehrere Protokollzeilen erscheinen nicht mehr als
+  fest deutscher Rohtext.
+- Zahlen- und Datumsformate folgen jetzt tatsächlich der UI-Sprache. Da die App mit
+  `InvariantGlobalization=true` baut, trägt eine beschreibbare Kopie der invarianten
+  Kultur die Trennzeichen und Kurzdatumsmuster pro Sprache – ohne ICU-Voraussetzung auf
+  Linux. Protokoll- und Berechnungspfade bleiben weiterhin explizit invariant.
+
+### Verification
+
+- Build 0 Warnungen/0 Fehler; Windows und Debian 13 (WSL2) **501/501** Tests grün;
+  `--selfcheck OK … 0.6.5 … SQLite ok` auf beiden Systemen.
+- Neue Regressionstests: sauberer Tray-Exit (Quellprüfung), `q:` + EOF, `q:` genau einmal,
+  kein Connect nach Dispose, Service löst Event-Abos, Fehlerdialog de→en→fr,
+  Zahlenformate für alle sechs Sprachen.
+- **UNBEKANNT:** Hardwarewirkung des EOF-Wartens am Original-Cube nicht gemessen;
+  Avalonia-Sichtprüfung und Muttersprachlerprüfung weiterhin offen. Audit- und
+  Diagnosetexte bleiben historische Rohtexte und werden nicht nachträglich übersetzt.
+
 ## [0.6.4] - 2026-11-26
 
 ### Fixed

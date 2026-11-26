@@ -673,6 +673,24 @@ public class ViewModelTests
         offenders.Should().BeEmpty("UI-Fortsetzungen müssen auf dem UI-Thread landen");
     }
 
+    [Fact]
+    public void The_tray_exit_uses_the_graceful_shutdown_path()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && root.GetFiles("MaxCube.slnx").Length == 0)
+        {
+            root = root.Parent;
+        }
+
+        root.Should().NotBeNull("die Quellen sind im Testlauf immer vorhanden");
+        var app = File.ReadAllText(Path.Combine(
+            root!.FullName, "src", "MaxCube.UI.Desktop", "App.axaml.cs"));
+
+        app.Should().Contain("exit.Click += (_, _) => desktop.TryShutdown();");
+        app.Should().NotContain("exit.Click += (_, _) => desktop.Shutdown();",
+            "ein forcierter Exit überspringt ShutdownRequested und damit q:");
+    }
+
     private sealed class FakeDiscovery : ICubeDiscovery
     {
         private readonly IReadOnlyList<DiscoveredCube> _cubes;

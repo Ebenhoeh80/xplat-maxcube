@@ -30,15 +30,17 @@ bash start.sh
 
 Beide Skripte suchen ein .NET-10-SDK, bauen inkrementell und starten die Desktop-DLL (`start.cmd:8-43`, `start.sh:8-35`). Ohne SDK: veröffentlichtes self-contained Paket aus `publish/win-x64` oder `publish/linux-x64` starten (`ci.yml:39-69`).
 
-**Erwartung:** Fenster mit neun Reitern; Titel/Status zeigen Version `0.3.0` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
+**Erwartung:** Fenster mit neun Reitern; Titel/Status zeigen Version `0.6.5` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
 
 ### 1.2 Stopp
 
 1. Reiter „Einstellungen“ prüfen: Ist `closeToTray` aktiv? Dann Tray-Symbol → „Beenden“ nutzen (`App.axaml.cs:80-115`, `Settings.cs:48-53`).
 2. Sonst Fenster schließen.
-3. Shutdown wartet auf asynchrones Dispose: Log/DB schließen, `q:` senden, Lock freigeben (`App.axaml.cs:124-143`, `CubeGateway.cs:23-26`).
+3. Shutdown wartet auf asynchrones Dispose: Reconnect stoppen, Log/DB schließen, `q:` senden, kurz auf EOF warten, Socket und Lock freigeben (`App.axaml.cs:124-143`, `CubeApplicationService.DisposeAsync`, `CubeGateway.cs`).
 
-**Notfall:** Prozess beenden. Das OS gibt Socket und Lockdatei frei; ein `q:` kann fehlen, ist aber kein Datenverlust (`CubeGateway.cs:185-235`).
+**FAKT (0.6.5):** Beide Wege – Fenster und Tray → „Beenden“ – lösen `ShutdownRequested` aus. Vor 0.6.5 rief der Tray-Eintrag `desktop.Shutdown()` auf; dieser forcierte Exit übersprang das Cleanup, sodass kein `q:` gesendet wurde und der Cube die einzige TCP-Session bis zu seinem Timeout hielt (`App.axaml.cs:91-95`).
+
+**Notfall:** Prozess beenden. Das OS gibt Socket und Lockdatei frei; ein `q:` fehlt dann jedoch, und der Cube kann die Session bis zu seinem eigenen Timeout blockieren (`CubeGateway.cs:185-235`).
 
 ### 1.3 Verbindung herstellen
 
