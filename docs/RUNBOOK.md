@@ -30,7 +30,7 @@ bash start.sh
 
 Beide Skripte suchen ein .NET-10-SDK, bauen inkrementell und starten die Desktop-DLL (`start.cmd:8-43`, `start.sh:8-35`). Ohne SDK: veröffentlichtes self-contained Paket aus `publish/win-x64` oder `publish/linux-x64` starten (`ci.yml:39-69`).
 
-**Erwartung:** Fenster mit neun Reitern; Titel/Status zeigen Version `0.6.5` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
+**Erwartung:** Fenster mit neun Reitern; Titel/Status zeigen Version `0.6.6` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
 
 ### 1.2 Stopp
 

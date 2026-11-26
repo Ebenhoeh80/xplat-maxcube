@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-11-26
+
+### Fixed
+
+- Verbindungsfehler zeigen jetzt einen vollständig lokalisierten Ursachenhinweis im Dialog
+  statt nur eines Generic-Texts: Timeout, nicht erreichbarer Endpoint, fehlender bzw.
+  ungültiger Handshake, nicht unterstützte Firmware und bereits bestehende Verbindung.
+  Alle sechs Sprachen folgen dem Sprachwechsel ohne Neustart; die rohe Ausnahme bleibt im
+  Protokoll und im Datenstatus.
+- Ein `nmap`-Portscan wurde bewusst **nicht** in den Verbindungs- oder Reconnect-Pfad
+  eingebaut. Der vorhandene TCP-Connect mit 30-s-Grenze plus `H:`/`L:`/`C:`/`M:`-Handshake
+  ist die maßgebliche Prüfung; nmap würde nur „Port offen“ melden und eine externe,
+  rechtebehaftete Abhängigkeit einführen.
+
+### Verification
+
+- Build 0 Warnungen/0 Fehler; Windows und Debian 13 (WSL2) **507/507** Tests grün;
+  `SELFCHECK OK … 0.6.6 … SQLite ok` auf beiden Systemen.
+- Neue Regressionstests: sechs Verbindungsursachen auf Deutsch und nach Sprachwechsel
+  (EN/FR/PL/NL/IT) – jeweils ohne englischen Rohtext im sichtbaren Dialog.
+- **UNBEKANNT:** Hardware-EOF-Reaktion am Original-Cube, Avalonia-Sichtprüfung und
+  Muttersprachlerprüfung bleiben offen; die Reaktion des Original-Cube auf einen nmap-Scan
+  wurde nicht gemessen.
+
 ## [0.6.5] - 2026-11-26
 
 ### Fixed

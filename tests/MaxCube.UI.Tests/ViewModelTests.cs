@@ -189,6 +189,28 @@ public class ViewModelTests
         viewModel.WarningText.Should().Be("Envoyé, mais le cache local n'a pas été mis à jour.");
     }
 
+    [Theory]
+    [InlineData("Timed out connecting to the cube.", "Zeitüberschreitung", "en", "Timed out connecting to the cube")]
+    [InlineData("Cannot connect to cube at 192.168.10.60:62910.", "nicht erreichbar", "fr", "inaccessible")]
+    [InlineData("No Incoming Hello", "Handshake", "pl", "uzgadniania")]
+    [InlineData("H: line needs at least serial, radio address and firmware.", "ungültig", "nl", "ongeldig")]
+    [InlineData("Firmware 999 is outside the supported range 273..275.", "nicht unterstützt", "it", "non supportato")]
+    [InlineData("Already connected. Disconnect first.", "bereits eine Verbindung", "fr", "connecté")]
+    public async Task Connect_errors_show_a_localized_cause_and_follow_the_language_switch(
+        string rawFailure, string germanHint, string language, string switchedHint)
+    {
+        using var viewModel = CreateViewModelWithGateway(out _, out var gateway);
+        viewModel.Host = "192.168.10.60";
+        viewModel.Port = 62910;
+        gateway.ConnectHook = _ => throw new InvalidOperationException(rawFailure);
+
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+
+        viewModel.ErrorMessage.Should().Contain(germanHint).And.NotContain(rawFailure);
+        viewModel.SelectedLanguage = viewModel.Languages.Single(item => item.Code == language);
+        viewModel.ErrorMessage.Should().Contain(switchedHint).And.NotContain(rawFailure);
+    }
+
     [Fact]
     public async Task Cancelling_restores_the_status_text()
     {

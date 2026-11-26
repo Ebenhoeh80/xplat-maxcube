@@ -61,7 +61,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 
 | Symptom | Ursache | Beleg | Maßnahme |
 |---|---|---|---|
-| Connect timeout 30 s | Host/Port falsch, Cube aus, Firewall | `CubeConnectionOptions.cs:15-20`, `TcpCubeTransport.cs:23-60` | IP prüfen; Port **62910** für physischen Cube (54321 nur virtuell); andere Clients beenden |
+| Connect timeout 30 s | Host/Port falsch, Cube aus, Firewall | `CubeConnectionOptions.cs:15-20`, `TcpCubeTransport.cs:23-60` | IP prüfen; Port **62910** für physischen Cube (54321 nur virtuell); andere Clients beenden. Seit 0.6.6 steht die Ursache lokalisiert im Dialog, der Rohtext nur im Protokoll. |
 | `NoIncomingHelloException` / `MalformedHelloException` | erste Zeile ist kein gültiges `H:` | `HelloParser.cs:13-47` | Cube neu starten; anderes Programm auf Port 62910 trennen; Mitschnitt prüfen |
 | `IncompatibleFirmwareException` | Firmware außerhalb 273–275 | `FirmwareGuard.cs:12-20`, `ErrorCatalog.cs:101-107` | Firmware ist `UNBEKANNT`/nicht supportet; **kein** Firmware-Schreiben durchführen |
 | `StateReceiveTimeout`/`CubeCommunicationFailedException` vor `L:` | `C:`/`M:` unvollständig oder zu langsam | `StateReceiver.cs:23-71` | Verbindung trennen und erneut connecten; Log/Mitschnitt prüfen |
