@@ -18,8 +18,8 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.3** (`Directory.Build.props:3`), **not released yet** (work in
-progress as of 2026-11-26). The last published release is 0.6.2. See
+Version **0.6.3** (`Directory.Build.props:3`), released on 2026-11-26 as
+`v0.6.3` (latest published; previous release 0.6.2). See
 [CHANGELOG.md](CHANGELOG.md).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
