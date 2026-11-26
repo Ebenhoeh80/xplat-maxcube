@@ -75,6 +75,29 @@ public static partial class ErrorCatalog
     public static Entry? Find(string? code)
         => code is not null && ByCode.TryGetValue(code.Trim(), out var entry) ? entry : null;
 
+    /// <summary>Ersten bekannten Fehlercode in einer Meldung; für UI-Hinweise in allen Sprachen.</summary>
+    public static string? FindFirstCode(string? message)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            return null;
+        }
+
+        foreach (Match match in CodePattern().Matches(message))
+        {
+            if (Find(match.Value) is not null)
+            {
+                return match.Value;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>S:<duty>,1,<free> wurde ohne MAX-Code gemeldet (CubeCommands.cs:250-254).</summary>
+    public static bool IsCommandDiscarded(string? message)
+        => message?.Contains("Command discarded", StringComparison.OrdinalIgnoreCase) == true;
+
     /// <summary>Sucht den ersten bekannten Fehlercode in einer Meldung und liefert eine lesbare Erklärung.</summary>
     public static string? Describe(string? message, bool german = true)
     {

@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MaxCube.Domain.Enums;
+using MaxCube.UI.Localization;
 using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
 using DayOfWeek = MaxCube.Domain.Enums.DayOfWeek;
@@ -74,11 +76,15 @@ public sealed partial class SwitchPointViewModel : ObservableObject
 }
 
 /// <summary>Ein Wochentag des Wochenprofils (1..13 Schaltpunkte).</summary>
-public sealed partial class DayProfileViewModel : ObservableObject
+public sealed partial class DayProfileViewModel : ObservableObject, IDisposable
 {
-    public DayProfileViewModel(DayOfWeek day)
+    private readonly Localizer _loc;
+
+    public DayProfileViewModel(DayOfWeek day, Localizer? localizer = null)
     {
         Day = day;
+        _loc = localizer ?? new Localizer("de");
+        _loc.PropertyChanged += OnLanguageChanged;
         Points.CollectionChanged += OnPointsChanged;
     }
 
@@ -88,7 +94,17 @@ public sealed partial class DayProfileViewModel : ObservableObject
     [ObservableProperty]
     private bool wasReadFromCube;
 
-    public string DisplayName => Day.ToString();
+    public string DisplayName => _loc.Get(EnumLabels.Key(Day));
+
+    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is "Item[]" or nameof(Localizer.Language) or null)
+        {
+            OnPropertyChanged(nameof(DisplayName));
+        }
+    }
+
+    public void Dispose() => _loc.PropertyChanged -= OnLanguageChanged;
 
     public ObservableCollection<SwitchPointViewModel> Points { get; } = new();
 

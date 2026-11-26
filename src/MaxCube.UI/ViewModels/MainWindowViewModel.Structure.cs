@@ -206,14 +206,14 @@ public partial class MainWindowViewModel
     private async Task SearchNewDeviceAsync()
     {
         FoundDevice = null;
-        FoundDeviceText = L("SearchRunning", (int)CubeApplicationService.InclusionTotal.TotalSeconds);
+        SetFoundDevice(L("SearchRunning", (int)CubeApplicationService.InclusionTotal.TotalSeconds));
         await RunAsync(async token =>
         {
             var found = await _service.SearchNewDeviceAsync(CubeApplicationService.InclusionTotal, token);
             FoundDevice = found;
-            FoundDeviceText = found is null
+            SetFoundDevice(found is null
                 ? L("SearchNone")
-                : L("SearchFound", found.Type, found.Address, found.SerialNumber);
+                : L("SearchFound", found.Type, found.Address, found.SerialNumber));
             if (found is not null && AssignDeviceName.Trim().Length == 0)
             {
                 AssignDeviceName = $"{found.Type} {found.SerialNumber}";
@@ -239,7 +239,7 @@ public partial class MainWindowViewModel
             await _service.AssignNewDeviceAsync(
                 found, AssignDeviceName, roomId, creating ? NewRoomName : null, ConfirmChanges, token);
             FoundDevice = null;
-            FoundDeviceText = string.Empty;
+            SetFoundDevice(null);
             AssignDeviceName = string.Empty;
             NewRoomName = string.Empty;
             ConfirmChanges = false;

@@ -147,17 +147,17 @@ public partial class MainWindowViewModel
             var directory = Path.GetDirectoryName(_logStore?.Directory ?? string.Empty);
             if (string.IsNullOrWhiteSpace(directory))
             {
-                SuccessText = L("LogExportFailed", L("LogEmpty"));
+                SetSuccess(L("LogExportFailed", L("LogEmpty").Current));
                 return;
             }
 
             var path = _logStore!.Export(directory);
-            SuccessText = L("LogExportDone", path);
+            SetSuccess(L("LogExportDone", path));
             _log.Write("INFO", $"Protokoll exportiert: {path}");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            SuccessText = L("LogExportFailed", exception.Message);
+            SetSuccess(L("LogExportFailed", exception.Message));
             _log.Write("WARN", $"Protokollexport fehlgeschlagen: {exception.Message}");
         }
     }
@@ -174,7 +174,7 @@ public partial class MainWindowViewModel
 
         if (!_urlOpener.TryOpen(directory))
         {
-            StatusText = L("OpenExternalFailed", directory);
+            SetStatus(L("OpenExternalFailed", directory));
         }
     }
 }

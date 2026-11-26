@@ -59,7 +59,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     /// <summary>Aktiver CTS für den sichtbaren Abbrechen-Button.</summary>
     private CancellationTokenSource? _actionCts;
-    private string? _statusBeforeCancel;
+    private LocalizedValue? _statusBeforeCancel;
 
     /// <summary>
     ///cwd 0.6.2: Ein riskanter Schreibbefehl wird erst nach einer sichtbaren Vorschau
@@ -82,11 +82,78 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     };
 
     private sealed record PendingWrite(
-        Func<CancellationToken, Task> Action, string ErrorPrefix, string? SuccessText,
+        Func<CancellationToken, Task> Action, LocalizedValue ErrorPrefix, LocalizedValue? SuccessText,
         DataStatusViewModel? Status);
 
     /// <summary>Herence und Alter pro Bereich; nie in der Domäne, immer im ViewModel.</summary>
     private readonly DataStatusViewModel[] _statuses;
+
+    private sealed record LocalizedBinding(LocalizedValue Value, Action<string> Setter);
+
+    /// <summary>
+    /// Merkt sich, wie ein gespeicherter Anzeigetext aus der aktuellen Sprache erzeugt wird.
+    /// So wechseln auch Status-, Ergebnis- und Vorschautexte ohne Neustart oder Cube-Zugriff.
+    /// </summary>
+    private readonly Dictionary<string, LocalizedBinding> _localizedBindings = new(StringComparer.Ordinal);
+
+    private void SetLocalized(string property, LocalizedValue? value, Action<string> setter)
+    {
+        if (value is null || string.IsNullOrEmpty(value.Current))
+        {
+            _localizedBindings.Remove(property);
+            setter(string.Empty);
+            return;
+        }
+
+        _localizedBindings[property] = new LocalizedBinding(value, setter);
+        setter(value.Current);
+    }
+
+    private void RefreshLocalizedBindings()
+    {
+        foreach (var property in _localizedBindings.Keys.ToArray())
+        {
+            var binding = _localizedBindings[property];
+            var value = binding.Value.In(_loc);
+            _localizedBindings[property] = new LocalizedBinding(value, binding.Setter);
+            binding.Setter(value.Current);
+        }
+
+        // Eine noch nicht bestätigte Vorschau trägt die Texte der alten Sprache. Sie werden
+        // mitgewechselt; der Cube wird dadurch nicht kontaktiert.
+        if (_pendingWrite is not null)
+        {
+            _pendingWrite = _pendingWrite with
+            {
+                ErrorPrefix = _pendingWrite.ErrorPrefix.In(_loc),
+                SuccessText = _pendingWrite.SuccessText?.In(_loc),
+            };
+        }
+    }
+
+    private void SetStatus(LocalizedValue? value) => SetLocalized(nameof(StatusText), value, text => StatusText = text);
+
+    private void SetSuccess(LocalizedValue? value) => SetLocalized(nameof(SuccessText), value, text => SuccessText = text);
+
+    private void SetWarning(LocalizedValue? value) => SetLocalized(nameof(WarningText), value, text => WarningText = text);
+
+    private void SetError(LocalizedValue? value) => SetLocalized(nameof(ErrorMessage), value, text => ErrorMessage = text);
+
+    private void SetBusy(LocalizedValue? value) => SetLocalized(nameof(BusyText), value, text => BusyText = text);
+
+    private void SetPreview(LocalizedValue? value) => SetLocalized(nameof(WritePreviewText), value, text => WritePreviewText = text);
+
+    private void SetDiscovery(LocalizedValue? value) => SetLocalized(nameof(DiscoveryText), value, text => DiscoveryText = text);
+
+    private void SetProfileRoom(LocalizedValue? value) => SetLocalized(nameof(ProfileRoomName), value, text => ProfileRoomName = text);
+
+    private void SetAirtime(LocalizedValue? value) => SetLocalized(nameof(AirtimeText), value, text => AirtimeText = text);
+
+    private void SetTimeZone(LocalizedValue? value) => SetLocalized(nameof(TimeZoneText), value, text => TimeZoneText = text);
+
+    private void SetDiagnostic(LocalizedValue? value) => SetLocalized(nameof(DiagnosticText), value, text => DiagnosticText = text);
+
+    private void SetFoundDevice(LocalizedValue? value) => SetLocalized(nameof(FoundDeviceText), value, text => FoundDeviceText = text);
 
     /// <summary>Ein Auto-Read des Cube-Reiters läuft höchstens einmal gleichzeitig.</summary>
     private Task? _cubeAutoReadTask;
@@ -170,7 +237,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         foreach (var day in Enum.GetValues<DayOfWeek>())
         {
-            var viewModel = new DayProfileViewModel(day);
+            var viewModel = new DayProfileViewModel(day, _loc);
             // Ein voller Tag mit 21,0 °C; der letzte Punkt ist 00:00 (= 24:00 im Drahtformat).
             viewModel.Points.Add(new SwitchPointViewModel { UntilText = "00:00", Temperature = 21.0 });
             WeekDays.Add(viewModel);
@@ -400,7 +467,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             var cube = await _service.ConnectAsync(new CubeEndpoint(Host, Port), token);
             IsConnected = true;
-            StatusText = L("StatusConnected", cube.SerialNumber, cube.FirmwareVersion);
+            SetStatus(L("StatusConnected", cube.SerialNumber, cube.FirmwareVersion));
             await RefreshAuditAsync();
         }, L("ErrConnect"), L("OkConnect"));
 
@@ -503,16 +570,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         await RunAsync(async token =>
         {
             var cubes = await _discovery.DiscoverAsync(DiscoveryDuration, token);
+            foreach (var previous in DiscoveredCubes) previous.Dispose();
             DiscoveredCubes.Clear();
             foreach (var cube in cubes)
             {
-                DiscoveredCubes.Add(new DiscoveredCubeViewModel(cube));
+                DiscoveredCubes.Add(new DiscoveredCubeViewModel(cube, _loc));
             }
 
             SelectedDiscoveredCube = DiscoveredCubes.FirstOrDefault();
-            DiscoveryText = DiscoveredCubes.Count == 0
+            SetDiscovery(DiscoveredCubes.Count == 0
                 ? L("DiscoveryNoneFound")
-                : L("DiscoveryFound", DiscoveredCubes.Count);
+                : L("DiscoveryFound", DiscoveredCubes.Count));
         }, L("ErrDiscovery"), L("OkDiscovery"));
     }
 
@@ -524,13 +592,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var endpoint = await _service.GetLastEndpointAsync(token);
             if (endpoint is null)
             {
-                StatusText = L("NoLastEndpoint");
+                SetStatus(L("NoLastEndpoint"));
                 return;
             }
 
             Host = endpoint.Host;
             Port = endpoint.Port;
-            StatusText = L("LastEndpointIs", Host, Port);
+            SetStatus(L("LastEndpointIs", Host, Port));
         }, L("ErrLastEndpoint"));
     }
 
@@ -545,10 +613,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         Host = cube.IpAddress;
         Port = CubeTcpPort;
-        StatusText = L("CubeSelected", cube.SerialNumber);
-        WarningText = cube.Bootloader
-            ? L("BootloaderWarning")
-            : string.Empty;
+        SetStatus(L("CubeSelected", cube.SerialNumber));
+        SetWarning(cube.Bootloader ? L("BootloaderWarning") : null);
     }
 
     /// <summary>
@@ -563,17 +629,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             // Trennen ist intern auf < 2 s begrenzt und darf nicht halb abgebrochen werden.
             await _service.DisconnectAsync();
             IsConnected = false;
-            StatusText = L("StatusDisconnected");
+            SetStatus(L("StatusDisconnected"));
             _log.Write("INFO", "Verbindung zum Cube getrennt.");
+            foreach (var room in Rooms) room.Dispose();
+            foreach (var device in Devices) device.Dispose();
             Rooms.Clear();
             Devices.Clear();
             SelectedRoom = null;
             _weekProfileLoadedFor = null;
-            ProfileRoomName = L("NoRoomSelected");
+            SetProfileRoom(L("NoRoomSelected"));
             MarkAllNotRead();
             FirmwareText = string.Empty;
-            AirtimeText = string.Empty;
-            DiagnosticText = string.Empty;
+            SetAirtime(null);
+            SetDiagnostic(null);
             _cubeTabReadPending = false;
             await RefreshAuditAsync();
         }, L("ErrDisconnect"), L("OkDisconnect"));
@@ -585,7 +653,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         await RunAsync(async token =>
         {
             var cube = await _service.LoadCachedAsync(token);
-            StatusText = cube is null ? L("NoCache") : L("OfflineCache");
+            SetStatus(cube is null ? L("NoCache") : L("OfflineCache"));
             if (cube is not null)
             {
                 // UpdateRooms markt Räume/Geräte/Konfiguration als „Cache vom …“; die
@@ -614,13 +682,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             try
             {
                 _service.QueueRoomTemperature(room.Id, new Temperature(RequestedTemperature));
-                ErrorMessage = string.Empty;
-                SuccessText = L("OkTemperatureQueued", (int)CubeApplicationService.BundleWindow.TotalSeconds);
+                SetError(null);
+                SetSuccess(L("OkTemperatureQueued", (int)CubeApplicationService.BundleWindow.TotalSeconds));
                 _log.Write("INFO", SuccessText);
             }
             catch (Exception exception)
             {
-                ErrorMessage = $"{L("ErrTemperature")}: {exception.Message}";
+                SetError(L(localizer => $"{localizer.Get("ErrTemperature")}: {exception.Message}"));
                 _log.Write("ERROR", $"{ErrorMessage} ({exception.GetType().Name})");
             }
 
@@ -702,7 +770,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var rooms = Rooms.Where(room => room.IsHouseSelected).ToArray();
         if (rooms.Length == 0)
         {
-            SuccessText = L("NoRoomsChosen");
+            SetSuccess(L("NoRoomsChosen"));
             return;
         }
 
@@ -754,7 +822,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            ErrorMessage = exception.Message;
+            SetError(new LocalizedValue(exception.Message));
             return;
         }
 
@@ -763,7 +831,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .ToArray();
         if (days.Length == 0)
         {
-            SuccessText = L("NoLoadedProfiles");
+            SetSuccess(L("NoLoadedProfiles"));
             return;
         }
 
@@ -777,7 +845,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             await RefreshAuditAsync();
             MarkWeekSaved();
         }, L("ErrCopyProfile"), L("OkCopyProfile", days.Length),
-            previewText: PreviewWeekCopy(days.Length), contextText: L("CopyDay") + " …");
+            previewText: PreviewWeekCopy(days.Length), contextText: L("CopyDay").Append(" …"));
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveWeekProfile))]
@@ -796,7 +864,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            ErrorMessage = exception.Message;
+            SetError(new LocalizedValue(exception.Message));
             return;
         }
 
@@ -806,7 +874,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             await RefreshAuditAsync();
             MarkWeekSaved();
         }, L("ErrSendProfile"), L("OkSendProfile"),
-            previewText: PreviewWeek(profile, L("SendProfile")), contextText: L("SendProfile") + " …");
+            previewText: PreviewWeek(profile, L("SendProfile")), contextText: L("SendProfile").Append(" …"));
     }
 
     [RelayCommand]
@@ -894,13 +962,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             && !string.Equals(_savedConfigSignature, ConfigSignature(), StringComparison.Ordinal);
 
         HasDirty = weekDirty || configDirty;
-        DirtyText = (weekDirty, configDirty) switch
+        SetLocalized(nameof(DirtyText), (weekDirty, configDirty) switch
         {
             (true, true) => L("DirtyBoth"),
             (true, false) => L("DirtyWeek"),
             (false, true) => L("DirtyConfig"),
-            _ => string.Empty,
-        };
+            _ => null,
+        }, text => DirtyText = text);
     }
 
     /// <summary>Ein Grund statt einer stumm deaktivierten Schaltfläche.</summary>
@@ -950,19 +1018,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             : L("NoRoomsChosen");
     }
 
-    private string PreviewWeek(DayProfile profile, string action)
-        => L("PreviewWeek", action, SelectedRoom!.Name, profile.Day, profile.Points.Count,
+    private LocalizedValue PreviewWeek(DayProfile profile, LocalizedValue action)
+        => L(localizer => localizer.Format("PreviewWeek", action.In(localizer).Current, SelectedRoom!.Name,
+            profile.Day, profile.Points.Count,
             string.Join(", ", profile.Points.Select(point =>
-                $"{point.Until:HH:mm}={FormatNumber(point.Temperature.Value)}")));
+                $"{point.Until:HH:mm}={FormatNumber(point.Temperature.Value)}"))));
 
-    private string PreviewWeekCopy(int count)
+    private LocalizedValue PreviewWeekCopy(int count)
         => L("PreviewWeekCopy", count, SelectedRoom!.Name);
 
-    private string PreviewConfiguration(string action)
-        => L("PreviewConfig", action, SelectedRoom!.Name, FormatNumber(ConfigComfort),
-            FormatNumber(ConfigEco), FormatNumber(ConfigOffset));
+    private LocalizedValue PreviewConfiguration(LocalizedValue action)
+        => L(localizer => localizer.Format("PreviewConfig", action.In(localizer).Current, SelectedRoom!.Name,
+            FormatNumber(ConfigComfort), FormatNumber(ConfigEco), FormatNumber(ConfigOffset)));
 
-    private string PreviewConfigurationCopy(int count)
+    private LocalizedValue PreviewConfigurationCopy(int count)
         => L("PreviewConfigCopy", count, SelectedRoom!.Name, FormatNumber(ConfigComfort));
 
     private async Task SetModeAsync(int roomId, RoomControlMode mode, DateTimeOffset? until)
@@ -983,9 +1052,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// eigenen Status. <paramref name="status"/> erhält Loading/Failed/Restore.
     /// </summary>
     private async Task RunAsync(
-        Func<CancellationToken, Task> action, string errorPrefix, string? successText = null,
-        bool quiet = false, DataStatusViewModel? status = null, string? previewText = null,
-        string? contextText = null)
+        Func<CancellationToken, Task> action, LocalizedValue errorPrefix, LocalizedValue? successText = null,
+        bool quiet = false, DataStatusViewModel? status = null, LocalizedValue? previewText = null,
+        LocalizedValue? contextText = null)
     {
         if (IsBusy)
         {
@@ -994,10 +1063,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         // 0.6.2: Riskante Schreibbefehle werden nicht sofort gesendet. Die Aktion liegt
         // bis zur ausdrücklichen Bestätigung lokal im ViewModel; ein Abbruch sendet nichts.
-        if (!quiet && !string.IsNullOrWhiteSpace(previewText))
+        if (!quiet && !string.IsNullOrWhiteSpace(previewText?.Current))
         {
             _pendingWrite = new PendingWrite(action, errorPrefix, successText, status);
-            WritePreviewText = previewText;
+            SetPreview(previewText);
             IsWritePreviewVisible = true;
             ConfirmWriteCommand.NotifyCanExecuteChanged();
             CancelWriteCommand.NotifyCanExecuteChanged();
@@ -1011,16 +1080,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 _actionCts = cts;
                 IsBusy = true;
-                BusyText = string.IsNullOrWhiteSpace(contextText) ? L("Busy") : contextText;
-                ErrorMessage = string.Empty;
-                SuccessText = string.Empty;
+                SetBusy(string.IsNullOrWhiteSpace(contextText?.Current) ? L("Busy") : contextText);
+                SetError(null);
+                SetSuccess(null);
                 // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
                 // stehen bleiben (Sonnet N10).
-                WarningText = string.Empty;
+                SetWarning(null);
             }
-            else if (!string.IsNullOrWhiteSpace(contextText))
+            else if (!string.IsNullOrWhiteSpace(contextText?.Current))
             {
-                BusyText = contextText;
+                SetBusy(contextText);
             }
 
             status?.MarkLoading();
@@ -1035,7 +1104,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 if (!quiet)
                 {
-                    SuccessText = result;
+                    SetSuccess(result);
                 }
 
                 // 0.6.1: Nur der Erfolgstext, nie der Fehlerprefix. 0.6.0 schrieb
@@ -1050,7 +1119,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 status?.Restore();
                 if (!quiet)
                 {
-                    SuccessText = L("Cancelled");
+                    SetSuccess(L("Cancelled"));
                 }
 
                 _log.Write("INFO", L("Cancelled"));
@@ -1058,12 +1127,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            var message = $"{errorPrefix}: {exception.Message}";
+            var message = L(localizer => $"{errorPrefix.In(localizer).Current}: {exception.Message}");
             OnUiThread(() =>
             {
                 if (!quiet)
                 {
-                    ErrorMessage = message;
+                    SetError(message);
                 }
 
                 // Der Ausnahmetyp hilft beim Support ohne Nutzdaten oder Zugangsdaten.
@@ -1078,9 +1147,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 if (!quiet)
                 {
                     // Der Abbruch-Hinweis gehört nur zur laufenden Aktion (Gremium Runde 2).
-                    if (StatusText == L("StatusCancelling"))
+                    if (StatusText == L("StatusCancelling").Current)
                     {
-                        StatusText = _statusBeforeCancel ?? L("StatusDisconnected");
+                        SetStatus(_statusBeforeCancel?.In(_loc) ?? L("StatusDisconnected"));
                     }
 
                     _statusBeforeCancel = null;
@@ -1088,7 +1157,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     IsBusy = false;
                 }
 
-                BusyText = string.Empty;
+                SetBusy(null);
 
                 if (_cubeTabReadPending && !IsBusy && SelectedTabIndex == TabIndex.Cube)
                 {
@@ -1107,15 +1176,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (StatusText != L("StatusCancelling"))
+        if (StatusText != L("StatusCancelling").Current)
         {
-            _statusBeforeCancel = StatusText;
+            _statusBeforeCancel = _localizedBindings.TryGetValue(nameof(StatusText), out var binding)
+                ? binding.Value
+                : new LocalizedValue(StatusText);
         }
 
         // Gremium Runde 3: Erst den sichtbaren Hinweis setzen, dann abbrechen.
         // Sonst kann die Aktion zwischen Cancel und Statuszuweisung enden; der
         // finally-Restore läuft dann ins Leere und „Abbrechen …" bleibt stehen.
-        StatusText = L("StatusCancelling");
+        SetStatus(L("StatusCancelling"));
         _actionCts?.Cancel();
         _service.CancelActiveOperation();
     }
@@ -1134,7 +1205,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         _pendingWrite = null;
         IsWritePreviewVisible = false;
-        WritePreviewText = string.Empty;
+        SetPreview(null);
         ConfirmWriteCommand.NotifyCanExecuteChanged();
         CancelWriteCommand.NotifyCanExecuteChanged();
         await RunAsync(pending.Action, pending.ErrorPrefix, pending.SuccessText, status: pending.Status);
@@ -1146,7 +1217,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _pendingWrite = null;
         IsWritePreviewVisible = false;
-        WritePreviewText = string.Empty;
+        SetPreview(null);
         ConfirmWriteCommand.NotifyCanExecuteChanged();
         CancelWriteCommand.NotifyCanExecuteChanged();
     }
@@ -1170,7 +1241,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void OnWarning(object? sender, string message) => OnUiThread(() =>
     {
-        WarningText = message;
+        SetWarning(new LocalizedValue(message));
         _log.Write("WARN", message);
     });
 
@@ -1182,12 +1253,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // sichtbar, nicht nur als Warnung und als Stale-Marker.
         if (stale)
         {
-            StatusText = L("StatusReconnecting");
+            SetStatus(L("StatusReconnecting"));
             _log.Write("WARN", "Veraltete Daten erkannt - automatische Reconnect läuft.");
         }
-        else if (StatusText == L("StatusReconnecting"))
+        else if (StatusText == L("StatusReconnecting").Current)
         {
-            StatusText = IsConnected ? L("StatusRestored") : L("StatusDisconnected");
+            SetStatus(IsConnected ? L("StatusRestored") : L("StatusDisconnected"));
             _log.Write("INFO", "Verbindung wiederhergestellt.");
         }
     });
@@ -1204,7 +1275,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (state == CubeConnectionState.Faulted)
             {
                 IsConnected = false;
-                StatusText = L("StatusInterrupted");
+                SetStatus(L("StatusInterrupted"));
                 _log.Write("ERROR", "Verbindung zum Cube unterbrochen.");
                 MarkStatusesStale(true);
                 return;
@@ -1217,7 +1288,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             IsConnected = true;
             if (!wasConnected)
             {
-                StatusText = L("StatusRestored");
+                SetStatus(L("StatusRestored"));
             }
 
             MarkStatusesStale(false);
@@ -1294,6 +1365,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var previousId = SelectedRoom?.Id;
         var houseSelection = Rooms.Where(room => room.IsHouseSelected).Select(room => room.Id).ToHashSet();
+        foreach (var previous in Rooms) previous.Dispose();
         Rooms.Clear();
         foreach (var room in cube.Rooms)
         {
@@ -1330,11 +1402,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshDevices(Cube cube, RoomViewModel? room)
     {
+        foreach (var previous in Devices) previous.Dispose();
         Devices.Clear();
         // Gremium Runde 1: Die Geräteliste gehört zum gewählten Raum, nicht zum ganzen Cube.
         foreach (var device in cube.Devices.Where(device => room is null || device.RoomId == room.Id))
         {
-            Devices.Add(new DeviceViewModel(device));
+            Devices.Add(new DeviceViewModel(device, _loc));
         }
     }
 
@@ -1342,13 +1415,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (room is null)
         {
-            ProfileRoomName = L("NoRoomSelected");
+            SetProfileRoom(L("NoRoomSelected"));
             WeekStatus.Reset();
             MarkWeekSaved();
             return;
         }
 
-        ProfileRoomName = L("ProfileForRoom", room.Id, room.Name);
+        SetProfileRoom(L("ProfileForRoom", room.Id, room.Name));
         if (keepEdited && _weekProfileLoadedFor == room.Id)
         {
             return; // bearbeitete Schaltpunkte eines StateChanged nicht überschreiben
@@ -1422,6 +1495,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         _loc.PropertyChanged -= OnLanguageChanged;
+        foreach (var day in WeekDays) day.Dispose();
+        foreach (var room in Rooms) room.Dispose();
+        foreach (var device in Devices) device.Dispose();
+        foreach (var discovered in DiscoveredCubes) discovered.Dispose();
         _service.AirtimeChanged -= OnAirtimeChanged;
         _service.StateChanged -= OnStateChanged;
         _service.ConnectionChanged -= OnConnectionChanged;

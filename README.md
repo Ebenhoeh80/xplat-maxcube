@@ -18,8 +18,8 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.2** (`Directory.Build.props:3`), **not released yet** (work in
-progress as of 2026-11-25). The last published release is 0.6.1. See
+Version **0.6.3** (`Directory.Build.props:3`), **not released yet** (work in
+progress as of 2026-11-26). The last published release is 0.6.2. See
 [CHANGELOG.md](CHANGELOG.md).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
@@ -241,7 +241,6 @@ bring your own ideas to
 [Discussions → Ideas](https://github.com/Ebenhoeh80/xplat-maxcube/discussions/categories/ideas):
 
 - Fine-grained log levels, filters and a redacted support export.
-- Confirmation preview for weekly-profile and configuration writes.
 - Room selection directly inside the weekly-profile and configuration tabs.
 - Free end time for `Temporary` mode.
 - Read-only firmware queries (`latest` / `least compatible`).
@@ -269,10 +268,15 @@ bring your own ideas to
 
 ## Verification status
 
-Build **0 warnings / 0 errors**, **468/468** hardware-free tests green on Windows
+Build **0 warnings / 0 errors**, **488/488** hardware-free tests green on Windows
 and Debian 13 (WSL2), `--selfcheck` `OK` on both systems, self-contained Linux
 package `OK` with `LANG=de_DE.UTF-8` and `LANG=C` (`docs/gremium.md:134`,
 `docs/roadmap.md:460-487`). These results are `OBSERVATION`.
+
+Switching the UI language updates every visible area without a restart or Cube
+access: cached status/result texts, confirmation preview, dirty hint, weekday and
+mode labels, device states and error hints (`CHANGELOG.md`, §17 of
+`docs/HARDWARE-VERIFY.md`).
 
 **FACT (2026-11-25, authorised hardware check):** discovery, `0x11`
 comfort/eco, `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` and `z:` were sent to the

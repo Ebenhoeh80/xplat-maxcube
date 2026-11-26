@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-26
+
+### Fixed
+
+- Sprachwechsel aktualisiert jetzt alle sichtbaren Bereiche, nicht nur Titel, Hilfe und
+  Räume: Statusleiste, Erfolgs-/Fehler-/Warntexte, Zeitstempel des Fehlers, Dirty-Hinweis,
+  Beschäftigt-Overlay, Schreibvorschau inklusive noch nicht bestätigter Aktion, Funkauslastung,
+  Zeitzone, Diagnose, Fundmeldung und Profilraumbezeichnung werden in der neuen Sprache
+  neu erzeugt (`MainWindowViewModel.OnLanguageChanged`, `RefreshLocalizedBindings`).
+- Wochentage, Raum- und Taster-Modi, Gerätetyp/-status, Funkstatus, Entkalkungstag und
+  Zeitzonen-Presets kommen aus dem Katalog statt aus `Enum.ToString()`; Auswahl und
+  Domänenwerte bleiben unverändert (`EnumLabels`, `EnumOption`, `MainWindow.axaml`).
+- Fehlerhinweise für FR/IT/NL/PL bleiben nicht mehr englisch: Bekannte Codes erhalten einen
+  lokalisierten Hinweis, `Command discarded` einen eigenen sechssprachigen Text
+  (`ErrorCatalog.FindFirstCode`, `ErrorCatalog.IsCommandDiscarded`).
+- Zahlen- und Zeitformate folgen der gewählten UI-Sprache; Protokoll- und Berechnungspfade
+  bleiben bewusst invariant (`Localizer.ApplyCulture`).
+
+### Changed
+
+- Der Selfcheck prüft jetzt in allen sechs Sprachen jeden Katalogschlüssel, nicht nur `Connect`.
+- Version auf `0.6.3` (`Directory.Build.props:3`); Build 0 Warnungen/0 Fehler,
+  488/488 hardwarefreie Tests grün, `--selfcheck OK` unter Windows und Debian 13 (WSL2).
+
 ## [0.6.2] - 2026-11-26
 
 ### Added
