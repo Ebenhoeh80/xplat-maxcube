@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using FluentAssertions;
+using MaxCube.Application.Abstractions;
 using MaxCube.Infrastructure.Platform;
 using Xunit;
 
@@ -7,6 +8,9 @@ namespace MaxCube.Infrastructure.Tests;
 
 public sealed class AppLogTests
 {
+    private static readonly DateTimeOffset ExportTime =
+        new(2026, 11, 25, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void Disabled_log_writes_nothing_and_enabled_log_writes_locally()
     {
@@ -57,7 +61,7 @@ public sealed class AppLogTests
     public void Export_creates_a_zip_with_the_log_files_only_on_request()
     {
         using var folder = new TempFolder();
-        var log = new FileAppLog(folder.Path);
+        var log = new FileAppLog(folder.Path, new FixedTime(ExportTime));
         log.Write("INFO", "Protokoll exportiert");
         var target = Path.Combine(folder.Path, "export");
 
@@ -68,6 +72,108 @@ public sealed class AppLogTests
         using var zip = ZipFile.OpenRead(archive);
         zip.Entries.Should().ContainSingle();
         zip.Entries[0].FullName.Should().StartWith("maxcube-").And.EndWith(".log");
+    }
+
+    [Fact]
+    public void Export_filters_lines_by_minimum_level()
+    {
+        using var folder = new TempFolder();
+        var log = new FileAppLog(folder.Path, new FixedTime(ExportTime));
+        log.Write("INFO", "nur Info");
+        log.Write("WARN", "auch Warnung");
+        log.Write("ERROR", "auch Fehler");
+
+        var archive = log.Export(Path.Combine(folder.Path, "export"),
+            new LogExportOptions { MinLevel = LogExportLevel.Warn });
+
+        var text = ReadExportedText(archive);
+        text.Should().NotContain("nur Info");
+        text.Should().Contain("auch Warnung").And.Contain("auch Fehler");
+    }
+
+    [Fact]
+    public void Export_redacts_ip_serial_and_known_names_on_request()
+    {
+        using var folder = new TempFolder();
+        var log = new FileAppLog(folder.Path, new FixedTime(ExportTime));
+        log.Write("INFO", "Verbindung zu 192.168.1.24 mit JEQ47110815 im Raum Wohnzimmer");
+        log.Write("WARN", "Gerät Küche antwortet von 10.0.0.7");
+
+        var archive = log.Export(Path.Combine(folder.Path, "export"), new LogExportOptions
+        {
+            RedactPersonalData = true,
+            KnownNames = new[] { "Wohnzimmer", "Küche" },
+        });
+
+        var text = ReadExportedText(archive);
+        text.Should().Contain("[IP]").And.Contain("[SERIAL]").And.Contain("[NAME]");
+        text.Should().NotContain("192.168.1.24").And.NotContain("10.0.0.7");
+        text.Should().NotContain("JEQ47110815").And.NotContain("Wohnzimmer").And.NotContain("Küche");
+    }
+
+    [Fact]
+    public void Export_without_matching_lines_returns_no_path_and_creates_no_archive()
+    {
+        using var folder = new TempFolder();
+        Directory.CreateDirectory(folder.Path);
+        File.WriteAllText(Path.Combine(folder.Path, "maxcube-20261125.log"),
+            "2026-11-25 12:00:00 +00:00 [DEBUG] vertraulich");
+        var log = new FileAppLog(folder.Path, new FixedTime(ExportTime));
+        var target = Path.Combine(folder.Path, "export");
+
+        var archive = log.Export(target, new LogExportOptions { MinLevel = LogExportLevel.Error });
+
+        archive.Should().BeEmpty();
+        Directory.Exists(target).Should().BeTrue();
+        Directory.GetFiles(target, "*.zip").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Default_export_keeps_unredacted_lines_and_the_original_file_name()
+    {
+        using var folder = new TempFolder();
+        var log = new FileAppLog(folder.Path, new FixedTime(ExportTime));
+        log.Write("INFO", "IP 192.168.1.24, JEQ47110815, Wohnzimmer");
+
+        var archive = log.Export(Path.Combine(folder.Path, "export"));
+
+        var text = ReadExportedText(archive, "maxcube-20261125.log");
+        text.Should().Contain("192.168.1.24").And.Contain("JEQ47110815").And.Contain("Wohnzimmer");
+        text.Should().NotContain("[IP]").And.NotContain("[SERIAL]").And.NotContain("[NAME]");
+    }
+
+    [Fact]
+    public void Null_log_store_supports_both_export_overloads()
+    {
+        var store = new NullLogStore();
+
+        store.Export("irgendwo").Should().BeEmpty();
+        store.Export("irgendwo", new LogExportOptions()).Should().BeEmpty();
+    }
+
+    private static string ReadExportedText(string archive, string? expectedEntryName = null)
+    {
+        File.Exists(archive).Should().BeTrue();
+        using var zip = ZipFile.OpenRead(archive);
+        zip.Entries.Should().ContainSingle();
+        if (expectedEntryName is not null)
+        {
+            zip.Entries[0].FullName.Should().Be(expectedEntryName);
+        }
+
+        using var reader = new StreamReader(zip.Entries[0].Open());
+        return reader.ReadToEnd();
+    }
+
+    private sealed class FixedTime : TimeProvider
+    {
+        public FixedTime(DateTimeOffset now) => Now = now;
+
+        private DateTimeOffset Now { get; }
+
+        public override DateTimeOffset GetUtcNow() => Now.ToUniversalTime();
+
+        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
     }
 
     private sealed class TempFolder : IDisposable

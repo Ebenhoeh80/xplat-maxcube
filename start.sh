@@ -29,6 +29,43 @@ if ! ldconfig -p 2>/dev/null | grep -q libicuuc; then
   export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 fi
 
+# SkiaSharp/Avalonia laden Systembibliotheken zur Laufzeit; das Release-ZIP enthält
+# keine Systembibliotheken. Der fensterlose Selbsttest braucht sie nicht.
+# xdg-utils liefert xdg-open für externe Links; ohne Opener zeigt die App die URL als Status.
+APT_PACKAGES="libfontconfig1 libx11-6 libxcursor1 libxext6 libxfixes3 libxi6 libxrandr2 libice6 libsm6 libgl1 libvulkan1 xdg-utils"
+missing_libraries() {
+  local lib missing=""
+  for lib in libfontconfig.so.1 libX11.so.6 libXcursor.so.1 libXext.so.6 libXfixes.so.3 libXi.so.6 libXrandr.so.2 libICE.so.6 libSM.so.6 libGL.so.1 libvulkan.so.1; do
+    ldconfig -p 2>/dev/null | grep -q "$lib" || missing="$missing $lib"
+  done
+  printf '%s' "$missing"
+}
+
+# Opt-in: der Nutzer gibt sein sudo-Passwort selbst ein; ohne Flag wird nie installiert.
+if [[ " $* " == *" --install-deps "* ]]; then
+  if [ ! -f /etc/debian_version ] || ! command -v apt-get >/dev/null 2>&1; then
+    echo "--install-deps wird nur auf Debian/Ubuntu unterstützt." >&2
+    exit 2
+  fi
+  echo "Installiere Systembibliotheken (sudo-Passwort erforderlich): $APT_PACKAGES"
+  sudo apt-get update && sudo apt-get install -y $APT_PACKAGES || exit 2
+  args=()
+  for arg in "$@"; do
+    [ "$arg" = "--install-deps" ] || args+=("$arg")
+  done
+  set -- "${args[@]}"
+fi
+
+if [[ " $* " != *" --selfcheck "* && " $* " != *" --check-linux-deps "* ]]; then
+  missing="$(missing_libraries)"
+  if [ -n "$missing" ]; then
+    echo "FEHLER: fehlende Linux-Bibliotheken:$missing" >&2
+    echo "Debian/Ubuntu: ./start.sh --install-deps (sudo-Passwort erforderlich)" >&2
+    echo "oder: sudo apt-get update && sudo apt-get install -y $APT_PACKAGES" >&2
+    exit 2
+  fi
+fi
+
 echo "Verwende SDK: $DOTNET"
 "$DOTNET" build MaxCube.slnx --nologo -v:minimal
 echo "Starte MAX! Cube Local App ..."

@@ -13,7 +13,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.1** (`Directory.Build.props:3`), Stand **25.11.2026**. Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.6.2** (`Directory.Build.props:3`), **noch nicht veröffentlicht** (Stand **25.11.2026**). Die letzte veröffentlichte Version ist 0.6.1. Siehe [CHANGELOG.md](CHANGELOG.md).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
@@ -37,7 +37,7 @@ Version **0.6.1** (`Directory.Build.props:3`), Stand **25.11.2026**. Siehe [CHAN
 Unter [Releases](https://github.com/Ebenhoeh80/xplat-maxcube/releases) liegen selbstständige Pakete für `win-x64` und `linux-x64` (self-contained, kein .NET-SDK nötig). Die Archive werden bei jedem `v*`-[Tag](https://github.com/Ebenhoeh80/xplat-maxcube/tags) automatisch von GitHub Actions gebaut, mit dem fensterlosen Selbsttest geprüft und an das Release angehängt.
 
 - **Windows:** ZIP entpacken, `MaxCube.UI.Desktop.exe` starten.
-- **Linux:** ZIP entpacken, `chmod +x MaxCube.UI.Desktop`, danach `./MaxCube.UI.Desktop`. Für die Oberfläche sind X11 oder Wayland nötig.
+- **Linux:** zuerst die Systembibliotheken installieren (`sudo apt-get update && sudo apt-get install -y libfontconfig1 libx11-6 libxcursor1 libxext6 libxfixes3 libxi6 libxrandr2 libice6 libsm6 libgl1 libvulkan1 xdg-utils` (xdg-utils nur für externe Links); das ZIP enthält keine Systembibliotheken), dann ZIP entpacken, `chmod +x MaxCube.UI.Desktop` und `./MaxCube.UI.Desktop`. Für die Oberfläche sind X11 oder Wayland nötig. Mit `./MaxCube.UI.Desktop --check-linux-deps` lässt sich die Voraussetzung vorab prüfen; fehlen Bibliotheken, erscheint ein konkreter Hinweis statt eines Stacktraces. Im Quellcheckout installiert `./start.sh --install-deps` die Pakete nach Eingabe des sudo-Passworts. Zum Öffnen des Projekt-Links wird `xdg-open`, `gio` oder `wslview` benötigt; ohne einen solchen Opener zeigt die App die URL in der Statusleiste an, statt sich zu beenden.
 
 ### Aus Quellen bauen
 

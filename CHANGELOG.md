@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (0.6.2, noch nicht veröffentlicht)
+
+- Vorschau vor riskanten Schreibbefehlen: Wochenprofil senden/kopieren und
+  Konfiguration senden/kopieren zeigen zuerst die konkreten Werte; erst nach
+  „Jetzt senden“ wird ein Telegramm erzeugt. „Abbrechen“ verwirft die Vorschau
+  ohne Cube-Zugriff (`MainWindowViewModel.RunAsync`, `ConfirmWriteCommand`,
+  `CancelWriteCommand`, `MainWindow.axaml`).
+- Sichtbarer Dirty-Hinweis für geänderte Wochenprofile und/oder Raumkonfiguration
+  in der Statusleiste; erfolgreiches Senden setzt die jeweilige Basis zurück.
+- Verständliche, lokalisierte Begründung, warum eine Schreibaktion gesperrt ist
+  (offline, veraltet, nicht gelesen, kein Raum, kein geladenes Wochenprofil,
+  keine Administration, laufende Aktion, keine Räume ausgewählt).
+- Modales „Beschäftigt“-Overlay zeigt jetzt den konkreten Vorgang; alle neuen
+  Texte existieren in DE/EN/FR/IT/NL/PL und die Bedienelemente haben Namen für
+  Screenreader.
+
+### Fixed
+
+- Linux-Start: Fehlten `libfontconfig.so.1` bzw. die X11-Bibliotheken, brach
+  Avalonia mit einer `TypeInitializationException` ab (`SkiaSharp.SKImageInfo`).
+  `Program.cs` prüft alle elf von SkiaSharp/Avalonia.X11/Skia benötigten
+  Systembibliotheken (fontconfig, sechs X11, ICE/SM, GL/Vulkan) vor dem GUI-Start
+  und nennt den konkreten Installationsbefehl;
+  `start.sh` prüft zusätzlich vor dem Build. `--check-linux-deps` macht die Prüfung
+  auch im veröffentlichten ZIP verfügbar. Das Paket bleibt self-contained für .NET;
+  Systembibliotheken müssen auf dem Zielsystem vorhanden sein (READMEs,
+  `docs/HARDWARE-VERIFY.md` §14).
+- Externe Links beenden die App nicht mehr: Der Klick auf den Projekt-Link rief
+  `Process.Start` mit `UseShellExecute` direkt auf; ohne `xdg-open`/`gio`/`wslview`
+  (in schlanken WSL-Installationen üblich) endete das in einer ungehandelten
+  `Win32Exception`. Neuer `IUrlOpener`/`DesktopUrlOpener` versucht Windows-Shell,
+  `xdg-open`, `gio open`, `wslview` bzw. macOS `open`; bei Fehlern erscheint die
+  lokalisierte Meldung „Öffnen fehlgeschlagen – bitte manuell öffnen: {0}" mit dem
+  Ziel als Statusleistentext. Auch „Protokollordner öffnen“ nutzt jetzt diesen
+  Pfad; `start.sh --install-deps` installiert zusätzlich `xdg-utils`
+  (`docs/HARDWARE-VERIFY.md` §15). Vom Nutzer am 26.11.2026 in WSLg bestätigt.
+
+### Changed
+
+- Version auf `0.6.2` (`Directory.Build.props:3`); Build 0 Warnungen/0 Fehler,
+  486/486 Tests grün, `--selfcheck OK` unter Windows und Debian 13 (WSL2).
+  Noch kein Commit, Tag oder Release.
+
 ## [0.6.1] - 2026-11-25
 
 Auswertung des Kundenprotokolls vom 25.11.2026: „Call from invalid thread" beim
