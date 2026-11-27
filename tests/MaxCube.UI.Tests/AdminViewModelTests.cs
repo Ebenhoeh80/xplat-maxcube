@@ -379,13 +379,13 @@ public class AdminViewModelTests : IDisposable
         var vm = (await CreateAsync()).ViewModel;
         var baseline = vm.TemporaryEnd;
 
-        vm.TemporaryEndDate = new DateTime(2026, 11, 25);
+        vm.TemporaryEndDate = new DateTimeOffset(2026, 11, 25, 0, 0, 0, baseline.Offset);
         vm.TemporaryEnd.Should().Be(new DateTimeOffset(
             2026, 11, 25, baseline.Hour, baseline.Minute, baseline.Second, baseline.Offset));
 
         vm.TemporaryEndTime = new TimeSpan(21, 45, 0);
         vm.TemporaryEnd.Should().Be(new DateTimeOffset(2026, 11, 25, 21, 45, 0, TimeSpan.Zero));
-        vm.TemporaryEndDate.Should().Be(new DateTime(2026, 11, 25));
+        vm.TemporaryEndDate.Should().Be(new DateTimeOffset(2026, 11, 25, 0, 0, 0, TimeSpan.Zero));
         vm.TemporaryEndTime.Should().Be(new TimeSpan(21, 45, 0));
     }
 

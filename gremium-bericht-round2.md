@@ -9,7 +9,7 @@
 > **Historisches Artefakt:** Dieser Bericht dokumentiert die Bewertung zu Beginn von
 > Runde 2. Die damaligen Zahlen (232/232) sind überholt; maßgeblich sind der
 > Abschlussstand der Runden 1–3 war **251/251**, später **442/442**; maßgeblich
-> ist der aktuelle Stand **553/553** in `README.md` und `CHANGELOG.md` (Abschnitt 0.8.0). Die darin
+> ist der aktuelle Stand **554/554** in `README.md` und `CHANGELOG.md` (Abschnitt 0.8.1). Die darin
 > beschriebenen Funde wurden in den Runden 2 und 3 abgearbeitet.
 
 > **Randbedingungen (aus `docs/gremium.md`):** Cube ist Source of Truth; SQLite nur Cache. Keine Cloud/, Jetty/, Browser-, AGPL-Abhängigkeit. Firmware-Schreiben deaktiviert. Keine Hardware-/Netzwerk-Schreibzugriffe. Keine Commits/Pushes. Ohne echte Hardware sind alle `Hardware`-Fragen `UNBEKANNT`.

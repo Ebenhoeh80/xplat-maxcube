@@ -132,7 +132,7 @@ There is no installer and no backward database schema migration. Rollback means:
 | Mechanism | What it monitors | Limit |
 |---|---|---|
 | `--selfcheck` | paths, SQLite + native libs, instance protection, view model, six languages | no cube contact (`Program.cs:26-92`) |
-| CI matrix | build, 553 tests, self-test, publish for Ubuntu/Windows | on push/PR/manual (`.github/workflows/ci.yml:3-7`) |
+| CI matrix | build, 554 tests, self-test, publish for Ubuntu/Windows | on push/PR/manual (`.github/workflows/ci.yml:3-7`) |
 | `FileAppLog` | daily log file with retention | diagnostics, not a feature (`FileAppLog.cs:6-9`) |
 | Audit log | technical events in SQLite with source tag | last 100 in UI, 500 via API, retention applied at startup (`SqliteStateStore.cs:166-219`) |
 | `CubeSessionMonitor` | `L:` refresh/stale/reconnect at runtime | internal, no external notification |

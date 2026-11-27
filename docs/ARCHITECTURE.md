@@ -1,6 +1,6 @@
 # Architektur – MAX! Cube Local App
 
-> Rolle: Senior Solution Architect. Stand: 27.11.2026. Version: 0.8.0.
+> Rolle: Senior Solution Architect. Stand: 27.11.2026. Version: 0.8.1.
 > Kennzeichnung: `FAKT` = direkt im Artefakt belegt, `BEOBACHTUNG` = im Testlauf gesehen, `INFERENZ` = aus Code/Doku abgeleitet, `UNBEKANNT` = nicht belegbar. Belege als `Datei:Zeile`.
 
 ## 1. Executive Summary
@@ -40,7 +40,7 @@ Verbindung und Discovery, Raum-/Geräteansicht, Solltemperatur und Modi, Hausste
 C4Context
   title Systemkontext – MAX! Cube Local App
   Person(Betreiber, "Betreiber", "Steuert Heizung lokal am PC")
-  System(App, "MAX! Cube Local App 0.8.0", "Avalonia-Desktop-App, Windows/Linux")
+  System(App, "MAX! Cube Local App 0.8.1", "Avalonia-Desktop-App, Windows/Linux")
   System(Cube, "eQ-3 MAX! Cube", "Firmware 273–275, TCP 62910, UDP 23272")
   SystemDb(Cache, "maxcube.db", "SQLite-Cache, Einstellungen, Audit")
   SystemExt(Cloud, "MAX! Cloud", "seit 01.07.2023 abgeschaltet; App laut Nutzerhinweis aus Stores entfernt")
@@ -287,7 +287,7 @@ Quell-Tags im Audit-Log und Reconnect-Zeitpunkte im Diagnosebericht.
 **Umgesetzt in 0.8.0:** freie `Temporary`-Endzeit, tablokale Raumauswahl,
 Drag-and-drop-Verschiebung von Schaltpunkten, bestätigter Wake-up (`z:`) als
 eigene Benutzeraktion und SHA-256-Prüfsummen im Release. Die vier Umbauten sind
-mit 553/553 Tests unter Windows und Debian/WSL2 belegt.
+mit 554/554 Tests unter Windows und Debian/WSL2 belegt.
 
 ## 10. Offene Fragen
 

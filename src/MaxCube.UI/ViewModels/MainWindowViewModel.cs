@@ -411,12 +411,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private DateTimeOffset temporaryEnd;
 
     /// <summary>Datumsteil für den DatePicker; die Zeit bleibt dabei erhalten.</summary>
-    public DateTime? TemporaryEndDate
+    public DateTimeOffset? TemporaryEndDate
     {
-        get => TemporaryEnd.DateTime.Date;
+        get => new DateTimeOffset(TemporaryEnd.DateTime.Date, TemporaryEnd.Offset);
         set
         {
-            var date = (value ?? TemporaryEnd.DateTime).Date;
+            var date = (value?.DateTime ?? TemporaryEnd.DateTime).Date;
             TemporaryEnd = new DateTimeOffset(date.Add(TemporaryEnd.TimeOfDay), TemporaryEnd.Offset);
         }
     }

@@ -37,7 +37,7 @@ Zehn Zieldateien des Auftrags – eine Root-Datei und neun Dateien in `docs/`. S
 |---|---|---|
 | Schnelleinstieg | [README.md](../README.md) | Start Windows/Linux, Selbsttest, Grenzen, Verifikationsstand |
 | Architektur | [ARCHITECTURE.md](ARCHITECTURE.md) | Senior-Architekt-Sicht: Kontext, Schichten, ADRs, Risiken, Verbesserungen |
-| Entwicklung | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, Konventionen, 553/553 Tests, Erweiterungsrezepte, Versionierung |
+| Entwicklung | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, Konventionen, 554/554 Tests, Erweiterungsrezepte, Versionierung |
 | API | [API.md](API.md) | lokale C#-Interfaces + Cube-Wire-Protokoll; **keine HTTP-API** |
 | Datenbank | [DATABASE.md](DATABASE.md) | SQLite-Schema, Migration, Einstellungen, Audit |
 | Betrieb | [OPERATIONS.md](OPERATIONS.md) | Netz, Pfade, CI, Pakete, Backup; keine Server/Kubernetes |

@@ -130,7 +130,7 @@ Es gibt keinen Installer und keine Datenbankschema-Rückwärtsmigration. Rollbac
 | Mechanismus | Was überwacht er | Grenze |
 |---|---|---|
 | `--selfcheck` | Pfade, SQLite + native Lib, Instanzschutz, ViewModel, sechs Sprachen | kein Cube-Kontakt (`Program.cs:26-92`) |
-| CI-Matrix | Build, 553 Tests, Selbsttest, Publish für Ubuntu/Windows | bei Push/PR/manuell (`.github/workflows/ci.yml:3-7`) |
+| CI-Matrix | Build, 554 Tests, Selbsttest, Publish für Ubuntu/Windows | bei Push/PR/manuell (`.github/workflows/ci.yml:3-7`) |
 | `FileAppLog` | tägliche Logdatei mit Aufbewahrung | Diagnose, keine Funktion (`FileAppLog.cs:6-9`) |
 | Audit-Log | fachliche Ereignisse in SQLite mit Quell-Tag | letzte 100 in UI, 500 via API, Aufbewahrung beim Start (`SqliteStateStore.cs:166-219`) |
 | `CubeSessionMonitor` | `L:`-Refresh/Stale/Reconnect zur Laufzeit | intern, keine externe Meldung |
