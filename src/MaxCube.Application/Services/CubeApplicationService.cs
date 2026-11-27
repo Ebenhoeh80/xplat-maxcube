@@ -133,7 +133,14 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             RaiseWarning("WarnCacheNotUpdated", "Live-Zustand angezeigt, Cache nicht aktualisiert.");
         }
 
-        StateChanged?.Invoke(this, refreshed);
+        try
+        {
+            StateChanged?.Invoke(this, refreshed);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            RaiseWarning("WarnStateListenerFailed", "Live-Zustand konnte nicht gemeldet werden.");
+        }
     }
 
     private void OnSessionUnreachable(object? sender, EventArgs args)
@@ -199,6 +206,18 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             {
                 // Ein hängender Reconnect darf das Beenden nicht festhalten.
             }
+        }
+
+        CancellationTokenSource? bundleCts;
+        lock (_bundleLock)
+        {
+            bundleCts = _bundleCts;
+            _bundleCts = null;
+        }
+        if (bundleCts is not null)
+        {
+            bundleCts.Cancel();
+            bundleCts.Dispose();
         }
 
         _gateway.StateChanged -= OnGatewayStateChanged;

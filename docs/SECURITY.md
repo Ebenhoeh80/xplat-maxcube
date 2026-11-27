@@ -49,7 +49,7 @@ flowchart TB
 | Firmware schreiben | **nicht implementiert/deaktiviert** | `docs/gremium.md:11`, `README.md` alt:76 |
 | Firmware-Update-Check | **kein HTTP-Check** | `docs/features.md:77,86` |
 | Broadcast beim Start | **keiner**; nur „Cube suchen“ | `docs/features.md:41`, `Program.cs:26-29` |
-| Fehlerbericht | lokal, **kein Versand** | `CubeApplicationService.Admin.cs:840-844` |
+| Fehlerbericht | lokal, **kein Versand** | `CubeApplicationService.Admin.cs:915-947` |
 | Sendingate | `OperationGate` mit 2 s Erwerb und `CancelActive()` | `OperationGate.cs:3-16` |
 
 **INFERENZ:** Die Bestätigungsdialoge sind eine Bedienbarriere, keine kryptografische Autorisierung. Ein lokaler Prozess mit Zugriff auf denselben Datenordner kann die SQLite-Einstellungen dennoch ändern.

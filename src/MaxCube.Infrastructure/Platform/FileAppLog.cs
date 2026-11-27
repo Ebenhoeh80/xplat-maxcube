@@ -77,23 +77,33 @@ public sealed class FileAppLog : ILogStore
 
         var limit = _time.GetLocalNow().Date.AddDays(-retentionDays);
         var removed = 0;
-        foreach (var file in System.IO.Directory.EnumerateFiles(_directory, Prefix + "*" + Extension))
+        // Löschen und Schreiben/Export dürfen sich nicht überlappen: sonst kann eine
+        // Tagesdatei während eines Appends verschwinden (Linux erlaubt das Löschen offener Dateien).
+        lock (_gate)
         {
-            var name = Path.GetFileNameWithoutExtension(file)[Prefix.Length..];
-            if (!DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
-                || day >= limit)
+            if (!System.IO.Directory.Exists(_directory))
             {
-                continue;
+                return 0;
             }
 
-            try
+            foreach (var file in System.IO.Directory.EnumerateFiles(_directory, Prefix + "*" + Extension))
             {
-                File.Delete(file);
-                removed++;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                // Eine gesperrte Datei bleibt bis zum nächsten Start stehen.
+                var name = Path.GetFileNameWithoutExtension(file)[Prefix.Length..];
+                if (!DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+                    || day >= limit)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    File.Delete(file);
+                    removed++;
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    // Eine gesperrte Datei bleibt bis zum nächsten Start stehen.
+                }
             }
         }
 

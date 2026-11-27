@@ -765,7 +765,7 @@ public class AdminViewModelTests : IDisposable
 
         vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "nl");
         vm.LogRetentionDays = 7;
-        await Task.Delay(100);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
         h.Store.Settings[MainWindowViewModel.LanguageSetting].Should().Be("nl");
         h.Store.Settings[MainWindowViewModel.LogRetentionSetting].Should().Be("7");
     }

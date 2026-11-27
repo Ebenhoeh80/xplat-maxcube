@@ -528,6 +528,52 @@ public class AdminServiceTests
     }
 
     [Fact]
+    public async Task Network_configuration_write_is_blocked_for_the_offline_cache()
+    {
+        var h = new Harness();
+        var network = new FakeNetwork();
+        var service = new CubeApplicationService(h.Core, h.Store, new FakeClock(), admin: h.Admin, network: network);
+        await service.ConnectAsync(new CubeEndpoint("192.168.1.5", 62910));
+        h.Store.Settings["cube.serial"] = "JEQ0001234";
+        h.Store.Snapshot = CubeSnapshot.From(h.Cube, DateTimeOffset.UnixEpoch);
+        await service.DisconnectAsync();
+        await service.LoadCachedAsync();
+        var valid = new CubeNetworkConfiguration("192.168.1.5", "255.255.255.0", "192.168.1.1", "192.168.1.1", "8.8.8.8", false);
+
+        var act = () => service.WriteNetworkConfigurationAsync(valid, confirmed: true);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*read-only*");
+        network.Written.Should().BeEmpty();
+        h.Store.Audit.Should().NotContain(entry => entry.Contains("Netzwerkkonfiguration"));
+    }
+
+    [Fact]
+    public async Task Network_configuration_write_honours_cancel_active_operation()
+    {
+        var h = new Harness();
+        var network = new FakeNetwork();
+        var service = new CubeApplicationService(h.Core, h.Store, new FakeClock(), admin: h.Admin, network: network);
+        await service.ConnectAsync(new CubeEndpoint("192.168.1.5", 62910));
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        network.WriteHook = async token =>
+        {
+            started.TrySetResult();
+            await Task.Delay(Timeout.Infinite, token);
+        };
+        var valid = new CubeNetworkConfiguration("192.168.1.5", "255.255.255.0", "192.168.1.1", "192.168.1.1", "8.8.8.8", false);
+        var write = () => service.WriteNetworkConfigurationAsync(valid, confirmed: true);
+        var running = write();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        service.CancelActiveOperation();
+
+        Func<Task> runningCheck = () => running;
+        await runningCheck.Should().ThrowAsync<OperationCanceledException>();
+        network.Written.Should().BeEmpty();
+        h.Store.Audit.Should().NotContain(entry => entry.Contains("Netzwerkkonfiguration"));
+    }
+
+    [Fact]
     public async Task Airtime_is_forwarded_and_a_high_duty_cycle_warns()
     {
         var h = new Harness();
@@ -786,16 +832,21 @@ public class AdminServiceTests
     private sealed class FakeNetwork : ICubeNetworkConfigurator
     {
         public List<(string Serial, string Ip, CubeNetworkConfiguration Configuration)> Written { get; } = new();
+        public Func<CancellationToken, Task>? WriteHook { get; set; }
 
         public Task<CubeNetworkConfiguration> ReadAsync(string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
             => Task.FromResult(new CubeNetworkConfiguration("1.2.3.4", "255.255.255.0", "1.2.3.1", "1.2.3.1", "8.8.8.8", true));
 
-        public Task WriteAsync(
+        public async Task WriteAsync(
             string serialNumber, string ipAddress, CubeNetworkConfiguration configuration,
             CancellationToken cancellationToken = default)
         {
+            if (WriteHook is not null)
+            {
+                await WriteHook(cancellationToken);
+            }
+
             Written.Add((serialNumber, ipAddress, configuration));
-            return Task.CompletedTask;
         }
     }
 

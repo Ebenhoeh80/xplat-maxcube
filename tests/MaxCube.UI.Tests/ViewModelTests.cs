@@ -223,7 +223,7 @@ public class ViewModelTests
         };
 
         var connect = viewModel.ConnectCommand.ExecuteAsync(null);
-        await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         var statusBefore = viewModel.StatusText;
 
         viewModel.CancelCommand.Execute(null);
@@ -317,7 +317,7 @@ public class ViewModelTests
         var dispatcher = new RecordingUiDispatcher();
         using var viewModel = new MainWindowViewModel(service, clock, dispatcher);
 
-        await Task.Run(() => gateway.RaiseFaulted());
+        await Task.Run(() => gateway.RaiseFaulted(), TestContext.Current.CancellationToken);
 
         dispatcher.Posted.Should().Be(1);
         // Post wurde nur aufgezeichnet, daher kein direkter Property-Zugriff vom Hintergrundthread.
@@ -511,7 +511,7 @@ public class ViewModelTests
 
         viewModel.CubeInfoStatus.State.Should().Be(DataReadState.NotRead);
         viewModel.SelectedTabIndex = TabIndex.Cube;
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         viewModel.CubeInfoStatus.State.Should().Be(DataReadState.Live);
         viewModel.CubeInfoStatus.Text.Should().Contain("●");
@@ -632,7 +632,7 @@ public class ViewModelTests
         await viewModel.ConnectCommand.ExecuteAsync(null);
         var before = dispatcher.Posted;
 
-        await Task.Run(() => gateway.RaiseFaulted());
+        await Task.Run(() => gateway.RaiseFaulted(), TestContext.Current.CancellationToken);
 
         dispatcher.Posted.Should().BeGreaterThan(before);
         viewModel.IsConnected.Should().BeFalse();
