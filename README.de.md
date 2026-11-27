@@ -145,7 +145,7 @@ Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](do
 
 ## Verifikationsstand
 
-Build **0 Warnungen / 0 Fehler**, **518/518** hardwarefreie Tests grün unter Windows und Debian 13 (WSL2), `--selfcheck` unter beiden Systemen `OK`, self-contained Linux-Paket mit `LANG=de_DE.UTF-8` und `LANG=C` `OK` (`docs/gremium.md:134`, `docs/roadmap.md:460-487`). Diese Ergebnisse sind `BEOBACHTUNG`.
+Build **0 Warnungen / 0 Fehler**, **519/519** hardwarefreie Tests grün unter Windows und Debian 13 (WSL2), `--selfcheck` unter beiden Systemen `OK`, self-contained Linux-Paket mit `LANG=de_DE.UTF-8` und `LANG=C` `OK` (`docs/gremium.md:134`, `docs/roadmap.md:460-487`). Diese Ergebnisse sind `BEOBACHTUNG`.
 
 Ein Wechsel der Oberflächensprache aktualisiert ohne Neustart und ohne Cube-Zugriff alle sichtbaren Bereiche: zwischengespeicherte Status-/Ergebnistexte, Schreibvorschau, Dirty-Hinweis, Wochentags- und Modusbezeichnungen, Gerätestatus und Fehlerhinweise (`CHANGELOG.md`, `docs/HARDWARE-VERIFY.md` §17).
 
