@@ -549,3 +549,14 @@ Vier Regressionstests belegen parallele UDP-Lesungen, Portkonflikt als
 Exception-Detail im Log. **UNBEKANNT:** die tatsächlichen Klicks, der `SocketErrorCode` im
 Originalprotokoll und die Hardware-Antwort auf UDP 23272; die Kausalität bleibt daher INFERENZ,
 die Race-Beseitigung ist jedoch hardwarefrei bewiesen.
+
+**FAKT (Release):** PR [#42](https://github.com/Ebenhoeh80/xplat-maxcube/pull/42) wurde als
+Squash `574c2d265b881292c6051e17e8db8145fc6e6d45` gemergt (sieben Checks grün); der annotierte Tag
+`v0.8.2` zeigt auf den Merge-Commit. Release-Lauf `45991073744`,
+[Release v0.8.2](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.2).
+`xplat-maxcube-0.8.2-win-x64.zip` SHA-256
+`8400335318a36e7c3bbe7bc47389e18bcc0d1118afd6c5f5e135e58c05439f76`,
+`xplat-maxcube-0.8.2-linux-x64.zip` SHA-256
+`172615969a9c83cfd9d5d34f8c1e80a7e6deb0b26a6e911b4e76eec0e0001c3f`; beide stimmen mit
+`SHA256SUMS.txt` überein (`sha256sum -c` grün). Beide heruntergeladenen Pakete liefen mit
+`SELFCHECK OK … 0.8.2 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; Exitcode 0 je).
