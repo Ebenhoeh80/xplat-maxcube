@@ -15,7 +15,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.8.1** (`Directory.Build.props:3`), vorgesehen am **27.11.2026** als `v0.8.1` (davor veröffentlicht: `v0.8.0`). Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.8.1** (`Directory.Build.props:3`), veröffentlicht am **27.11.2026** als `v0.8.1` (davor veröffentlicht: `v0.8.0`). Siehe [CHANGELOG.md](CHANGELOG.md) und das [Release](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
