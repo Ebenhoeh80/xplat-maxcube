@@ -7,37 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Changed / Geändert
 
-- Avalonia auf 12.2.0 angehoben (UI, Desktop, Themes und Headless-Tests gemeinsam). Die XAML
-  nutzt weiterhin Reflection-Bindings (`x:CompileBindings="False"`), `Watermark` wurde durch
+- **EN:** All Avalonia packages were upgraded together to 12.2.0 (UI, Desktop, Themes and
+  headless tests). The XAML still uses reflection bindings (`x:CompileBindings="False"`);
+  `Watermark` was replaced by `PlaceholderText`. UI tests now use xUnit v3 with
+  `xunit.runner.visualstudio` 3.1.5, so they remain discoverable by `dotnet test` and still
+  produce TRX artifacts (no `MTP0001` warning). Reason: the open Dependabot PRs #8 and #10
+  were not mergeable individually (AVLN2100 / `TypeLoadException` in the headless test host).
+  Residual risk: real desktop rendering and real hardware were not visually verified in this
+  sweep.
+- **DE:** Avalonia auf 12.2.0 angehoben (UI, Desktop, Themes und Headless-Tests gemeinsam). Die
+  XAML nutzt weiterhin Reflection-Bindings (`x:CompileBindings="False"`), `Watermark` wurde durch
   `PlaceholderText` ersetzt. Die UI-Tests laufen auf xUnit v3 mit `xunit.runner.visualstudio`
   3.1.5; dadurch bleiben sie unter `dotnet test` auffindbar und schreiben weiterhin TRX-Artefakte
-  (ohne `MTP0001`-Warnung). Grund: die offenen Dependabot-PRs #8 und
-  #10 waren einzeln nicht mergebar (AVLN2100 bzw. `TypeLoadException` im Headless-Testhost).
-  Verbleibendes Risiko: echte Desktop-Darstellung und echte Hardware wurden in diesem Sweep
-  nicht visuell geprüft.
+  (ohne `MTP0001`-Warnung). Grund: die offenen Dependabot-PRs #8 und #10 waren einzeln nicht
+  mergebar (AVLN2100 bzw. `TypeLoadException` im Headless-Testhost). Verbleibendes Risiko: echte
+  Desktop-Darstellung und echte Hardware wurden in diesem Sweep nicht visuell geprüft.
 
-### Fixed
+### Fixed / Behoben
 
-- `WriteNetworkConfigurationAsync` läuft jetzt wie alle anderen Schreibpfade über
+- **EN:** `WriteNetworkConfigurationAsync` now passes through `RequireOnline()` and the
+  `OperationGate` like every other write path. The audit entry uses the lease token so
+  `CancelActiveOperation()` also takes effect after a successful UDP write
+  (`CubeApplicationService.Admin.cs:838-861`).
+- **DE:** `WriteNetworkConfigurationAsync` läuft jetzt wie alle anderen Schreibpfade über
   `RequireOnline()` und das `OperationGate`. Der Audit-Eintrag nutzt den Lease-Token, damit
   `CancelActiveOperation()` auch nach einem erfolgreichen UDP-Schreiben wirkt
   (`CubeApplicationService.Admin.cs:838-861`).
-- Das Bündelungs-`CancellationTokenSource` wird nach Abbruch und beim Dispose freigegeben;
+- **EN:** The batching `CancellationTokenSource` is disposed after cancellation and on
+  `DisposeAsync`; previously one CTS remained per temperature window.
+- **DE:** Das Bündelungs-`CancellationTokenSource` wird nach Abbruch und beim Dispose freigegeben;
   zuvor blieb pro Temperaturfenster ein CTS zurück.
-- `FileAppLog.Cleanup` hält jetzt dieselbe Dateisperre wie Schreiben, Lesen und Export; ein
+- **EN:** `FileAppLog.Cleanup` now holds the same file lock as writing, reading and exporting, so
+  a daily log can no longer be deleted during an append.
+- **DE:** `FileAppLog.Cleanup` hält jetzt dieselbe Dateisperre wie Schreiben, Lesen und Export; ein
   Tageslog kann nicht mehr während eines Appends gelöscht werden.
-- Ein werfender `StateChanged`-Subscriber beendet nicht mehr den Prozess (`async void`); der
+- **EN:** A throwing `StateChanged` subscriber no longer terminates the process (`async void`);
+  the error is reported as a localised warning.
+- **DE:** Ein werfender `StateChanged`-Subscriber beendet nicht mehr den Prozess (`async void`); der
   Fehler erscheint als lokalisierte Warnung.
-- Veraltete Testzahlen (488/488, 442/442), die Versionsangabe in `README.de.md` und veraltete
+- **EN:** Outdated test counts (488/488, 442/442), the version in `README.de.md` and stale
+  `file:line` references were corrected.
+- **DE:** Veraltete Testzahlen (488/488, 442/442), die Versionsangabe in `README.de.md` und veraltete
   `Datei:Zeile`-Verweise wurden korrigiert.
 
-### Verification
+### Verification / Verifikation
 
-- Build 0 Warnungen/0 Fehler; 518/518 Tests grün unter Windows (Domain 64, Application 83,
-  Protocol 198, Infrastructure 66, UI 107), `--selfcheck` `OK`. Neue Regressionstests decken
-  Offline-Sperre und Abbruch des Netzwerk-Schreibpfads sowie die Log-Aufbewahrung ab.
+- **EN:** Build with 0 warnings / 0 errors; 518/518 tests green on Windows and Debian 13
+  (WSL2) — Domain 64, Application 83, Protocol 198, Infrastructure 66, UI 107 — and
+  `--selfcheck` `OK`. New regression tests cover the offline lock and cancellation of the
+  network write path as well as log retention.
+- **DE:** Build 0 Warnungen/0 Fehler; 518/518 Tests grün unter Windows und Debian 13 (WSL2)
+  (Domain 64, Application 83, Protocol 198, Infrastructure 66, UI 107), `--selfcheck` `OK`. Neue
+  Regressionstests decken Offline-Sperre und Abbruch des Netzwerk-Schreibpfads sowie die
+  Log-Aufbewahrung ab.
 
 ## [0.6.8] - 2026-11-26
 
