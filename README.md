@@ -18,8 +18,9 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.8.0** (`Directory.Build.props:3`), to be released on 2026-11-27 as
-`v0.8.0` (previous published release: `v0.7.0`). See [CHANGELOG.md](CHANGELOG.md).
+Version **0.8.0** (`Directory.Build.props:3`), published on 2026-11-27 as
+`v0.8.0` (previous release: `v0.7.0`). See [CHANGELOG.md](CHANGELOG.md) and the
+[release](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.0).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
 > MAX! cloud control and removed the cloud app from the app stores. Remote

@@ -463,7 +463,7 @@ the dedicated drag handle; further cases cover the 5-minute grid, ordering, dupl
 the 13-point limit, free `Temporary` end time, per-tab room selections and the wake-up
 write gate for cached/stale state. `dotnet format --verify-no-changes`, the NuGet vulnerability audit (including transitive
 packages) and YAML parsing of both workflows are green. `actionlint` was unavailable in this
-environment; GitHub's action analysis runs additionally on the PR.
+environment; GitHub's action analysis was green in PR [#38](https://github.com/Ebenhoeh80/xplat-maxcube/pull/38).
 
 **OBSERVATION (packages):** The self-contained `win-x64` and `linux-x64` publish packages
 reported `--selfcheck` `OK` at version 0.8.0 with `SQLite ok` (exit code 0). The release
@@ -475,3 +475,17 @@ The digests are plain checksums, not a signature claim.
 and is never automatically embedded in other write paths. `A:` confirms only that the Cube
 accepted the command, not its effect on devices. No `nmap` was used and no non-approved
 hardware was addressed.
+
+**FACT (release):** PR [#38](https://github.com/Ebenhoeh80/xplat-maxcube/pull/38) was merged
+as squash `641b436248e3b236bd53ddbe22a669ef5c77945a` with all seven checks green. The
+annotated tag `v0.8.0` points to the merge commit and was created only afterwards. The release
+run `45977502002` and release
+[v0.8.0](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.0) are published.
+`xplat-maxcube-0.8.0-win-x64.zip` has SHA-256
+`163a94253545b3261d1ff116a25d5b7be68e3e9d59e4d2daa210301e48af6936`,
+`xplat-maxcube-0.8.0-linux-x64.zip` SHA-256
+`b940c8b51a7b689c16108e86ee07fd163312c1869a9bb91d948f7bc6ba2c13e9`; both digests match
+`SHA256SUMS.txt` and the GitHub API (`sha256sum -c`: green). Both downloaded packages ran
+windowless with `SELFCHECK OK … 0.8.0 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13
+trixie; exit code 0 each). The release notes were extracted from the `## [0.8.0]` section of
+`CHANGELOG.md`. **Documentation addendum without a new tag.**

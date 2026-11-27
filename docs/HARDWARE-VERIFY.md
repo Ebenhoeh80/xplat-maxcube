@@ -462,7 +462,7 @@ Headless-Host das Drop-Ziel und den eigenen Drag-Griff; weitere Fälle sichern 5
 Raster, Reihenfolge, Doppelzeiten, 13-Punkte-Grenze, freie `Temporary`-Endzeit, die
 tablokalen Raumauswahlen und den Schreib-Gate von Wake-up bei gepufferten/veralteten Werten. `dotnet format --verify-no-changes`, die NuGet-Schwachstellenprüfung
 (inklusive transitiver Pakete) und das Parsing beider Workflow-YAMLs sind grün. `actionlint`
-war in dieser Umgebung nicht verfügbar; die GitHub-Action-Analyse läuft zusätzlich im PR.
+war in dieser Umgebung nicht verfügbar; die GitHub-Action-Analyse war im PR [#38](https://github.com/Ebenhoeh80/xplat-maxcube/pull/38) grün.
 
 **BEOBACHTUNG (Pakete):** Die selbstständigen Publish-Pakete für `win-x64` und `linux-x64`
 meldeten `--selfcheck` `OK` mit Version 0.8.0 und `SQLite ok` (Exitcode 0). Der SHA-256-Schritt
@@ -474,3 +474,17 @@ kein Hardware-Schreibtest hinzugefügt. Die Aktion ist nur über die ausdrückli
 Oberflächenhandlung erreichbar und wird nie automatisch in andere Schreibpfade eingebettet.
 `A:` bestätigt nur die Annahme durch den Cube, nicht die fachliche Wirkung an Geräten. Es wurde
 kein `nmap` eingesetzt und keine nicht freigegebene Hardware angesprochen.
+
+**FAKT (Release):** PR [#38](https://github.com/Ebenhoeh80/xplat-maxcube/pull/38) wurde als
+Squash `641b436248e3b236bd53ddbe22a669ef5c77945a` gemergt; alle sieben Checks waren grün.
+Der annotierte Tag `v0.8.0` zeigt auf den Merge-Commit und wurde erst danach erstellt. Der
+Release-Lauf `45977502002` und das Release
+[v0.8.0](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.0) sind veröffentlicht.
+`xplat-maxcube-0.8.0-win-x64.zip` hat SHA-256
+`163a94253545b3261d1ff116a25d5b7be68e3e9d59e4d2daa210301e48af6936`,
+`xplat-maxcube-0.8.0-linux-x64.zip` SHA-256
+`b940c8b51a7b689c16108e86ee07fd163312c1869a9bb91d948f7bc6ba2c13e9`; beide Digests stimmen
+mit `SHA256SUMS.txt` und der GitHub-API überein (`sha256sum -c`: grün). Beide heruntergeladenen
+Pakete liefen fensterlos mit `SELFCHECK OK … 0.8.0 … SQLite ok` (Windows 10.0.26300,
+Debian GNU/Linux 13 trixie; Exitcode 0 je). Die Release-Notes stammen aus dem Abschnitt
+`## [0.8.0]` des `CHANGELOG.md`. **Doku-Nachtrag ohne neues Tag.**
