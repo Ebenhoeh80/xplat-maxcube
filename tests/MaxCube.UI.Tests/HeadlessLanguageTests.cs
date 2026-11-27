@@ -148,6 +148,32 @@ public class HeadlessLanguageTests
         window.Close();
     }
 
+    [AvaloniaFact]
+    public void Temporary_end_date_picker_binds_without_cast_error_and_writes_back()
+    {
+        using var viewModel = new MainWindowViewModel();
+        var window = new MainWindow { DataContext = viewModel };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var pickers = window.GetVisualDescendants().OfType<DatePicker>().ToList();
+        pickers.Should().NotBeEmpty("the rooms tab renders the free end-date picker");
+
+        foreach (var picker in pickers)
+        {
+            picker.SelectedDate.Should().Be(viewModel.TemporaryEndDate);
+            DataValidationErrors.GetHasErrors(picker).Should().BeFalse(
+                "DateTime→DateTimeOffset? cast errors must not appear (Avalonia 12 DatePicker)");
+
+            var chosen = new DateTimeOffset(2027, 1, 15, 0, 0, 0, viewModel.TemporaryEnd.Offset);
+            picker.SelectedDate = chosen;
+            Dispatcher.UIThread.RunJobs();
+            viewModel.TemporaryEnd.Date.Should().Be(new DateTime(2027, 1, 15));
+        }
+
+        window.Close();
+    }
+
     private static List<string> RenderedTexts(Window window)
         => window.GetVisualDescendants()
             .SelectMany(visual => visual switch

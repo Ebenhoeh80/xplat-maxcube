@@ -1,6 +1,6 @@
 # Entwicklung – MAX! Cube Local App
 
-> Stand 27.11.2026. Version 0.8.0. Diese Datei beschreibt den **Ist-Zustand des Repositories**, nicht eine Wunscharchitektur. Aussagen mit `INFERENZ`/`UNBEKANNT` sind ausdrücklich gekennzeichnet; Belege stehen als `Datei:Zeile`.
+> Stand 27.11.2026. Version 0.8.1. Diese Datei beschreibt den **Ist-Zustand des Repositories**, nicht eine Wunscharchitektur. Aussagen mit `INFERENZ`/`UNBEKANNT` sind ausdrücklich gekennzeichnet; Belege stehen als `Datei:Zeile`.
 
 ## 1. Schnellstart für Entwickler
 
@@ -57,7 +57,7 @@ flowchart LR
 | `MaxCube.UI` | Avalonia-MVVM, Lokalisierung, Tagesleiste | Avalonia 11.3.23, CommunityToolkit.Mvvm 8.4.2 |
 | `MaxCube.UI.Desktop` | Prozess, DI, Tray, Instanzschutz, Selbsttest | Avalonia.Desktop/Themes 11.3.23, DI 10.0.0 |
 
-Zentrale Build-Properties: Version `0.8.0`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`). C#-Quellen nutzen LF-Zeilenenden (`.gitattributes`, `.editorconfig`), damit `dotnet format --verify-no-changes` auf Windows und Debian identisch ist.
+Zentrale Build-Properties: Version `0.8.1`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`). C#-Quellen nutzen LF-Zeilenenden (`.gitattributes`, `.editorconfig`), damit `dotnet format --verify-no-changes` auf Windows und Debian identisch ist.
 
 ## 2. Kodierkonventionen
 
@@ -129,7 +129,7 @@ Tray: laufzeitgeneriertes Icon ohne Binärasset (`TrayIconFactory.cs:9-17`), `Tr
 | `MaxCube.Infrastructure.Tests` | SQLite, Gateway, UDP, Plattform, Sprache | `tests/MaxCube.Infrastructure.Tests/*Tests.cs` |
 | `MaxCube.UI.Tests` | ViewModel, Admin-ViewModel | `tests/MaxCube.UI.Tests/*Tests.cs` |
 
-**BEOBACHTUNG (27.11.2026):** 553/553 Tests grün unter Windows 10 und Debian 13 (WSL2). **FAKT (Testlauf 27.11.2026):** Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 130; die einzige `[MemberData]`-Quelle liefert 21 Zeilen (`CubeCommandsTests.cs:12-33`). Die älteren Stände 442/442, 514/515 und 519/519 sind historisch und in `CHANGELOG.md` dokumentiert. Belege: `tests/*/*.cs`, `CHANGELOG.md`. Hardwarefrei: Der End-to-End-Test nutzt `LoopbackFakeCube`/`FakeGateway`/`FakeStore`, **keinen** Golden-Capture (`LoopbackFakeCube.cs:10-12`). Für Wake-up gibt es bewusst keinen automatischen Hardware-Schreibtest; die Aktion ist nur nach Bestätigung erreichbar.
+**BEOBACHTUNG (27.11.2026):** 554/554 Tests grün unter Windows 10 und Debian 13 (WSL2). **FAKT (Testlauf 27.11.2026):** Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 131; die einzige `[MemberData]`-Quelle liefert 21 Zeilen (`CubeCommandsTests.cs:12-33`). Die älteren Stände 442/442, 514/515 und 519/519 sind historisch und in `CHANGELOG.md` dokumentiert. Belege: `tests/*/*.cs`, `CHANGELOG.md`. Hardwarefrei: Der End-to-End-Test nutzt `LoopbackFakeCube`/`FakeGateway`/`FakeStore`, **keinen** Golden-Capture (`LoopbackFakeCube.cs:10-12`). Für Wake-up gibt es bewusst keinen automatischen Hardware-Schreibtest; die Aktion ist nur nach Bestätigung erreichbar.
 
 ### 3.1 Testregeln
 
@@ -174,7 +174,7 @@ Neue Reiter folgen dem Muster `MainWindowViewModel.<Bereich>.cs` + `Strings`-Key
 
 Version kommt **nur** aus `Directory.Build.props:3-5`; `AppVersionProvider` liest das Assembly-Attribut (`AppVersionProvider.cs:13-24`). Fenstertitel und Status zeigen die Version; der Cache speichert `app.version` und `schema.version` zusätzlich (`SqliteStateStore.cs:31-37,108-115`).
 
-Bei Änderungen: Version nach Nutzerregel im SecondBrain automatisch/autark erhöhen (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Aktuell `0.8.0`; `schema.version` bleibt `1`, solange das Schema kompatibel bleibt.
+Bei Änderungen: Version nach Nutzerregel im SecondBrain automatisch/autark erhöhen (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Aktuell `0.8.1`; `schema.version` bleibt `1`, solange das Schema kompatibel bleibt.
 
 CI: Push/PR auf `main`/`master`/`develop` oder manuell; Matrix `ubuntu-latest` + `windows-latest`; Restore/Build/Test/Selbsttest, danach Publish `linux-x64`/`win-x64` mit Selbsttest und Artefakt-Upload (`ci.yml:3-69`). Der Release-Workflow erzeugt zusätzlich `SHA256SUMS.txt` für die beiden ZIPs (`release.yml:91-105,134`). Die Artefakte sind weiterhin **unsigniert**; eine Signatur bleibt Verbesserungsvorschlag (`ARCHITECTURE.md` §9).
 

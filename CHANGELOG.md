@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-11-27
+
+### Fixed / Behoben
+
+- **EN:** The `Temporary` end-date picker in the rooms and house tabs showed `System.InvalidCastException: Could not convert '…' (System.DateTime) to 'System.Nullable`1[System.DateTimeOffset]'`. Avalonia 12's `DatePicker.SelectedDate` is a `DateTimeOffset?`, but `TemporaryEndDate` was exposed as `DateTime?`. The property is now a `DateTimeOffset?` (date part; the time and offset are preserved). A headless test renders the real window, checks that the picker has no validation error and that a picked date is written back.
+- **DE:** Der `Temporary`-Endzeit-Datumsauswähler in Räume- und Haus-Reiter zeigte `System.InvalidCastException: Could not convert '…' (System.DateTime) to 'System.Nullable`1[System.DateTimeOffset]'`. `DatePicker.SelectedDate` ist in Avalonia 12 ein `DateTimeOffset?`, `TemporaryEndDate` war aber als `DateTime?` bereitgestellt. Die Property ist jetzt ein `DateTimeOffset?` (Datumsteil; Zeit und Offset bleiben erhalten). Ein Headless-Test rendert das echte Fenster, prüft, dass der Picker keinen Validierungsfehler hat, und dass ein gewähltes Datum zurückgeschrieben wird.
+
+### Verification / Verifikation
+
+- **EN:** Build with 0 warnings / 0 errors and 554/554 hardware-free tests green — Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 131; `dotnet format --verify-no-changes` green.
+- **DE:** Build 0 Warnungen/0 Fehler und 554/554 hardwarefreie Tests grün — Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 131; `dotnet format --verify-no-changes` grün.
+
 ## [0.8.0] - 2026-11-27
 
 ### Added / Hinzugefügt
@@ -519,7 +531,8 @@ Gleichzeitig werden die gefährlichsten Erstnutzer-Fallen geschlossen.
   Seriennummern und Raumwerte enthalten und ist vor der Weitergabe zu prüfen;
   ein Hinweis steht direkt im Viewer. Keine Cloud, kein HTTP, keine Telemetrie.
 
-[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1
 [0.8.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.0
 [0.7.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.7.0
 [0.6.9]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.6.9
