@@ -284,6 +284,8 @@ original Cube `192.168.10.60` and acknowledged; the Cube state was restored to
 21.5 °C / 16.5 °C and confirmed read-only (`docs/HARDWARE-VERIFY.md`). The
 functional acceptance by the thermostats is only partially read-back verified.
 
+**FACT (user, 27.11.2026):** The desktop UI on Linux was checked and found visually okay; native-speaker review is complete for German and English. French, Italian, Dutch and Polish await feedback via issues or PRs (`docs/HARDWARE-VERIFY.md` §28).
+
 ## Screenshots
 
 No screenshots have been published yet. The UI is a native Avalonia desktop

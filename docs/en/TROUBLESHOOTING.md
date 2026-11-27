@@ -1,4 +1,4 @@
-> English translation of docs/TROUBLESHOOTING.md. Machine-created; native-speaker review pending.
+> English translation of docs/TROUBLESHOOTING.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Troubleshooting – MAX! Cube Local App
 
@@ -57,7 +57,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 | "Close" does not exit | `ui.closeToTray = 1` | check Settings tab (`Settings.cs:48-53`, `App.axaml.cs:53-60`) | remove checkbox or use tray "Exit" |
 | Linux starts without UI | no X11/Wayland, `libSkiaSharp`/HarfBuzz missing | `start.sh:3-4`, `Program.cs:23-24` | check desktop session and self-contained package directory; `--selfcheck` separates wiring from GUI |
 
-**UNKNOWN:** Tray and window on a real X11/Wayland desktop were not visually checked (`README.md`, limits table; `ARCHITECTURE.md` R-03).
+**FACT (user, 27.11.2026):** The Linux UI was checked and found visually okay (`HARDWARE-VERIFY.md` §28). **UNKNOWN:** tray behaviour and "close hides window" were not explicitly confirmed (`ARCHITECTURE.md` R-03); the protocol-specific check remains open.
 
 ## 4. Connection problems
 

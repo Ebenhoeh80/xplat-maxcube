@@ -55,7 +55,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 | „Schließen“ beendet nicht | `ui.closeToTray = 1` | Einstellungen-Reiter prüfen (`Settings.cs:48-53`, `App.axaml.cs:53-60`) | Haken entfernen oder Tray „Beenden“ nutzen |
 | Linux startet ohne Oberfläche | kein X11/Wayland, `libSkiaSharp`/HarfBuzz fehlt | `start.sh:3-4`, `Program.cs:23-24` | Desktop-Session und self-contained Paketverzeichnis prüfen; `--selfcheck` trennt Verdrahtung von GUI |
 
-**UNBEKANNT:** Tray und Fenster auf echtem X11-/Wayland-Desktop wurden nicht visuell geprüft (`README.md`, Grenzen-Tabelle; `ARCHITECTURE.md` R-03).
+**FAKT (Nutzer, 27.11.2026):** Die Optik unter Linux wurde geprüft und augenscheinlich als ok befunden (`HARDWARE-VERIFY.md` §28). **UNBEKANNT:** Tray-Verhalten und „Schließen versteckt Fenster" wurden nicht ausdrücklich bestätigt (`ARCHITECTURE.md` R-03); die protokollspezifische Prüfung bleibt offen.
 
 ## 4. Verbindungsprobleme
 

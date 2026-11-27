@@ -5,7 +5,7 @@
 >
 > **Hinweis zum öffentlichen Repo:** Die RE-Eingaben (`decompiled/`, `extracted/`, `evidence/`) sind aus Lizenzgründen nicht Bestandteil von `xplat-maxcube`. Die nachfolgenden `Datei:Zeile`-Belege verweisen auf diese lokalen Eingaben; veröffentlicht sind ausschließlich unsere eigenen Auswertungen unter `docs/`.
 
-**Englische Fassung:** Alle 25 Dokumente unter `docs/` haben eine englische Übersetzung unter [`docs/en/`](en/INDEX.md). Die Übersetzungen sind maschinell erstellt und mit `native-speaker review pending` gekennzeichnet; maßgeblich ist die deutsche Quelle.
+**Englische Fassung:** Alle 25 Dokumente unter `docs/` haben eine englische Übersetzung unter [`docs/en/`](en/INDEX.md). Die Übersetzungen sind maschinell erstellt; DE/EN wurden am 27.11.2026 vom Nutzer geprüft und freigegeben, FR/IT/NL/PL erwarten Rückmeldung über Issues/PRs. Maßgeblich ist die deutsche Quelle.
 
 ---
 

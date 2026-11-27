@@ -1,4 +1,4 @@
-> English translation of docs/ARCHITECTURE.md. Machine-created; native-speaker review pending.
+> English translation of docs/ARCHITECTURE.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Architecture – MAX! Cube Local App
 
@@ -278,7 +278,7 @@ The cache is completely overwritten on every connect (`SqliteStateStore.cs:236-2
 
 1. Hardware test with packet capture for all `INFERENCE` formats; then raise the evidence status in `docs/features.md` or correct the encoding.
 2. Golden capture of a real cube including `S:` acknowledgement and UDP response; derive test fixtures from it.
-3. Linux desktop visual check on X11 **and** Wayland, including tray and "close hides window". The user confirmed on 26.11.2026 in principle "Linux Desktop funktiojniert auch" (`HARDWARE-VERIFY.md:389`); the protocol-specific check remains open.
+3. Linux desktop visual check: the user confirmed on 26.11.2026 in principle "Linux Desktop funktiojniert auch" and on 27.11.2026 that the UI looks visually okay (`HARDWARE-VERIFY.md` §28). Tray and "close hides window" are not explicitly checked; the protocol-specific check remains open.
 4. Audit rotation or configurable retention analogous to `FileAppLog`.
 5. Drag-and-drop in the weekly schedule editor as a complement to the day bar.
 6. Add error catalog entries with manufacturer wording instead of interpretations once evidenced.

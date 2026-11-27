@@ -1,4 +1,4 @@
-> Deutsche Übersetzung von README.md. Maschinell erstellt, Muttersprachlerprüfung offen.
+> Deutsche Fassung. Muttersprachlerprüfung DE/EN am 27.11.2026 durch den Nutzer bestätigt; FR/IT/NL/PL: Rückmeldung über Issues/PRs erwartet.
 
 # xplat-maxcube
 
@@ -233,6 +233,8 @@ Build **0 Warnungen / 0 Fehler**, **519/519** hardwarefreie Tests grün unter Wi
 Ein Wechsel der Oberflächensprache aktualisiert ohne Neustart und ohne Cube-Zugriff alle sichtbaren Bereiche: zwischengespeicherte Status-/Ergebnistexte, Schreibvorschau, Dirty-Hinweis, Wochentags- und Modusbezeichnungen, Gerätestatus und Fehlerhinweise (`CHANGELOG.md`, `docs/HARDWARE-VERIFY.md` §17).
 
 **FAKT (25.11.2026, freigegebene Hardwareprüfung):** Discovery, `0x11` Komfort/Eco, `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` und `z:` wurden am Original-Cube `192.168.10.60` gesendet und quittiert; der Cube-Zustand wurde auf die Ursprungswerte 21,5 °C / 16,5 °C zurückgesetzt und nur-lesend bestätigt (`docs/HARDWARE-VERIFY.md`). Die fachliche Annahme durch Thermostate ist nur teilweise per Read-back belegt.
+
+**FAKT (Nutzer, 27.11.2026):** Die Optik der Desktop-App unter Linux wurde geprüft und „augenscheinlich ok“ befunden; die Muttersprachlerprüfung ist für Deutsch und Englisch abgeschlossen. Französisch, Italienisch, Niederländisch und Polnisch erwarten Rückmeldung über Issues oder PRs (`docs/HARDWARE-VERIFY.md` §28).
 
 ## Dokumentation
 
