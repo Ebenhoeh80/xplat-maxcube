@@ -15,15 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `xunit.runner.visualstudio` 3.1.5, so they remain discoverable by `dotnet test` and still
   produce TRX artifacts (no `MTP0001` warning). Reason: the open Dependabot PRs #8 and #10
   were not mergeable individually (AVLN2100 / `TypeLoadException` in the headless test host).
-  Residual risk: real desktop rendering and real hardware were not visually verified in this
-  sweep.
+  The initial residual risk (real desktop rendering and real hardware not verified) was closed
+  later in this sweep; see the verification entry below.
 - **DE:** Avalonia auf 12.2.0 angehoben (UI, Desktop, Themes und Headless-Tests gemeinsam). Die
   XAML nutzt weiterhin Reflection-Bindings (`x:CompileBindings="False"`), `Watermark` wurde durch
   `PlaceholderText` ersetzt. Die UI-Tests laufen auf xUnit v3 mit `xunit.runner.visualstudio`
   3.1.5; dadurch bleiben sie unter `dotnet test` auffindbar und schreiben weiterhin TRX-Artefakte
   (ohne `MTP0001`-Warnung). Grund: die offenen Dependabot-PRs #8 und #10 waren einzeln nicht
-  mergebar (AVLN2100 bzw. `TypeLoadException` im Headless-Testhost). Verbleibendes Risiko: echte
-  Desktop-Darstellung und echte Hardware wurden in diesem Sweep nicht visuell geprüft.
+  mergebar (AVLN2100 bzw. `TypeLoadException` im Headless-Testhost). Das anfängliche Restrisiko
+  (echte Desktop-Darstellung und echte Hardware ungeprüft) wurde später im selben Sweep
+  geschlossen; siehe den Verifikations-Eintrag unten.
 
 ### Fixed / Behoben
 
