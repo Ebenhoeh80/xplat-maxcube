@@ -609,4 +609,14 @@ retry in the same window. **UNKNOWN:** whether the cube actually stayed silent b
 TCP session, whether endpoint and serial matched in the customer log, and which inner cause
 occurred. The measures are proven without hardware; hardware causality remains INFERENCE.
 
-**FACT (release):** Release evidence will be added after publication.
+**FACT (release):** PR [#44](https://github.com/Ebenhoeh80/xplat-maxcube/pull/44) was merged as
+squash `24eac2dd918d2443a0022f605e9d884d37a6f713` (seven checks green); the annotated tag
+`v0.8.3` points to the merge commit. Release run `45997414559`,
+[release v0.8.3](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.3).
+`xplat-maxcube-0.8.3-win-x64.zip` SHA-256
+`4ed5f84bf166c1ac2a4cdec9abbd538e35add7aca94cbbc10892bd35b88031de`,
+`xplat-maxcube-0.8.3-linux-x64.zip` SHA-256
+`eebe21d6c40619ae527e6348198788ce7808892f038e2df91955c05788259213`; both match
+`SHA256SUMS.txt` (`sha256sum -c` green). Both downloaded packages ran with
+`SELFCHECK OK … 0.8.3 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; exit code 0 each).
+No hardware access, no `nmap` and no write test were performed in this step either.

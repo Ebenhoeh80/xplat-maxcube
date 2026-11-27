@@ -612,4 +612,14 @@ ob der Cube tatsächlich wegen der TCP-Session schwieg, ob der Endpunkt und die 
 im Kundenlog übereinstimmten und welcher innere Fehler vorlag. Die Maßnahmen sind hardwarefrei
 belegt, die Hardwarekausalität bleibt INFERENZ.
 
-**FAKT (Release):** Die Release-Belege werden nach Veröffentlichung nachgetragen.
+**FAKT (Release):** PR [#44](https://github.com/Ebenhoeh80/xplat-maxcube/pull/44) wurde als
+Squash `24eac2dd918d2443a0022f605e9d884d37a6f713` gemergt (sieben Checks grün); der annotierte Tag
+`v0.8.3` zeigt auf den Merge-Commit. Release-Lauf `45997414559`,
+[Release v0.8.3](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.3).
+`xplat-maxcube-0.8.3-win-x64.zip` SHA-256
+`4ed5f84bf166c1ac2a4cdec9abbd538e35add7aca94cbbc10892bd35b88031de`,
+`xplat-maxcube-0.8.3-linux-x64.zip` SHA-256
+`eebe21d6c40619ae527e6348198788ce7808892f038e2df91955c05788259213`; beide stimmen mit
+`SHA256SUMS.txt` überein (`sha256sum -c` grün). Beide heruntergeladenen Pakete liefen mit
+`SELFCHECK OK … 0.8.3 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; Exitcode 0 je).
+Auch in diesem Schritt erfolgte kein Hardwarezugriff, kein `nmap` und kein Schreibtest.
