@@ -560,3 +560,56 @@ Squash `574c2d265b881292c6051e17e8db8145fc6e6d45` gemergt (sieben Checks grün);
 `172615969a9c83cfd9d5d34f8c1e80a7e6deb0b26a6e911b4e76eec0e0001c3f`; beide stimmen mit
 `SHA256SUMS.txt` überein (`sha256sum -c` grün). Beide heruntergeladenen Pakete liefen mit
 `SELFCHECK OK … 0.8.2 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; Exitcode 0 je).
+
+## 33. Version 0.8.3: Protokoll-Labels und UDP-Timeouts (27.11.2026)
+
+**FAKT (Eingabe):** Das zweite Nutzerprotokoll vom 27.11.2026 beginnt um 12:45:09 mit App 0.8.2.
+Discovery läuft 12:45:13–15 erfolgreich, die TCP-Verbindung steht ab 12:45:17. Um 12:45:27
+startet der leise Cube-Reiter-Read; um 12:45:39 steht
+`Netzwerk: CubeCommunicationFailedException: The cube did not answer the UDP request.`,
+unmittelbar danach aber `Aktion abgeschlossen.`. Der explizite Netzwerkleseversuch um
+12:45:42 endet um 12:45:52 mit derselben Exception. Klickzeiten, Stacktrace und
+`SocketErrorCode` fehlen.
+
+**FAKT (Log-Code):** `MainWindowViewModel.RunAsync` schrieb den Aktionsstart als
+`L("ActionStarted", errorPrefix)`. Dadurch entstanden die gemeldeten Zeilen
+„Aktion gestartet: Cube-Suche fehlgeschlagen“ und „Aktion gestartet: Verbindung fehlgeschlagen“.
+Dieselbe Methode schrieb nach `quiet`-Reads immer `OkAction`, auch wenn `TryReadAsync` gerade
+eine WARN für einen Abschnitt protokolliert hatte. Beide Zeilen sind eindeutig dem Code
+zuzuordnen; die Ursache der UDP-Timeouts ist daraus nicht ableitbar.
+
+**FAKT (UDP-Code):** Beide Fehler laufen durch `UdpNetworkConfigurator.RequestAsync`: fünf
+Versuche mit je 2 s auf dem festen lokalen Port 23272, Unicast an den gespeicherten Endpoint.
+Die 10 s bzw. 12 s der Protokolle passen zu ausgeschöpften Zeitfenstern. Der identische
+Außentext entsteht sowohl bei Timeout als auch bei verworfener Antwort; der innere Grund
+wurde bisher nicht protokolliert. Der Originalclient verlangt vor `c`/`C` ausdrücklich
+`assertNotConnected()` (`decompiled/.../LocalController.java`, `getNetworkConfiguration`/
+`setNetworkConfiguration`); unsere App las dagegen nur im verbundenen Zustand. Der Original-
+UDP-Proxy bleibt innerhalb eines 2-s-Fensters empfangsbereit, wenn ein Datagramm verworfen
+wird (`decompiled/.../CubeUdpProxy.java`).
+
+**INFERENZ:** Die stärkste, aber hardwaremäßig nicht bewiesene Ursache ist, dass der Cube
+UDP-Konfigurationszugriffe bei aktiver TCP-Session nicht beantwortet. Die Korrelation
+stimmt mit der Timeline und dem Originalcode überein; ein Portkonflikt ist durch die
+konkrete Fehlermeldung ausgeschlossen, da er einen anderen Text erzeugt hätte.
+
+**FAKT (Maßnahmen):** Explizite Aktionen erhalten jetzt echte Aktionsnamen; ohne Name erscheint
+ein neutraler Starttext. Leise Reads schreiben keinen generischen Abschluss mehr. Logdetails
+enthalten die verketteten inneren Ausnahmen. `CubeApplicationService.ReadNetworkConfigurationAsync`
+sichert Serial und Endpoint, trennt die TCP-Session vor der `c`-Anfrage und verbindet in einem
+`finally`-Block wieder, auch bei Fehler und Abbruch. Die UDP-Empfangsschleife bleibt im selben
+Zeitfenster, wenn ein Datagramm fremd oder fehlerhaft ist. Nur lesende Zugriffe wurden umgestellt;
+Schreiben behält Bestätigung, Gate und Audit. Kein Hardwarezugriff, kein `nmap`, kein `z:`-Test.
+
+**BEOBACHTUNG (Verifikation):** Windows 10 und Debian 13 (WSL2): Build 0 Warnungen/0 Fehler,
+**564/564** Tests (Domain 64, Application 92, Protocol 200, Infrastructure 72, UI 136),
+`dotnet format --verify-no-changes` Exit 0, NuGet-Audit ohne Funde, YAML beider Workflows
+geparst, `--selfcheck` `OK` mit 0.8.3 in Debug- und selbstständigen Publish-Ausgaben auf
+beiden Systemen. Sechs neue Regressionstests belegen Aktionsnamen, innere Ursache, keinen
+falschen Erfolg nach leisem Fehler, TCP-freies UDP-Lesen mit Wiederverbindung bei Erfolg und
+Fehler sowie das Verwerfen fehlerhafter Datagramme im selben Zeitfenster. **UNBEKANNT:**
+ob der Cube tatsächlich wegen der TCP-Session schwieg, ob der Endpunkt und die Seriennummer
+im Kundenlog übereinstimmten und welcher innere Fehler vorlag. Die Maßnahmen sind hardwarefrei
+belegt, die Hardwarekausalität bleibt INFERENZ.
+
+**FAKT (Release):** Die Release-Belege werden nach Veröffentlichung nachgetragen.

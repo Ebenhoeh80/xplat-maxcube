@@ -2,7 +2,7 @@
 
 # Development – MAX! Cube Local App
 
-> As of 27.11.2026. Version 0.8.2. This file describes the **as-built state of the repository**, not a desired architecture. Statements with `INFERENCE`/`UNKNOWN` are explicitly marked; evidence as `file:line`.
+> As of 27.11.2026. Version 0.8.3. This file describes the **as-built state of the repository**, not a desired architecture. Statements with `INFERENCE`/`UNKNOWN` are explicitly marked; evidence as `file:line`.
 
 ## 1. Quick start for developers
 
@@ -59,7 +59,7 @@ flowchart LR
 | `MaxCube.UI` | Avalonia MVVM, localization, day bar | Avalonia 11.3.23, CommunityToolkit.Mvvm 8.4.2 |
 | `MaxCube.UI.Desktop` | process, DI, tray, instance protection, self-test | Avalonia.Desktop/Themes 11.3.23, DI 10.0.0 |
 
-Central build properties: version `0.8.2`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`). C# sources use LF line endings (`.gitattributes`, `.editorconfig`) so `dotnet format --verify-no-changes` matches on Windows and Debian.
+Central build properties: version `0.8.3`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`). C# sources use LF line endings (`.gitattributes`, `.editorconfig`) so `dotnet format --verify-no-changes` matches on Windows and Debian.
 
 ## 2. Coding conventions
 
@@ -176,7 +176,7 @@ New tabs follow the pattern `MainWindowViewModel.<area>.cs` + `Strings` keys + c
 
 Version comes **only** from `Directory.Build.props:3-5`; `AppVersionProvider` reads the assembly attribute (`AppVersionProvider.cs:13-24`). Window title and status show the version; the cache additionally stores `app.version` and `schema.version` (`SqliteStateStore.cs:31-37,108-115`).
 
-For changes: increase the version automatically/autonomously per the user rule in SecondBrain (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Currently `0.8.2`; `schema.version` remains `1` as long as the schema stays compatible.
+For changes: increase the version automatically/autonomously per the user rule in SecondBrain (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Currently `0.8.3`; `schema.version` remains `1` as long as the schema stays compatible.
 
 CI: push/PR on `main`/`master`/`develop` or manual; matrix `ubuntu-latest` + `windows-latest`; restore/build/test/self-test, then publish `linux-x64`/`win-x64` with self-test and artifact upload (`ci.yml:3-69`). The release workflow also creates `SHA256SUMS.txt` for both ZIPs (`release.yml:91-105,134`). Artefacts remain **unsigned**; a signature is still an improvement suggestion (`ARCHITECTURE.md` §9).
 

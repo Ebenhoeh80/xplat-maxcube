@@ -873,10 +873,9 @@ public sealed partial class CubeApplicationService
     public async Task<CubeNetworkConfiguration> ReadNetworkConfigurationAsync(CancellationToken cancellationToken = default)
     {
         var network = _network ?? throw new InvalidOperationException("Die Netzwerkkonfiguration ist nicht verfügbar.");
-        var cube = RequireCube();
         var endpoint = _lastEndpoint ?? throw new InvalidOperationException("Es ist kein Cube-Endpoint bekannt.");
-        var configuration = await network.ReadAsync(cube.SerialNumber.Value, endpoint.Host, cancellationToken)
-            .ConfigureAwait(false);
+        var configuration = await RunUdpWithoutTcpAsync(
+            (serial, token) => network.ReadAsync(serial, endpoint.Host, token), cancellationToken).ConfigureAwait(false);
         // Die c-Antwort enthält die gespeicherte Konfigurations-IP. Bei DHCP weicht sie von der
         // tatsächlich erreichbaren Adresse ab; beide Werte werden getrennt ausgewiesen (0.6.4).
         return configuration with { ActiveIp = endpoint.Host };
@@ -1015,6 +1014,31 @@ public sealed partial class CubeApplicationService
         var endpoint = _lastEndpoint ?? throw new InvalidOperationException("Es ist kein Cube-Endpoint bekannt.");
         await DisconnectAsync(cancellationToken).ConfigureAwait(false);
         await ConnectAsync(endpoint, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Liest per UDP ohne aktive TCP-Session. Der Original-Client verlangt für c/C ausdrücklich
+    /// <c>assertNotConnected()</c> (LocalController.java:749-750, 779-780); unsere App hat
+    /// zuvor genau im verbundenen Zustand gelesen (Nutzerprotokoll 27.11., 12:45 Uhr).
+    /// Serial und Endpoint werden vor dem Trennen gesichert; nach dem Lesen wird immer
+    /// wieder verbunden, auch bei Fehler oder Abbruch. Nur für lesende Zugriffe – die
+    /// schreibende Netzwerkkonfiguration behält ihren bestätigten Gate-/Audit-Pfad.
+    /// </summary>
+    private async Task<T> RunUdpWithoutTcpAsync<T>(
+        Func<string, CancellationToken, Task<T>> operation, CancellationToken cancellationToken)
+    {
+        var serial = RequireCube().SerialNumber.Value;
+        var endpoint = _lastEndpoint ?? throw new InvalidOperationException("Es ist kein Cube-Endpoint bekannt.");
+        await DisconnectAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await operation(serial, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Kein halboffener Zustand: Die Verbindung wird auch nach Abbruch wiederhergestellt.
+            await ConnectAsync(endpoint, CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
     // ---------------------------------------------------------------------------------

@@ -8,6 +8,7 @@ using MaxCube.Domain.Enums;
 using MaxCube.Domain.Exceptions;
 using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
+using MaxCube.Protocol.Exceptions;
 using Xunit;
 using DayOfWeek = MaxCube.Domain.Enums.DayOfWeek;
 
@@ -529,6 +530,49 @@ public class AdminServiceTests
     }
 
     [Fact]
+    public async Task Reading_the_network_configuration_runs_without_a_tcp_session_and_reconnects()
+    {
+        var h = new Harness();
+        var network = new FakeNetwork
+        {
+            ReadHook = _ =>
+            {
+                h.Core.Calls.Add("udp-read");
+                h.Core.State.Should().Be(CubeConnectionState.Disconnected);
+                return Task.CompletedTask;
+            },
+        };
+        var service = new CubeApplicationService(h.Core, h.Store, new FakeClock(), admin: h.Admin, network: network);
+        await service.ConnectAsync(new CubeEndpoint("192.168.1.5", 62910));
+        h.Core.Calls.Clear();
+
+        var configuration = await service.ReadNetworkConfigurationAsync();
+
+        configuration.ActiveIp.Should().Be("192.168.1.5");
+        h.Core.Calls.Should().Equal("disconnect", "udp-read", "connect:192.168.1.5:62910");
+        service.Current.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task A_failed_network_read_still_restores_the_tcp_connection()
+    {
+        var h = new Harness();
+        var network = new FakeNetwork
+        {
+            ReadHook = _ => throw new CubeCommunicationFailedException("The cube did not answer the UDP request."),
+        };
+        var service = new CubeApplicationService(h.Core, h.Store, new FakeClock(), admin: h.Admin, network: network);
+        await service.ConnectAsync(new CubeEndpoint("192.168.1.5", 62910));
+        h.Core.Calls.Clear();
+
+        var act = () => service.ReadNetworkConfigurationAsync();
+
+        await act.Should().ThrowAsync<CubeCommunicationFailedException>();
+        h.Core.Calls.Should().Equal("disconnect", "connect:192.168.1.5:62910");
+        service.Current.Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task Network_configuration_write_is_blocked_for_the_offline_cache()
     {
         var h = new Harness();
@@ -739,6 +783,7 @@ public class AdminServiceTests
 
         public Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
+            Calls.Add("disconnect");
             State = CubeConnectionState.Disconnected;
             StateChanged?.Invoke(this, State);
             return Task.CompletedTask;
@@ -900,9 +945,18 @@ public class AdminServiceTests
     {
         public List<(string Serial, string Ip, CubeNetworkConfiguration Configuration)> Written { get; } = new();
         public Func<CancellationToken, Task>? WriteHook { get; set; }
+        public Func<CancellationToken, Task>? ReadHook { get; set; }
 
-        public Task<CubeNetworkConfiguration> ReadAsync(string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
-            => Task.FromResult(new CubeNetworkConfiguration("1.2.3.4", "255.255.255.0", "1.2.3.1", "1.2.3.1", "8.8.8.8", true));
+        public async Task<CubeNetworkConfiguration> ReadAsync(
+            string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
+        {
+            if (ReadHook is not null)
+            {
+                await ReadHook(cancellationToken);
+            }
+
+            return new CubeNetworkConfiguration("1.2.3.4", "255.255.255.0", "1.2.3.1", "1.2.3.1", "8.8.8.8", true);
+        }
 
         public async Task WriteAsync(
             string serialNumber, string ipAddress, CubeNetworkConfiguration configuration,

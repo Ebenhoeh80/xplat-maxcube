@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-11-27
+
+### Fixed / Behoben
+
+- **EN:** Explicit actions now log their real action name (for example "Connect" or "Find Cube") instead of the failure prefix; without an explicit name a neutral "Action started." is written. The silent Cube-tab read no longer ends with a generic "Action completed." when a section failed. Exception logs now include inner exceptions, so a UDP timeout can be distinguished from a discarded response.
+- **DE:** Explizite Aktionen protokollieren jetzt ihren echten Aktionsnamen (z. B. „Verbinden“ oder „Cube suchen“) statt des Fehlerprefixes; ohne ausdrücklichen Namen erscheint ein neutrales „Aktion gestartet.“. Der leise Cube-Reiter-Read schreibt nach einem fehlgeschlagenen Abschnitt kein generisches „Aktion abgeschlossen.“ mehr. Ausnahmeprotokolle enthalten jetzt die inneren Ursachen, damit sich ein UDP-Timeout von einer verworfenen Antwort unterscheiden lässt.
+- **EN:** UDP network configuration reads now follow the original client's `assertNotConnected()` rule: the TCP session is closed before the `c` request and restored in a `finally` block on success, failure or cancellation. Within each 2 s receive window, malformed datagrams no longer consume the attempt; the original client likewise keeps receiving until a valid answer arrives. The original requirement is code evidence; whether this cube rejects UDP while TCP is active remains `UNKNOWN` without a hardware test.
+- **DE:** UDP-Netzwerkkonfigurationslesungen folgen jetzt der `assertNotConnected()`-Regel des Originalclients: Die TCP-Session wird vor der `c`-Anfrage getrennt und in einem `finally`-Block bei Erfolg, Fehler oder Abbruch wiederhergestellt. Innerhalb jedes 2-s-Empfangsfensters verbrauchen fehlerhafte Datagramme keinen Versuch; auch der Originalclient empfängt solange weiter, bis eine gültige Antwort vorliegt. Die Originalregel ist ein Codebeleg; ob dieser Cube UDP bei aktiver TCP-Verbindung verweigert, bleibt ohne Hardwaretest `UNBEKANNT`.
+
+### Verification / Verifikation
+
+- **EN:** Build with 0 warnings / 0 errors and 564/564 hardware-free tests green on Windows and Debian 13 (WSL2) — Domain 64, Application 92, Protocol 200, Infrastructure 72, UI 136. `dotnet format --verify-no-changes`, the NuGet vulnerability audit and YAML parsing of both workflows are green; `--selfcheck` reports `OK` at 0.8.3 in debug and self-contained outputs on both systems. Six new regression tests cover action names, inner causes, no false success after a quiet failure, UDP reads without TCP with reconnect on success and failure, and malformed-datagram retry. No hardware write test was performed; the exact UDP root cause remains `UNKNOWN`.
+- **DE:** Build 0 Warnungen/0 Fehler und 564/564 hardwarefreie Tests grün unter Windows und Debian 13 (WSL2) — Domain 64, Application 92, Protocol 200, Infrastructure 72, UI 136. `dotnet format --verify-no-changes`, die NuGet-Schwachstellenprüfung und das YAML-Parsing beider Workflows sind grün; `--selfcheck` meldet `OK` mit 0.8.3 in Debug- und selbstständigen Publish-Ausgaben auf beiden Systemen. Sechs neue Regressionstests decken Aktionsnamen, innere Ursachen, keinen falschen Erfolg nach leisem Fehler, UDP-Lesungen ohne TCP mit Wiederverbindung bei Erfolg und Fehler sowie das Überspringen fehlerhafter Datagramme ab. Es wurde kein Hardware-Schreibtest durchgeführt; die genaue UDP-Ursache bleibt `UNBEKANNT`.
+
 ## [0.8.2] - 2026-11-27
 
 ### Fixed / Behoben
@@ -545,7 +559,8 @@ Gleichzeitig werden die gefährlichsten Erstnutzer-Fallen geschlossen.
   Seriennummern und Raumwerte enthalten und ist vor der Weitergabe zu prüfen;
   ein Hinweis steht direkt im Viewer. Keine Cloud, kein HTTP, keine Telemetrie.
 
-[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.3
 [0.8.2]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.2
 [0.8.1]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1
 [0.8.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.0

@@ -560,3 +560,53 @@ squash `574c2d265b881292c6051e17e8db8145fc6e6d45` (seven checks green); the anno
 `172615969a9c83cfd9d5d34f8c1e80a7e6deb0b26a6e911b4e76eec0e0001c3f`; both match
 `SHA256SUMS.txt` (`sha256sum -c` green). Both downloaded packages ran with
 `SELFCHECK OK … 0.8.2 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; exit code 0 each).
+
+## 33. Version 0.8.3: Log labels and UDP timeouts (27.11.2026)
+
+**FACT (input):** The second user log of 27.11.2026 starts at 12:45:09 with app 0.8.2.
+Discovery succeeds at 12:45:13–15, the TCP connection is established at 12:45:17. At
+12:45:27 the silent cube-tab read starts; at 12:45:39 it records
+`Network: CubeCommunicationFailedException: The cube did not answer the UDP request.`,
+immediately followed by `Action completed.`. The explicit network read at 12:45:42 fails at
+12:45:52 with the same exception. Click times, stack trace and `SocketErrorCode` are absent.
+
+**FACT (log code):** `MainWindowViewModel.RunAsync` wrote the action start as
+`L("ActionStarted", errorPrefix)`. This produced the reported lines "Action started: Cube
+search failed" and "Action started: Connection failed". The same method always wrote `OkAction`
+after a `quiet` read, even when `TryReadAsync` had just logged a WARN for a section. Both lines
+are unambiguously attributable to the code; the cause of the UDP timeouts cannot be derived
+from them.
+
+**FACT (UDP code):** Both errors run through `UdpNetworkConfigurator.RequestAsync`: five
+attempts of 2 s each on the fixed local port 23272, unicast to the stored endpoint. The 10 s
+and 12 s in the log fit exhausted time windows. The identical outer text is produced both on
+timeout and on a discarded response; the inner cause was not logged previously. The original
+client explicitly requires `assertNotConnected()` before `c`/`C`
+(`decompiled/.../LocalController.java`, `getNetworkConfiguration` /
+`setNetworkConfiguration`); our app read only while connected. The original UDP proxy keeps
+receiving within a 2 s window when a datagram is discarded (`decompiled/.../CubeUdpProxy.java`).
+
+**INFERENCE:** The strongest cause, not proven on hardware, is that the cube does not answer
+UDP configuration reads while the TCP session is active. The correlation matches the timeline
+and the original code; a port conflict is ruled out by the concrete message, which would have
+had different text.
+
+**FACT (measures):** Explicit actions now use real action names; without one, a neutral start
+text is written. Quiet reads no longer log a generic completion. Log details now contain the
+chained inner exceptions. `CubeApplicationService.ReadNetworkConfigurationAsync` captures the
+serial and endpoint, disconnects the TCP session before the `c` request and reconnects in a
+`finally` block on success, failure or cancellation. The UDP receive loop stays in the same
+window when a datagram is foreign or malformed. Only read access was changed; writes keep
+confirmation, gate and audit. No hardware access, no `nmap`, no `z:` test.
+
+**OBSERVATION (verification):** Windows 10 and Debian 13 (WSL2): build 0 warnings/0 errors,
+**564/564** tests (Domain 64, Application 92, Protocol 200, Infrastructure 72, UI 136),
+`dotnet format --verify-no-changes` exit 0, NuGet audit without findings, both workflow YAML
+files parsed, `--selfcheck` `OK` at 0.8.3 in debug and self-contained outputs on both systems.
+Six new regression tests cover action names, inner causes, no false success after a quiet
+failure, UDP reads without TCP with reconnect on success and failure, and malformed-datagram
+retry in the same window. **UNKNOWN:** whether the cube actually stayed silent because of the
+TCP session, whether endpoint and serial matched in the customer log, and which inner cause
+occurred. The measures are proven without hardware; hardware causality remains INFERENCE.
+
+**FACT (release):** Release evidence will be added after publication.

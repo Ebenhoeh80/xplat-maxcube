@@ -93,7 +93,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private sealed record PendingWrite(
         Func<CancellationToken, Task> Action, LocalizedValue ErrorPrefix, LocalizedValue? SuccessText,
-        DataStatusViewModel? Status);
+        DataStatusViewModel? Status, LocalizedValue? ActionName);
 
     /// <summary>Herence und Alter pro Bereich; nie in der Domäne, immer im ViewModel.</summary>
     private readonly DataStatusViewModel[] _statuses;
@@ -568,7 +568,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             SetStatus(L("StatusConnected", cube.SerialNumber, cube.FirmwareVersion));
             await RefreshAuditAsync();
         }, L("ErrConnect"), L("OkConnect"),
-           errorHint: exception => ConnectErrorHint(exception, endpoint.Host, endpoint.Port));
+           errorHint: exception => ConnectErrorHint(exception, endpoint.Host, endpoint.Port),
+           actionName: L("Connect"));
 
         // Wurde der Cube-Reiter schon geöffnet, liest die Hybrid-Regel jetzt automatisch
         // nach; vorher war dort nur der Platzhalter „nicht gelesen“ sichtbar.
@@ -693,7 +694,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             SetDiscovery(DiscoveredCubes.Count == 0
                 ? L("DiscoveryNoneFound")
                 : L("DiscoveryFound", DiscoveredCubes.Count));
-        }, L("ErrDiscovery"), L("OkDiscovery"));
+        }, L("ErrDiscovery"), L("OkDiscovery"), actionName: L("SearchCube"));
     }
 
     [RelayCommand(CanExecute = nameof(CanLoadLastEndpoint))]
@@ -1233,14 +1234,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var detail = exception is SocketException socket
             ? $"{socket.SocketErrorCode}/{socket.NativeErrorCode}"
             : exception.Message;
+        // 0.8.3: Im Kundenprotokoll stand nur der äußere Text. Ohne innere Ursache lässt
+        // sich nicht unterscheiden, ob der Cube schwieg oder eine Antwort verworfen wurde.
+        for (var inner = exception.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            detail += $" <- {inner.GetType().Name}: {inner.Message}";
+        }
+
         detail = string.IsNullOrWhiteSpace(detail) ? "ohne Detail" : detail.Replace('\r', ' ').Replace('\n', ' ');
-        return detail;
+        return detail.Length > 500 ? $"{detail[..500]} …" : detail;
     }
 
     private async Task RunAsync(
         Func<CancellationToken, Task> action, LocalizedValue errorPrefix, LocalizedValue? successText = null,
         bool quiet = false, DataStatusViewModel? status = null, LocalizedValue? previewText = null,
-        LocalizedValue? contextText = null, Func<Exception, LocalizedValue?>? errorHint = null)
+        LocalizedValue? contextText = null, Func<Exception, LocalizedValue?>? errorHint = null,
+        LocalizedValue? actionName = null)
     {
         // Der Auto-Read des Cube-Reiters ist leise, setzt aber IsCubeAutoReading.
         // Explizite Aktionen dürfen nicht in seinen Trenn-/Verbindungsspalt laufen.
@@ -1253,7 +1262,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // bis zur ausdrücklichen Bestätigung lokal im ViewModel; ein Abbruch sendet nichts.
         if (!quiet && !string.IsNullOrWhiteSpace(previewText?.Current))
         {
-            _pendingWrite = new PendingWrite(action, errorPrefix, successText, status);
+            _pendingWrite = new PendingWrite(action, errorPrefix, successText, status, actionName);
             SetPreview(previewText);
             IsWritePreviewVisible = true;
             ConfirmWriteCommand.NotifyCanExecuteChanged();
@@ -1275,8 +1284,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 // stehen bleiben (Sonnet N10).
                 SetWarning(null);
                 // Der Start fehlt im Kundenlog 27.11.; ohne ihn lässt sich nicht zuordnen,
-                // welche Aktion zu einem Fehler gehört (0.8.2).
-                _log.Write("INFO", L("ActionStarted", errorPrefix).Current);
+                // welche Aktion zu einem Fehler gehört (0.8.2). 0.8.3: Nie den Fehlerprefix
+                // als Aktionsnamen ausgeben ("Aktion gestartet: … fehlgeschlagen").
+                _log.Write("INFO", (actionName is null
+                    ? L("ActionStartedPlain")
+                    : L("ActionStarted", actionName)).Current);
             }
             else if (!string.IsNullOrWhiteSpace(contextText?.Current))
             {
@@ -1300,7 +1312,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
                 // 0.6.1: Nur der Erfolgstext, nie der Fehlerprefix. 0.6.0 schrieb
                 // „Temperatur konnte nicht gesendet werden: Temperatur gesendet."
-                _log.Write("INFO", result);
+                // 0.8.3: Der leise Reiter-Read schreibt seinen eigenen Start und WARNs je
+                // Abschnitt; ein generisches „Aktion abgeschlossen" widerspricht einem
+                // fehlgeschlagenen UDP-Abschnitt und wurde deshalb entfernt.
+                if (!quiet)
+                {
+                    _log.Write("INFO", result);
+                }
             });
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
@@ -1409,7 +1427,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetPreview(null);
         ConfirmWriteCommand.NotifyCanExecuteChanged();
         CancelWriteCommand.NotifyCanExecuteChanged();
-        await RunAsync(pending.Action, pending.ErrorPrefix, pending.SuccessText, status: pending.Status);
+        await RunAsync(pending.Action, pending.ErrorPrefix, pending.SuccessText,
+            status: pending.Status, actionName: pending.ActionName);
     }
 
     /// <summary>Verwirft eine Vorschau; der Cube bleibt unverändert.</summary>

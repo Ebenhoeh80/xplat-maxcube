@@ -63,28 +63,43 @@ public sealed class UdpNetworkConfigurator : ICubeNetworkConfigurator
                 await client.SendAsync(request, request.Length, target).ConfigureAwait(false);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(AttemptTimeout);
-                try
+                var datagramSeen = false;
+                // Wie CubeUdpProxy.java:216-222 bleibt das 2-s-Fenster offen, bis eine
+                // gültige Antwort da ist. Fremde oder fehlerhafte Datagramme verbrauchen
+                // keinen Versuch: ein einzelnes Störpaket darf nicht alle fünf Fenster
+                // aufbrauchen, bevor der Cube antwortet (0.8.3).
+                while (!timeout.IsCancellationRequested)
                 {
-                    var result = await client.ReceiveAsync(timeout.Token).ConfigureAwait(false);
-                    if (!result.RemoteEndPoint.Address.Equals(address))
+                    try
                     {
-                        continue; // Antwort einer anderen Quelle ignorieren
-                    }
+                        var result = await client.ReceiveAsync(timeout.Token).ConfigureAwait(false);
+                        datagramSeen = true;
+                        if (!result.RemoteEndPoint.Address.Equals(address))
+                        {
+                            continue;
+                        }
 
-                    return CubeUdpCodec.ParseResponse(result.Buffer, serialNumber, opcode);
+                        return CubeUdpCodec.ParseResponse(result.Buffer, serialNumber, opcode);
+                    }
+                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        break; // Zeitfenster abgelaufen, nächster Versuch
+                    }
+                    catch (CubeCommunicationFailedException exception)
+                    {
+                        last = exception;
+                    }
+                    catch (SocketException exception)
+                    {
+                        // ICMP/Netzwerkfehler während des Empfangs: nächster Versuch.
+                        last = exception;
+                        break;
+                    }
                 }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+
+                if (!datagramSeen)
                 {
                     last = new TimeoutException("No UDP response from the cube.");
-                }
-                catch (CubeCommunicationFailedException exception)
-                {
-                    last = exception;
-                }
-                catch (SocketException exception)
-                {
-                    // ICMP/Netzwerkfehler während des Empfangs: nächster Versuch.
-                    last = exception;
                 }
             }
 
