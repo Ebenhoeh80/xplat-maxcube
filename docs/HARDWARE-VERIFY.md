@@ -425,3 +425,30 @@ Ohne die Variable ist der Test ein No-op, damit CI und Entwicklerrechner kein Ge
 **FAKT (Nutzer, 27.11.2026):** Die Optik der Desktop-App unter Linux wurde geprüft und „augenscheinlich ok“ befunden. Damit ist der visuelle Eindruck auf dem echten Linux-Desktop bestätigt. Tray-Sonderfälle und „Schließen versteckt Fenster" wurden dabei nicht ausdrücklich geprüft; die protokollspezifische Prüfung bleibt offen (§9 in `ARCHITECTURE.md`).
 
 **FAKT (Nutzer, 27.11.2026):** Die Muttersprachlerprüfung ist für Deutsch und Englisch abgeschlossen: beide Fassungen sind ok. Für Französisch, Italienisch, Niederländisch und Polnisch erwartet der Nutzer Rückmeldung über Issues oder PRs; diese vier Sprachen bleiben bewusst OFFEN. Die älteren `UNBEKANNT`-Vermerke in den vorherigen Abschnitten zu „sechs Sprachen" sind damit nur noch für FR/IT/NL/PL aktuell; die deutsche Fassung bleibt maßgeblich.
+
+## 29. Release 0.7.0: Audit-Aufbewahrung, Quell-Tags und Diagnose-Zeitpunkte (27.11.2026)
+
+**FAKT (Umbau):** PR [#36](https://github.com/Ebenhoeh80/xplat-maxcube/pull/36) wurde als Squash
+`fcae393` in `main` gemergt. Der Umbau ergänzt `audit.retentionDays` (1..365, Default 30),
+sprachneutrale Audit-Quell-Tags (`user`, `session`, `reconnect`, `system`) und die Zeitpunkte
+„Letzte Verbindung“, „Cube unerreichbar“ und „Reconnect erfolgreich“ im lokalen
+Diagnosebericht. Das SQLite-Schema blieb bei Version 1.
+
+**FAKT (Verifikation):** Windows und Debian 13 (WSL2) je Build 0 Warnungen/0 Fehler und
+**529/529** Tests grün (Domain 64, Application 86, Protocol 198, Infrastructure 68, UI 113),
+`--selfcheck` `OK` mit 0.7.0. Sechs neue Avalonia-Headless-Fälle prüfen das gerenderte
+Aufbewahrungs-Label in allen Sprachen. Der opt-in Hardwaretest
+`Hardware_disconnect_releases_the_only_cube_session` lief mit
+`MAXCUBE_HARDWARE_ENDPOINT=<host>:62910` **1/1 grün**; keine Schreibkommandos, kein `nmap`.
+Alle sieben PR-Checks (Analyze actions/csharp, CodeQL, Windows/Linux Build-and-Test und
+Publish) waren grün.
+
+**FAKT (Release):** Der annotierte Tag `v0.7.0` zeigt auf `fcae393`; der Release-Lauf
+`45963363720` war erfolgreich. Die Release-Notes wurden aus dem zweisprachigen Abschnitt
+`CHANGELOG.md` erzeugt. `xplat-maxcube-0.7.0-win-x64.zip` hat SHA-256
+`85c3007f536dac11e7cf1e6f0baf633791c768682dbe9c457f914eb4488f7706`,
+`xplat-maxcube-0.7.0-linux-x64.zip` SHA-256
+`09cf927ffcedf67a3bf465de178a903cb95d3e204c1d49d4d34bc8c87b1b6421`. Beide Digests stimmen
+mit der GitHub-API überein; beide heruntergeladenen Pakete liefen fensterlos mit
+`SELFCHECK OK … 0.7.0 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie; Exitcode 0
+je). **Doku-Nachtrag ohne neues Tag.**
