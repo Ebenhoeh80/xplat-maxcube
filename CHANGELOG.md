@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Avalonia auf 12.2.0 angehoben (UI, Desktop, Themes und Headless-Tests gemeinsam). Die XAML
   nutzt weiterhin Reflection-Bindings (`x:CompileBindings="False"`), `Watermark` wurde durch
-  `PlaceholderText` ersetzt. Die UI-Tests laufen auf xUnit v3 mit Microsoft Testing Platform;
-  dadurch bleiben sie unter `dotnet test` auffindbar. Grund: die offenen Dependabot-PRs #8 und
+  `PlaceholderText` ersetzt. Die UI-Tests laufen auf xUnit v3 mit `xunit.runner.visualstudio`
+  3.1.5; dadurch bleiben sie unter `dotnet test` auffindbar und schreiben weiterhin TRX-Artefakte
+  (ohne `MTP0001`-Warnung). Grund: die offenen Dependabot-PRs #8 und
   #10 waren einzeln nicht mergebar (AVLN2100 bzw. `TypeLoadException` im Headless-Testhost).
   Verbleibendes Risiko: echte Desktop-Darstellung und echte Hardware wurden in diesem Sweep
   nicht visuell geprüft.
