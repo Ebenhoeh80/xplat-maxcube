@@ -590,7 +590,7 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             catch (Exception exception) when (exception is TimeoutException
                 or OperationCanceledException or InvalidOperationException)
             {
-                RaiseWarning("WarnDisconnectSlow", "Trennen hat länger als erwartet gedauert; Verbindung local zurückgesetzt.");
+                RaiseWarning("WarnDisconnectSlow", "Trennen hat länger als erwartet gedauert; Verbindung lokal zurückgesetzt.");
             }
             _current = null;
             LastReadAt = null;

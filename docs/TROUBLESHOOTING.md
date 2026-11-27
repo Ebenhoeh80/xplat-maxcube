@@ -75,7 +75,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 
 ## 5. Fachfehler und MAX-Codes
 
-Die UI zeigt `ErrorMessage` und einen aus `ErrorCatalog.Describe` abgeleiteten `ErrorHint` (`MainWindowViewModel.cs:613-621`, `MainWindowViewModel.Admin.cs:65-78,225-241`). Die Beschreibungen sind Deutungen der Symbolnamen, **keine** Herstellermeldungen (`ErrorCatalog.cs:5-9`).
+Die UI zeigt `ErrorMessage` und einen aus `ErrorCatalog.Describe` abgeleiteten `ErrorHint` (`MainWindowViewModel.cs:1208-1229`, `MainWindowViewModel.Admin.cs:149-169`). Die Beschreibungen sind Deutungen der Symbolnamen, **keine** Herstellermeldungen (`ErrorCatalog.cs:5-9`).
 
 | Code / Meldung | Bedeutung nach Katalog | Typische Auslösung in der App | Maßnahme |
 |---|---|---|---|
@@ -103,7 +103,7 @@ Protokollausnahmen (`CubeCommunicationFailedException`, `UnknownCubeOpcodeExcept
 | Konfigurationsänderung im Cube erst bei der nächsten Sendung sichtbar | Funkübernahme durch Thermostat noch nicht abgeschlossen | 6 s warten, erneut lesen; kein Fehlschlag annehmen (`docs/HARDWARE-VERIFY.md` §4.2) |
 | Gebündelte Temperatur verzögert | `ui.bundleTemperatures` sammelt 3 s | Einstellung deaktivieren oder `FlushPendingTemperaturesAsync` abwarten (`Admin.cs:272-343`, `ARCHITECTURE.md` R-04) |
 
-**FAKT:** Nach erfolgreichem Cube-Befehl kann der lokale Cache-Schreibfehler nur eine Warnung erzeugen; der Cube-Erfolg bleibt erhalten (`CubeApplicationService.cs:544-564`). Umgekehrt darf ein Offline-Cache nie auf den Cube zurückfließen (`:265-280,528-534`).
+**FAKT:** Nach erfolgreichem Cube-Befehl kann der lokale Cache-Schreibfehler nur eine Warnung erzeugen; der Cube-Erfolg bleibt erhalten (`CubeApplicationService.cs:648`). Umgekehrt darf ein Offline-Cache nie auf den Cube zurückfließen (`:265-280,528-534`).
 
 ## 7. Logs, Audit, Bericht
 

@@ -2,7 +2,7 @@
 
 # Architecture – MAX! Cube Local App
 
-> Role: Senior Solution Architect. As of: 25.11.2026. Version: 0.3.0.
+> Role: Senior Solution Architect. As of: 27.11.2026. Version: 0.6.9.
 > Markers: `FACT` = directly evidenced in the artifact, `OBSERVATION` = seen in a test run, `INFERENCE` = derived from code/docs, `UNKNOWN` = not evidenced. Evidence as `file:line`.
 
 ## 1. Executive Summary
@@ -42,7 +42,7 @@ Connection and discovery, room/device view, target temperature and modes, home c
 C4Context
   title Systemkontext – MAX! Cube Local App
   Person(Betreiber, "Betreiber", "Steuert Heizung lokal am PC")
-  System(App, "MAX! Cube Local App 0.3.0", "Avalonia-Desktop-App, Windows/Linux")
+  System(App, "MAX! Cube Local App 0.6.9", "Avalonia-Desktop-App, Windows/Linux")
   System(Cube, "eQ-3 MAX! Cube", "Firmware 273–275, TCP 62910, UDP 23272")
   SystemDb(Cache, "maxcube.db", "SQLite-Cache, Einstellungen, Audit")
   SystemExt(Cloud, "MAX! Cloud", "seit 01.07.2023 abgeschaltet; App laut Nutzerhinweis aus Stores entfernt")

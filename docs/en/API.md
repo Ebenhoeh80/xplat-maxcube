@@ -306,7 +306,7 @@ sequenceDiagram
 
 - Error catalog: `MAX0001`, `MAX1001`–`MAX1051` plus evidenced outlier `MAX10038` (`:54`); regex `MAX\d{4,5}` (`:97`).
 - `DomainValidationException` formats the message as `"{Code}: {message}"` (`DomainValidationException.cs:3-16`).
-- UI: `ErrorMessage = $"{errorPrefix}: {exception.Message}"`, `ErrorHint = ErrorCatalog.Describe(...)`; own `OperationCanceledException` → "Cancelled" (`MainWindowViewModel.cs:613-621`, `MainWindowViewModel.Admin.cs:70-74`).
+- UI: `ErrorMessage = $"{errorPrefix}: {exception.Message}"`, `ErrorHint = ErrorCatalog.Describe(...)`; own `OperationCanceledException` → "Cancelled" (`MainWindowViewModel.cs:1208-1229`, `MainWindowViewModel.Admin.cs:149-169`).
 - Protocol exceptions carry **no** MAX codes (`CubeProtocolExceptions.cs:3-69`); `Describe` applies only if a code appears in the text.
 - The explanations in the catalog are interpretations of symbol names, **not** manufacturer messages (`ErrorCatalog.cs:5-9`).
 

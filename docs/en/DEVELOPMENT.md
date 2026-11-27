@@ -2,7 +2,7 @@
 
 # Development – MAX! Cube Local App
 
-> As of 25.11.2026. Version 0.3.0. This file describes the **as-built state of the repository**, not a desired architecture. Statements with `INFERENCE`/`UNKNOWN` are explicitly marked; evidence as `file:line`.
+> As of 27.11.2026. Version 0.6.9. This file describes the **as-built state of the repository**, not a desired architecture. Statements with `INFERENCE`/`UNKNOWN` are explicitly marked; evidence as `file:line`.
 
 ## 1. Quick start for developers
 
@@ -59,7 +59,7 @@ flowchart LR
 | `MaxCube.UI` | Avalonia MVVM, localization, day bar | Avalonia 11.3.23, CommunityToolkit.Mvvm 8.4.2 |
 | `MaxCube.UI.Desktop` | process, DI, tray, instance protection, self-test | Avalonia.Desktop/Themes 11.3.23, DI 10.0.0 |
 
-Central build properties: version `0.3.0`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`).
+Central build properties: version `0.6.9`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`).
 
 ## 2. Coding conventions
 
@@ -67,7 +67,7 @@ Central build properties: version `0.3.0`, `LangVersion latest`, `Nullable enabl
 
 - Comments/rationales are in German; identifiers are in English (`OBSERVATION`, e.g. `CubeGateway.cs`, `Localizer.cs`).
 - All technical validation errors carry a MAX code via `DomainValidationException` (`DomainValidationException.cs:3-16`). The catalog is `MAX0001`, `MAX1001`–`MAX1051`, supplemented by the evidenced outlier `MAX10038` (`ErrorCatalog.cs:14-68,97`). **Do not correct** as long as the artifact contains it that way.
-- Protocol/transport exceptions carry **no** MAX codes (`CubeProtocolExceptions.cs:3-69`, `CubeCommandExceptions.cs:1-31`). The UI shows `ErrorMessage` and a hint derived from `ErrorCatalog.Describe` (`MainWindowViewModel.cs:617-621`, `MainWindowViewModel.Admin.cs:70-74`).
+- Protocol/transport exceptions carry **no** MAX codes (`CubeProtocolExceptions.cs:3-69`, `CubeCommandExceptions.cs:1-31`). The UI shows `ErrorMessage` and a hint derived from `ErrorCatalog.Describe` (`MainWindowViewModel.cs:1208-1229`, `MainWindowViewModel.Admin.cs:149-169`).
 - `INFERENCE` may be implemented, but only with marking in code/docs; `UNKNOWN` must not be passed through as a valid state (`docs/INDEX.md:54-58`, `docs/roadmap.md:61`).
 
 ### 2.2 Async, cancellation, gates
@@ -115,7 +115,7 @@ sequenceDiagram
 
 **Nine tabs** in this order: `Rooms`, `Week`, `House`, `Configuration`, `Devices`, `Cube`, `Status`, `Help`, `Settings` (`MainWindowViewModel.Admin.cs:23-35`, XAML `MainWindow.axaml:49,112,168,193,305,370,441,451,464`). `SelectedIndex` is two-way bound (`MainWindow.axaml:46`).
 
-There are **53 `[RelayCommand]` attributes** (static inventory 25.11.2026), including connection/discovery/temperature/week/house in `MainWindowViewModel.cs:258-636`, admin in `MainWindowViewModel.Admin.cs:77-408`, structure in `MainWindowViewModel.Structure.cs:86-249`, cube/time/network in `MainWindowViewModel.Cube.cs:74-172`, help in `MainWindowViewModel.Settings.cs:164`, day bar in `DayProfileViewModel.cs:32-41`. MVVM convention: `[ObservableProperty]` on private fields, `[RelayCommand]` on private methods; `partial void On…Changed` handles persistence and `CanExecute` invalidation (`MainWindowViewModel.cs:4-5`, `DayProfileViewModel.cs:25-41`, `Settings.cs:55-91`, `Cube.cs:68`).
+There are **62 `[RelayCommand]` attributes** (static inventory 27.11.2026), including connection/discovery/temperature/week/house in `MainWindowViewModel.cs`, admin in `MainWindowViewModel.Admin.cs:77-408`, structure in `MainWindowViewModel.Structure.cs:86-249`, cube/time/network in `MainWindowViewModel.Cube.cs:74-172`, help in `MainWindowViewModel.Settings.cs:164`, day bar in `DayProfileViewModel.cs:32-41`. MVVM convention: `[ObservableProperty]` on private fields, `[RelayCommand]` on private methods; `partial void On…Changed` handles persistence and `CanExecute` invalidation (`MainWindowViewModel.cs:4-5`, `DayProfileViewModel.cs:25-41`, `Settings.cs:55-91`, `Cube.cs:68`).
 
 Context help: six topics `Connect/Rooms/Week/Config/Devices/Cube`, jump to tab 7 (`Settings.cs:27,151-169`, `Strings.cs:265-276`, `MainWindow.axaml:40,198,310,375,451-457`).
 
@@ -138,7 +138,7 @@ Tray: runtime-generated icon without a binary asset (`TrayIconFactory.cs:9-17`),
 1. No test may require a real cube, cloud, or broadcast. Discovery tests use `IDiscoveryTransport` with sample datagrams (`ICubeDiscovery.cs:10-17`, `CubeDiscoveryServiceTests.cs`).
 2. Time-dependent tests use injected clock/`TimeProvider`, not `Task.Delay` with wall-clock time.
 3. For every new wire format: codec test **and** byte expectation; origin marked as `FACT`/`INFERENCE` in the test comment.
-4. For every new technical action: check audit entry and `Warning` path on cache errors (`CubeApplicationService.cs:544-564`, `:66-70`).
+4. For every new technical action: check audit entry and `Warning` path on cache errors (`CubeApplicationService.cs:648`, `:84`).
 5. For every new UI action: check `CanExecuteChanged`/button state and language change (historical findings H-A/N9 in `SecondBrain/wiki/projekte/app-maxcube.md:36,40`).
 6. Definition of Done: build `0 warnings/0 errors`, all tests green, `--selfcheck` OK, docs and markers updated.
 
@@ -164,19 +164,19 @@ Tray: runtime-generated icon without a binary asset (`TrayIconFactory.cs:9-17`),
 ### 4.3 New language
 
 1. Add the code in `Localizer.Languages` (`Localizer.cs:15-23`).
-2. Add a translation for **every** key in `Strings.Table`; empty texts fall back to German (`Localizer.cs:56-65`). A completeness test is evidenced in `ViewModelTests.cs` (`INFERENCE`; look up the exact test method there).
+2. Add a translation for **every** key in `Strings.Table`; empty texts fall back to German (`Localizer.cs:56-65`). A completeness test is located in `tests/MaxCube.UI.Tests/AdminViewModelTests.cs:34` (`Every_key_has_six_non_empty_texts_with_identical_placeholders`).
 3. `SystemLanguage.Detect` needs no new case as long as the two-letter code matches (`SystemLanguage.cs:17-35`).
 4. Run `--selfcheck` with the new code; it reports `SELFCHECK FEHLER: Text fehlt in <code>` if a key is missing (`Program.cs:79-86`).
 
 ### 4.4 New UI area
 
-New tabs follow the pattern `MainWindowViewModel.<area>.cs` + `Strings` keys + context-specific help topic in `HelpKeys` (`MainWindowViewModel.Settings.cs:27`). View model actions run through `RunAsync` with an `OperationCanceledException` special case and error logging (`MainWindowViewModel.cs:600-630`). No direct socket/SQLite access from the UI; only via `CubeApplicationService`.
+New tabs follow the pattern `MainWindowViewModel.<area>.cs` + `Strings` keys + context-specific help topic in `HelpKeys` (`MainWindowViewModel.Settings.cs:27`). View model actions run through `RunAsync` with an `OperationCanceledException` special case and error logging (`MainWindowViewModel.cs:1134`). No direct socket/SQLite access from the UI; only via `CubeApplicationService`.
 
 ## 5. Versioning and releases
 
 Version comes **only** from `Directory.Build.props:3-5`; `AppVersionProvider` reads the assembly attribute (`AppVersionProvider.cs:13-24`). Window title and status show the version; the cache additionally stores `app.version` and `schema.version` (`SqliteStateStore.cs:31-37,108-115`).
 
-For changes: increase the version automatically/autonomously per the user rule in SecondBrain (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Currently `0.3.0`; `schema.version` remains `1` as long as the schema stays compatible.
+For changes: increase the version automatically/autonomously per the user rule in SecondBrain (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Currently `0.6.9`; `schema.version` remains `1` as long as the schema stays compatible.
 
 CI: push/PR on `main`/`master`/`develop` or manual; matrix `ubuntu-latest` + `windows-latest`; restore/build/test/self-test, then publish `linux-x64`/`win-x64` with self-test and artifact upload (`ci.yml:3-7,13-37,39-69`). Artifacts are **unsigned**; signature/hash are an improvement suggestion (`ARCHITECTURE.md` §9.7).
 

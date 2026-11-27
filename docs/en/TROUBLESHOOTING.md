@@ -77,7 +77,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 
 ## 5. Technical errors and MAX codes
 
-The UI shows `ErrorMessage` and an `ErrorHint` derived from `ErrorCatalog.Describe` (`MainWindowViewModel.cs:613-621`, `MainWindowViewModel.Admin.cs:65-78,225-241`). The descriptions are interpretations of the symbol names, **not** manufacturer messages (`ErrorCatalog.cs:5-9`).
+The UI shows `ErrorMessage` and an `ErrorHint` derived from `ErrorCatalog.Describe` (`MainWindowViewModel.cs:1208-1229`, `MainWindowViewModel.Admin.cs:149-169`). The descriptions are interpretations of the symbol names, **not** manufacturer messages (`ErrorCatalog.cs:5-9`).
 
 | Code / message | Meaning per catalog | Typical trigger in the app | Action |
 |---|---|---|---|
@@ -105,7 +105,7 @@ Protocol exceptions (`CubeCommunicationFailedException`, `UnknownCubeOpcodeExcep
 | Configuration change visible in cube only at next transmission | radio adoption by thermostat not yet complete | wait 6 s, read again; do not assume failure (`docs/HARDWARE-VERIFY.md` §4.2) |
 | Bundled temperature delayed | `ui.bundleTemperatures` collects for 3 s | disable setting or wait for `FlushPendingTemperaturesAsync` (`Admin.cs:272-343`, `ARCHITECTURE.md` R-04) |
 
-**FACT:** After a successful cube command, a local cache write error can only produce a warning; the cube success remains intact (`CubeApplicationService.cs:544-564`). Conversely, an offline cache must never flow back to the cube (`:265-280,528-534`).
+**FACT:** After a successful cube command, a local cache write error can only produce a warning; the cube success remains intact (`CubeApplicationService.cs:648`). Conversely, an offline cache must never flow back to the cube (`:265-280,528-534`).
 
 ## 7. Logs, audit, report
 
