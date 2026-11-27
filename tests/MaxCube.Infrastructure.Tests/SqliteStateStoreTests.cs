@@ -88,7 +88,36 @@ public class SqliteStateStoreTests
         await store.AppendAuditAsync("Connected");
         await store.AppendAuditAsync("Temperatur 1=21,5");
 
-        (await store.ReadAuditAsync()).Should().Equal("Connected", "Temperatur 1=21,5");
+        (await store.ReadAuditAsync()).Should().Equal("[user] Connected", "[user] Temperatur 1=21,5");
+    }
+
+    [Fact]
+    public async Task Audit_entries_keep_their_source_tag()
+    {
+        await using var store = new SqliteStateStore("Data Source=:memory:", new FakeClock());
+
+        await store.AppendAuditAsync("verbinden", AuditSource.Session);
+        await store.AppendAuditAsync("neu verbunden", AuditSource.Reconnect);
+        await store.AppendAuditAsync("gesendet", AuditSource.User);
+        await store.AppendAuditAsync("fehlgeschlagen", AuditSource.System);
+
+        (await store.ReadAuditAsync()).Should().Equal(
+            "[session] verbinden", "[reconnect] neu verbunden", "[user] gesendet", "[system] fehlgeschlagen");
+    }
+
+    [Fact]
+    public async Task Audit_retention_deletes_only_entries_before_the_cutoff()
+    {
+        var clock = new FakeClock();
+        await using var store = new SqliteStateStore("Data Source=:memory:", clock);
+        await store.AppendAuditAsync("alt");
+        clock.Now = clock.Now.AddDays(31);
+        await store.AppendAuditAsync("neu");
+
+        var removed = await store.DeleteAuditOlderThanAsync(clock.Now.AddDays(-30));
+
+        removed.Should().Be(1);
+        (await store.ReadAuditAsync()).Should().Equal("[user] neu");
     }
 
     [Fact]

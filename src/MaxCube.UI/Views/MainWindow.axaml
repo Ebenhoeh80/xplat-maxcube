@@ -525,6 +525,11 @@
                 <TextBlock Text="{Binding Labels[LogRetentionHint]}" Foreground="Gray" TextWrapping="Wrap" />
               </StackPanel>
               <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Labels[AuditRetention]}" FontWeight="SemiBold" />
+                <NumericUpDown Width="140" Minimum="1" Maximum="365" Increment="1" Value="{Binding AuditRetentionDays}" />
+                <TextBlock Text="{Binding Labels[AuditRetentionHint]}" Foreground="Gray" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Spacing="4">
                 <CheckBox Content="{Binding Labels[BundleTemperatures]}" IsChecked="{Binding BundleTemperatures}" />
                 <TextBlock Text="{Binding Labels[BundleHint]}" Foreground="Gray" TextWrapping="Wrap" />
               </StackPanel>

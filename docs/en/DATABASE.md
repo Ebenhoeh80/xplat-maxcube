@@ -1,4 +1,4 @@
-> English translation of docs/DATABASE.md. Machine-created; native-speaker review pending.
+> English translation of docs/DATABASE.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Database – SQLite cache of the MAX! Cube Local App
 
@@ -178,15 +178,16 @@ flowchart LR
 | Key | set by | read by | Value/meaning |
 |---|---|---|---|
 | `schema.version` | `SqliteStateStore.InitializeSchema` (`:114`) | diagnostics/display | `"1"` = `CurrentSchemaVersion` |
-| `app.version` | `SqliteStateStore.InitializeSchema` (`:115`) | diagnostics/display | version from `IAppVersionProvider`, e.g. `0.6.9`; `"unbekannt"` as fallback (`:32-34`) |
-| `cube.serial` | `CubeApplicationService.ConnectAsync` (`:208`) | `LoadCachedAsync` (`:282`) | serial number of the last connected cube |
-| `cube.endpoint` | `CubeApplicationService.ConnectAsync` (`:209`) | `GetLastEndpointAsync` (`:248`) | `host:port`, e.g. `192.168.10.60:62910` |
+| `app.version` | `SqliteStateStore.InitializeSchema` (`:115`) | diagnostics/display | version from `IAppVersionProvider`, e.g. `0.7.0`; `"unbekannt"` as fallback (`:32-34`) |
+| `cube.serial` | `CubeApplicationService.ConnectAsync` (`:306`) | `LoadCachedAsync` (`:370`) | serial number of the last connected cube |
+| `cube.endpoint` | `CubeApplicationService.ConnectAsync` (`:307`) | `GetLastEndpointAsync` (`:347`) | `host:port`, e.g. `192.168.10.60:62910` |
 | `ui.language` | `MainWindowViewModel.Settings.cs:21` | Localizer/view model | `de`, `en`, `fr`, `it`, `nl`, `pl` |
-| `log.retentionDays` | `MainWindowViewModel.Settings.cs:22` | `FileAppLog` / settings | retention in days, default 30 (`:25`) |
-| `ui.bundleTemperatures` | `MainWindowViewModel.Settings.cs:23` | `CubeApplicationService.QueueRoomTemperature` | bundled sending 3 s, optional |
-| `ui.closeToTray` | `MainWindowViewModel.Settings.cs:24` | `App.axaml.cs:55` | closing window only hides it |
+| `log.retentionDays` | `MainWindowViewModel.Settings.cs:22` | `FileAppLog` / settings | retention in days, default 30 (`:27`) |
+| `audit.retentionDays` | `MainWindowViewModel.Settings.cs:23` | `CubeApplicationService.CleanupAuditAsync` (`:904`) | audit retention in days, default 30 (`:27`), valid 1..365 |
+| `ui.bundleTemperatures` | `MainWindowViewModel.Settings.cs:24` | `CubeApplicationService.QueueRoomTemperature` | bundled sending 3 s, optional |
+| `ui.closeToTray` | `MainWindowViewModel.Settings.cs:25` | `App.axaml.cs:55` | closing window only hides it |
 
-Any additional keys can be written via `CubeApplicationService.ReadSettingAsync`/`WriteSettingAsync` (`CubeApplicationService.Admin.cs:830-834`); the store does not validate keys (`GetSettingAsync`/`SetSettingAsync` accept any string). **INFERENCE:** typos can therefore silently create new keys.
+Any additional keys can be written via `CubeApplicationService.ReadSettingAsync`/`WriteSettingAsync` (`CubeApplicationService.Admin.cs:908-914`); the store does not validate keys (`GetSettingAsync`/`SetSettingAsync` accept any string). **INFERENCE:** typos can therefore silently create new keys.
 
 ## 7. Migrations
 
@@ -202,11 +203,11 @@ Any additional keys can be written via `CubeApplicationService.ReadSettingAsync`
 
 - **Backup:** copy the data folder, at least `maxcube.db`; better `maxcube.db`, `logs/`, `reports/` together (consistent evidence). The DB is small; copying while running is usually possible with SQLite, but **recommended:** quit the app first so the lock and open transactions do not interfere (`AppPaths.cs:20-28`, `InstanceLock.cs:5-10`).
 - **Recovery:** quit app → restore saved `maxcube.db` → start. The next connect will overwrite rooms/devices from the cube anyway; settings and audit remain from the backup.
-- **Maintenance:** `audit_log` grows without limit; if needed, delete old rows or add rotation (improvement suggestion in [ARCHITECTURE.md](ARCHITECTURE.md) R-05). Log rotation is handled separately by `FileAppLog` (`FileAppLog.cs:6-9`).
+- **Maintenance:** old `audit_log` rows are deleted at startup according to `audit.retentionDays` (default 30, valid 1..365; `MainWindowViewModel.Settings.cs:23,27,165-174`, `SqliteStateStore.cs:186-202`). The schema is unchanged; log rotation is handled separately by `FileAppLog` (`FileAppLog.cs:6-9`).
 
 ## 9. Open questions
 
 - Should `room_id` be modeled as a real `FOREIGN KEY` with `ON DELETE CASCADE`? Currently only logical.
 - How can a backup be consistently checked for migrations while the app is running? Currently no `PRAGMA integrity_check` in the app.
-- Should `audit_log` get a retention limit? Currently `UNKNOWN`/unlimited.
+- Should audit retention also apply at runtime (not only at startup)? Currently `UNKNOWN`.
 - Are `week_profile` JSONs versioned when the schema changes? Currently stored only as text.

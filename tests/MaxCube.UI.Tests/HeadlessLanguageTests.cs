@@ -85,6 +85,28 @@ public class HeadlessLanguageTests
         window.Close();
     }
 
+    [AvaloniaTheory]
+    [InlineData("de", "Audit aufbewahren (Tage)")]
+    [InlineData("en", "Keep audit history (days)")]
+    [InlineData("fr", "Conserver l'historique d'audit (jours)")]
+    [InlineData("it", "Conservare la cronologia audit (giorni)")]
+    [InlineData("nl", "Auditgeschiedenis bewaren (dagen)")]
+    [InlineData("pl", "Przechowywanie audytu (dni)")]
+    public void Rendered_audit_retention_label_follows_every_language(string code, string label)
+    {
+        using var viewModel = new MainWindowViewModel();
+        var window = new MainWindow { DataContext = viewModel };
+        viewModel.SelectedTabIndex = TabIndex.Settings;
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        viewModel.SelectedLanguage = viewModel.Languages.Single(language => language.Code == code);
+        Dispatcher.UIThread.RunJobs();
+
+        RenderedTexts(window).Should().Contain(label, "the settings tab must render the new retention label");
+        window.Close();
+    }
+
     private static List<string> RenderedTexts(Window window)
         => window.GetVisualDescendants()
             .SelectMany(visual => visual switch

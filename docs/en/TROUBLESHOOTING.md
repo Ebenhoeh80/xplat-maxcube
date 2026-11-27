@@ -1,4 +1,4 @@
-> English translation of docs/TROUBLESHOOTING.md. Machine-created; native-speaker review pending.
+> English translation of docs/TROUBLESHOOTING.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Troubleshooting – MAX! Cube Local App
 
@@ -57,7 +57,7 @@ publish/linux-x64/MaxCube.UI.Desktop --selfcheck
 | "Close" does not exit | `ui.closeToTray = 1` | check Settings tab (`Settings.cs:48-53`, `App.axaml.cs:53-60`) | remove checkbox or use tray "Exit" |
 | Linux starts without UI | no X11/Wayland, `libSkiaSharp`/HarfBuzz missing | `start.sh:3-4`, `Program.cs:23-24` | check desktop session and self-contained package directory; `--selfcheck` separates wiring from GUI |
 
-**UNKNOWN:** Tray and window on a real X11/Wayland desktop were not visually checked (`README.md`, limits table; `ARCHITECTURE.md` R-03).
+**FACT (user, 27.11.2026):** The Linux UI was checked and found visually okay (`HARDWARE-VERIFY.md` §28). **UNKNOWN:** tray behaviour and "close hides window" were not explicitly confirmed (`ARCHITECTURE.md` R-03); the protocol-specific check remains open.
 
 ## 4. Connection problems
 
@@ -112,8 +112,8 @@ Protocol exceptions (`CubeCommunicationFailedException`, `UnknownCubeOpcodeExcep
 | Artifact | Path | Content / limit |
 |---|---|---|
 | Daily log | `<data folder>/logs/maxcube-JJJJMMTT.log` | timestamp, level, message; `InvariantCulture`; IO errors swallowed (`FileAppLog.cs:6-9,25-43`) |
-| Audit | `<data folder>/maxcube.db`, table `audit_log` | last 500 via `ReadAuditAsync`, UI shows 100; no rotation (`SqliteStateStore.cs:183-191`) |
-| Diagnostic report | `<data folder>/reports/maxcube-diagnose-*.txt` | OS/.NET, cube, rooms, radio, last 50 audit rows; **local, no transmission** (`CubeApplicationService.Admin.cs:840-876`) |
+| Audit | `<data folder>/maxcube.db`, table `audit_log` | last 500 via `ReadAuditAsync`, UI shows 100; `audit.retentionDays` applied at startup (`SqliteStateStore.cs:166-219`) |
+| Diagnostic report | `<data folder>/reports/maxcube-diagnose-*.txt` | OS/.NET, cube, rooms, radio, connection/reconnect timestamps, last 50 audit rows; **local, no transmission** (`CubeApplicationService.Admin.cs:922-959`) |
 | Data folder | `%LOCALAPPDATA%\MaxCube` / `$XDG_DATA_HOME/MaxCube` | override `MAXCUBE_DATA_DIR` (`AppPaths.cs:10-28`) |
 
 Logs may contain device names, serial numbers, temperatures, and error texts; no credentials (`SECURITY.md` §5). Check before sharing.
@@ -128,7 +128,7 @@ Logs may contain device names, serial numbers, temperatures, and error texts; no
 | Offline display empty | no `cube.serial` or no snapshot | connect once; cache then filled (`CubeApplicationService.cs:282,265-303`) |
 | Rooms/devices outdated | cache replaced only on connect | reconnect or "Reload state" (`SqliteStateStore.cs:236-255`) |
 | `week_profile` column missing | old DB before migration | app starts additive migration via `pragma_table_info` (`SqliteStateStore.cs:97-106`) |
-| DB grows due to audit | unlimited `audit_log` table | quit app, delete old rows; rotation is an improvement suggestion (`DATABASE.md` §9) |
+| DB grows due to audit | `audit.retentionDays` too high or no restart since change | check settings (1..365, default 30), restart the app; back up and clean manually if needed (`DATABASE.md` §8) |
 
 **Caution:** There is no backward migration. Back up the DB before downgrades (`SqliteStateStore.cs:108-115`, `OPERATIONS.md` §5).
 

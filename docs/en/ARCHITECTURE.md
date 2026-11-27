@@ -1,8 +1,8 @@
-> English translation of docs/ARCHITECTURE.md. Machine-created; native-speaker review pending.
+> English translation of docs/ARCHITECTURE.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Architecture – MAX! Cube Local App
 
-> Role: Senior Solution Architect. As of: 27.11.2026. Version: 0.6.9.
+> Role: Senior Solution Architect. As of: 27.11.2026. Version: 0.7.0.
 > Markers: `FACT` = directly evidenced in the artifact, `OBSERVATION` = seen in a test run, `INFERENCE` = derived from code/docs, `UNKNOWN` = not evidenced. Evidence as `file:line`.
 
 ## 1. Executive Summary
@@ -42,7 +42,7 @@ Connection and discovery, room/device view, target temperature and modes, home c
 C4Context
   title Systemkontext – MAX! Cube Local App
   Person(Betreiber, "Betreiber", "Steuert Heizung lokal am PC")
-  System(App, "MAX! Cube Local App 0.6.9", "Avalonia-Desktop-App, Windows/Linux")
+  System(App, "MAX! Cube Local App 0.7.0", "Avalonia-Desktop-App, Windows/Linux")
   System(Cube, "eQ-3 MAX! Cube", "Firmware 273–275, TCP 62910, UDP 23272")
   SystemDb(Cache, "maxcube.db", "SQLite-Cache, Einstellungen, Audit")
   SystemExt(Cloud, "MAX! Cloud", "seit 01.07.2023 abgeschaltet; App laut Nutzerhinweis aus Stores entfernt")
@@ -265,9 +265,9 @@ The cache is completely overwritten on every connect (`SqliteStateStore.cs:236-2
 |---|---|---|---|---|
 | R-01 | Write formats `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:`, UDP network only `INFERENCE` | **critical** | Wrong encoding could change meter values/structure; test room needed before production use | `README.md` old:77 |
 | R-02 | No golden capture, no technically evaluated `S:` response | **critical** | Acknowledgements >0 and `A:` acceptance not evidenced; UDP response and `0x11` comfort/eco are hardware-evidenced (`docs/HARDWARE-VERIFY.md`) | `README.md` old:80,83 |
-| R-03 | Linux UI/tray never seen on a real desktop | high | Layout/tray problems possible | `README.md` old:8,66 |
-| R-04 | Bundled temperatures (3 s) may lag behind individual commands | medium | Acceptance question, no data loss | `docs/features.md:93`, `MainWindowViewModel.Settings.cs:23` |
-| R-05 | `ReadAuditAsync` loads 500, UI shows 100 entries; audit grows without limit | medium | Long-term operation: DB growth, no rotation | `SqliteStateStore.cs:183-191`, `README.md` old:38 |
+| R-03 | Tray behaviour on a real desktop not explicitly checked | medium | Tray problems possible; UI look confirmed by the user on 2026-11-27 | `HARDWARE-VERIFY.md` §28 |
+| R-04 | Bundled temperatures (3 s) may lag behind individual commands | medium | Acceptance question, no data loss | `docs/features.md:93`, `MainWindowViewModel.Settings.cs:24` |
+| R-05 | `ReadAuditAsync` loads 500, UI shows 100 entries; retention is configurable | low | Historical evaluation is still limited to 500 entries; DB growth is bounded | `SqliteStateStore.cs:166-219`, `MainWindowViewModel.Settings.cs:23,27,165-174` |
 | R-06 | `Temperature` exact comparison instead of Java tolerance <0.1 °C | low | Different thresholds on floating-point rounding | `README.md` old:73 |
 | R-07 | `DomainLimits` enforced in the aggregate, Java AL does not check | low | Stricter validation than original (deliberate) | `DomainLimits.cs:4-8` |
 | R-08 | No hardware validation of 7+6 weekly schedules | high | Second `0x10` telegram remains `UNKNOWN` | `docs/roadmap.md:318-321` |
@@ -278,11 +278,13 @@ The cache is completely overwritten on every connect (`SqliteStateStore.cs:236-2
 
 1. Hardware test with packet capture for all `INFERENCE` formats; then raise the evidence status in `docs/features.md` or correct the encoding.
 2. Golden capture of a real cube including `S:` acknowledgement and UDP response; derive test fixtures from it.
-3. Linux desktop visual check on X11 **and** Wayland, including tray and "close hides window". The user confirmed on 26.11.2026 in principle "Linux Desktop funktiojniert auch" (`HARDWARE-VERIFY.md:389`); the protocol-specific check remains open.
-4. Audit rotation or configurable retention analogous to `FileAppLog`.
-5. Drag-and-drop in the weekly schedule editor as a complement to the day bar.
-6. Add error catalog entries with manufacturer wording instead of interpretations once evidenced.
-7. Deliver self-contained packages with hash/signature; currently only CI artifacts without a signature (`ci.yml:66-69`).
+3. Linux desktop visual check: the user confirmed on 26.11.2026 in principle "Linux Desktop funktiojniert auch" and on 27.11.2026 that the UI looks visually okay (`HARDWARE-VERIFY.md` §28). Tray and "close hides window" are not explicitly checked; the protocol-specific check remains open.
+4. Drag-and-drop in the weekly schedule editor as a complement to the day bar.
+5. Add error catalog entries with manufacturer wording instead of interpretations once evidenced.
+6. Deliver self-contained packages with hash/signature; currently only CI artifacts without a signature (`ci.yml:66-69`).
+
+**Implemented in 0.7.0:** configurable audit retention (`audit.retentionDays`), source tags in
+the audit log and reconnect timestamps in the diagnostic report.
 
 ## 10. Open questions
 

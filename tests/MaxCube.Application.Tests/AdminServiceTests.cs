@@ -320,7 +320,8 @@ public class AdminServiceTests
 
         await act.Should().ThrowAsync<InvalidOperationException>();
         h.Cube.GetRoom(1)!.Name.Should().Be("Wohnen");
-        h.Store.Audit.Should().Contain(text => text.Contains("Strukturänderung fehlgeschlagen"));
+        h.Store.Audit.Should().Contain(text =>
+            text.StartsWith("[system] ") && text.Contains("Strukturänderung fehlgeschlagen"));
     }
 
     [Fact]
@@ -631,6 +632,20 @@ public class AdminServiceTests
     }
 
     [Fact]
+    public async Task Audit_cleanup_clamps_the_retention_window()
+    {
+        var h = new Harness();
+        var service = await h.ConnectAsync();
+        var now = new DateTimeOffset(2026, 11, 24, 12, 0, 0, TimeSpan.Zero);
+
+        await service.CleanupAuditAsync(0);
+        h.Store.DeletedBefore.Should().Be(now.AddDays(-1));
+
+        await service.CleanupAuditAsync(9999);
+        h.Store.DeletedBefore.Should().Be(now.AddDays(-365));
+    }
+
+    [Fact]
     public async Task Reload_reconnects_to_the_last_endpoint()
     {
         var h = new Harness();
@@ -855,6 +870,7 @@ public class AdminServiceTests
         public Dictionary<string, string> Settings { get; } = new();
         public CubeSnapshot? Snapshot { get; set; }
         public List<string> Audit { get; } = new();
+        public DateTimeOffset? DeletedBefore { get; private set; }
 
         public Task<CubeSnapshot?> LoadAsync(string serialNumber, CancellationToken cancellationToken = default)
             => Task.FromResult(Snapshot);
@@ -874,10 +890,18 @@ public class AdminServiceTests
             return Task.CompletedTask;
         }
 
-        public Task AppendAuditAsync(string message, CancellationToken cancellationToken = default)
+        public Task AppendAuditAsync(
+            string message, AuditSource source = AuditSource.User, CancellationToken cancellationToken = default)
         {
-            Audit.Add(message);
+            Audit.Add($"[{source.ToString().ToLowerInvariant()}] {message}");
             return Task.CompletedTask;
+        }
+
+        public Task<int> DeleteAuditOlderThanAsync(
+            DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+        {
+            DeletedBefore = cutoff;
+            return Task.FromResult(0);
         }
 
         public Task<IReadOnlyList<string>> ReadAuditAsync(CancellationToken cancellationToken = default)

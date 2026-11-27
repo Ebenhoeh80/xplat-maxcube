@@ -30,7 +30,7 @@ bash start.sh
 
 Beide Skripte suchen ein .NET-10-SDK, bauen inkrementell und starten die Desktop-DLL (`start.cmd:8-43`, `start.sh:8-35`). Ohne SDK: veröffentlichtes self-contained Paket aus `publish/win-x64` oder `publish/linux-x64` starten (`ci.yml:39-69`).
 
-**Erwartung:** Fenster mit neun Reitern; Titel/Status zeigen Version `0.6.9` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
+**Erwartung:** Fenster mit neun Reitern; Titel/Status zeigen Version `0.7.0` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
 
 ### 1.2 Stopp
 
@@ -97,9 +97,9 @@ Inhalt: `maxcube.db`, `logs/`, `reports/`, `maxcube.lock` (`AppPaths.cs:20-28`).
 
 ### 2.4 Log- und Audit-Pflege
 
-- Log-Aufbewahrung: Einstellungen-Reiter, `log.retentionDays`, Default 30, gültig 1..365 (`MainWindowViewModel.Settings.cs:22,25,120-123`, `FileAppLog.cs:45-75`).
-- Audit: automatisch **keine** Rotation; `audit_log` wächst unbegrenzt (`SqliteStateStore.cs:183-191`). Bei Bedarf App beenden und alte Zeilen manuell löschen; Vorher backupen.
-- Diagnosebericht: Reiter „Cube“ → „Diagnosebericht exportieren“; Datei liegt unter `reports/`, wird **nicht** versendet (`CubeApplicationService.Admin.cs:840-876`, `MainWindowViewModel.Cube.cs:168-187`).
+- Log-Aufbewahrung: Einstellungen-Reiter, `log.retentionDays`, Default 30, gültig 1..365 (`MainWindowViewModel.Settings.cs:22,27,88-95`, `FileAppLog.cs:45-75`).
+- Audit: Einstellungen-Reiter, `audit.retentionDays`, Default 30, gültig 1..365; alte Zeilen werden beim Start gelöscht (`MainWindowViewModel.Settings.cs:23,27,95,165-174`, `SqliteStateStore.cs:186-202`). Vor einer manuellen Bereinigung backupen.
+- Diagnosebericht: Reiter „Cube“ → „Diagnosebericht exportieren“; Datei liegt unter `reports/`, wird **nicht** versendet und nennt jetzt auch Verbindungs-, `Unreachable`- und Reconnect-Zeitpunkte (`CubeApplicationService.Admin.cs:922-959`, `MainWindowViewModel.Cube.cs:220-228`).
 
 ## 3. Geänderte Konfiguration senden (Komfort/Eco)
 

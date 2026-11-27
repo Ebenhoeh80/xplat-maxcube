@@ -752,6 +752,7 @@ public class AdminViewModelTests : IDisposable
         var h = await CreateAsync(connect: false);
         h.Store.Settings[MainWindowViewModel.LanguageSetting] = "fr";
         h.Store.Settings[MainWindowViewModel.LogRetentionSetting] = "14";
+        h.Store.Settings[MainWindowViewModel.AuditRetentionSetting] = "9";
         h.Store.Settings[MainWindowViewModel.BundleSetting] = "1";
         h.Store.Settings[MainWindowViewModel.CloseToTraySetting] = "1";
         var vm = h.ViewModel;
@@ -760,14 +761,18 @@ public class AdminViewModelTests : IDisposable
 
         vm.Loc.Language.Should().Be("fr");
         vm.LogRetentionDays.Should().Be(14);
+        vm.AuditRetentionDays.Should().Be(9);
+        h.Store.AuditDeletedBefore.Should().NotBeNull();
         vm.BundleTemperatures.Should().BeTrue();
         vm.CloseToTray.Should().BeTrue();
 
         vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "nl");
         vm.LogRetentionDays = 7;
+        vm.AuditRetentionDays = 3;
         await Task.Delay(100, TestContext.Current.CancellationToken);
         h.Store.Settings[MainWindowViewModel.LanguageSetting].Should().Be("nl");
         h.Store.Settings[MainWindowViewModel.LogRetentionSetting].Should().Be("7");
+        h.Store.Settings[MainWindowViewModel.AuditRetentionSetting].Should().Be("3");
     }
 
     [Fact]
@@ -779,6 +784,7 @@ public class AdminViewModelTests : IDisposable
 
         h.ViewModel.Loc.Language.Should().Be("pl");
         h.ViewModel.LogRetentionDays.Should().Be(MainWindowViewModel.DefaultLogRetentionDays);
+        h.ViewModel.AuditRetentionDays.Should().Be(MainWindowViewModel.DefaultAuditRetentionDays);
         h.ViewModel.BundleTemperatures.Should().BeFalse();
         h.Store.Settings.Should().NotContainKey(MainWindowViewModel.LanguageSetting, "die Erkennung wird nicht als Nutzerwahl gespeichert");
     }
@@ -1100,6 +1106,7 @@ public class AdminViewModelTests : IDisposable
     {
         public Dictionary<string, string> Settings { get; } = new();
         public List<string> Audit { get; } = new();
+        public DateTimeOffset? AuditDeletedBefore { get; private set; }
 
         public Task<CubeSnapshot?> LoadAsync(string serialNumber, CancellationToken cancellationToken = default)
             => Task.FromResult<CubeSnapshot?>(null);
@@ -1115,10 +1122,18 @@ public class AdminViewModelTests : IDisposable
             return Task.CompletedTask;
         }
 
-        public Task AppendAuditAsync(string message, CancellationToken cancellationToken = default)
+        public Task AppendAuditAsync(
+            string message, AuditSource source = AuditSource.User, CancellationToken cancellationToken = default)
         {
-            Audit.Add(message);
+            Audit.Add($"[{source.ToString().ToLowerInvariant()}] {message}");
             return Task.CompletedTask;
+        }
+
+        public Task<int> DeleteAuditOlderThanAsync(
+            DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+        {
+            AuditDeletedBefore = cutoff;
+            return Task.FromResult(0);
         }
 
         public Task<IReadOnlyList<string>> ReadAuditAsync(CancellationToken cancellationToken = default)

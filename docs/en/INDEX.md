@@ -1,4 +1,4 @@
-> English translation of docs/INDEX.md. Machine-created; native-speaker review pending.
+> English translation of docs/INDEX.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Reverse-engineering wiki – MAX! Local Application 1.4.6
 
@@ -7,7 +7,7 @@
 >
 > **Note on the public repo:** The RE inputs (`decompiled/`, `extracted/`, `evidence/`) are not part of `xplat-maxcube` for licensing reasons. The `file:line` references below point to these local inputs; only our own analyses under `docs/` are published.
 
-**German original:** The authoritative source is [`docs/INDEX.md`](../INDEX.md). All 25 documents under `docs/` have an English translation here in `docs/en/`; the translations are machine-created and marked `native-speaker review pending`.
+**German original:** The authoritative source is [`docs/INDEX.md`](../INDEX.md). All 25 documents under `docs/` have an English translation here in `docs/en/`; the translations are machine-created; DE/EN were reviewed and approved by the user on 27.11.2026, FR/IT/NL/PL await feedback via issues/PRs.
 
 ---
 

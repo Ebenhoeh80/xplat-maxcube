@@ -1,6 +1,6 @@
 # Architektur – MAX! Cube Local App
 
-> Rolle: Senior Solution Architect. Stand: 27.11.2026. Version: 0.6.9.
+> Rolle: Senior Solution Architect. Stand: 27.11.2026. Version: 0.7.0.
 > Kennzeichnung: `FAKT` = direkt im Artefakt belegt, `BEOBACHTUNG` = im Testlauf gesehen, `INFERENZ` = aus Code/Doku abgeleitet, `UNBEKANNT` = nicht belegbar. Belege als `Datei:Zeile`.
 
 ## 1. Executive Summary
@@ -40,7 +40,7 @@ Verbindung und Discovery, Raum-/Geräteansicht, Solltemperatur und Modi, Hausste
 C4Context
   title Systemkontext – MAX! Cube Local App
   Person(Betreiber, "Betreiber", "Steuert Heizung lokal am PC")
-  System(App, "MAX! Cube Local App 0.6.9", "Avalonia-Desktop-App, Windows/Linux")
+  System(App, "MAX! Cube Local App 0.7.0", "Avalonia-Desktop-App, Windows/Linux")
   System(Cube, "eQ-3 MAX! Cube", "Firmware 273–275, TCP 62910, UDP 23272")
   SystemDb(Cache, "maxcube.db", "SQLite-Cache, Einstellungen, Audit")
   SystemExt(Cloud, "MAX! Cloud", "seit 01.07.2023 abgeschaltet; App laut Nutzerhinweis aus Stores entfernt")
@@ -263,9 +263,9 @@ Der Cache wird bei jedem Connect vollständig überschrieben (`SqliteStateStore.
 |---|---|---|---|---|
 | R-01 | Schreibformate `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:`, UDP-Netzwerk nur `INFERENZ` | **kritisch** | Falsche Kodierung könnte Meterwerte/Struktur verändern; vor Produktivgebrauch Testraum nötig | `README.md` alt:77 |
 | R-02 | Kein Golden-Capture, keine fachlich ausgewertete `S:`-Antwort | **kritisch** | Quittungen >0 und `A:`-Annahme nicht belegt; UDP-Antwort und `0x11` Komfort/Eco sind hardwarebelegt (`docs/HARDWARE-VERIFY.md`) | `README.md` alt:80,83 |
-| R-03 | Linux-Oberfläche/Tray nie auf echtem Desktop gesehen | hoch | Layout-/Tray-Probleme möglich | `README.md` alt:8,66 |
-| R-04 | Verbundene Temperaturen (3 s) können gegenüber Einzelbefehlen verzögern | mittel | Akzeptanzfrage, kein Datenverlust | `docs/features.md:93`, `MainWindowViewModel.Settings.cs:23` |
-| R-05 | `ReadAuditAsync` lädt 500, UI zeigt 100 Einträge; Audit wächst unbegrenzt | mittel | Langzeitbetrieb: DB-Wachstum, keine Rotation | `SqliteStateStore.cs:183-191`, `README.md` alt:38 |
+| R-03 | Tray-Verhalten auf echtem Desktop nicht ausdrücklich geprüft | mittel | Tray-Probleme möglich; Optik am 27.11.2026 vom Nutzer bestätigt | `HARDWARE-VERIFY.md` §28 |
+| R-04 | Verbundene Temperaturen (3 s) können gegenüber Einzelbefehlen verzögern | mittel | Akzeptanzfrage, kein Datenverlust | `docs/features.md:93`, `MainWindowViewModel.Settings.cs:24` |
+| R-05 | `ReadAuditAsync` lädt 500, UI zeigt 100 Einträge; Aufbewahrung ist konfigurierbar | niedrig | Historische Auswertung bleibt auf 500 Einträge begrenzt; DB-Wachstum ist begrenzt | `SqliteStateStore.cs:166-219`, `MainWindowViewModel.Settings.cs:23,27,165-174` |
 | R-06 | `Temperature` exakter Vergleich statt Java-Toleranz <0,1 °C | niedrig | Andere Grenzwerte bei Gleitkomma-Runden | `README.md` alt:73 |
 | R-07 | `DomainLimits` werden im Aggregat erzwungen, Java-AL prüft nicht | niedrig | Strengere Validierung als Original (bewusst) | `DomainLimits.cs:4-8` |
 | R-08 | Keine Hardwarevalidierung der 7+6-Wochenprofile | hoch | Zweites `0x10`-Telegramm bleibt `UNBEKANNT` | `docs/roadmap.md:318-321` |
@@ -276,11 +276,13 @@ Der Cache wird bei jedem Connect vollständig überschrieben (`SqliteStateStore.
 
 1. Hardwaretest mit Paketmitschnitt für alle `INFERENZ`-Formate; anschließend Belegstatus in `docs/features.md` heben oder Kodierung korrigieren.
 2. Golden-Capture eines echten Cubes inklusive `S:`-Quittung und UDP-Antwort; Testfixtures daraus ableiten.
-3. Linux-Desktop-Sichtprüfung auf X11 **und** Wayland, inklusive Tray und „Schließen versteckt Fenster“. Der Nutzer bestätigte am 26.11.2026 grundsätzlich „Linux Desktop funktiojniert auch“ (`HARDWARE-VERIFY.md:389`); die protokollspezifische Prüfung bleibt offen.
-4. Audit-Rotation oder konfigurierbare Aufbewahrung analog zu `FileAppLog`.
-5. Drag-and-drop im Wochenprogramm-Editor als Ergänzung zur Tagesleiste.
-6. Fehlercatalog-Einträge mit Herstellersprachen statt Deutungen ergänzen, sobald belegbar.
-7. Self-contained Pakete mit Hash/Signatur ausliefern; aktuell nur CI-Artefakte ohne Signatur (`ci.yml:66-69`).
+3. Linux-Desktop-Sichtprüfung: Der Nutzer bestätigte am 26.11.2026 grundsätzlich „Linux Desktop funktiojniert auch" und am 27.11.2026, dass die Optik „augenscheinlich ok“ ist (`HARDWARE-VERIFY.md` §28). Tray und „Schließen versteckt Fenster" sind damit nicht ausdrücklich geprüft; die protokollspezifische Prüfung bleibt offen.
+4. Drag-and-drop im Wochenprogramm-Editor als Ergänzung zur Tagesleiste.
+5. Fehlercatalog-Einträge mit Herstellersprachen statt Deutungen ergänzen, sobald belegbar.
+6. Self-contained Pakete mit Hash/Signatur ausliefern; aktuell nur CI-Artefakte ohne Signatur (`ci.yml:66-69`).
+
+**Umgesetzt in 0.7.0:** konfigurierbare Audit-Aufbewahrung (`audit.retentionDays`),
+Quell-Tags im Audit-Log und Reconnect-Zeitpunkte im Diagnosebericht.
 
 ## 10. Offene Fragen
 

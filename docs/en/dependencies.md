@@ -1,4 +1,4 @@
-> English translation of docs/dependencies.md. Machine-created; native-speaker review pending.
+> English translation of docs/dependencies.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Dependencies of MAX Local Application 1.4.6
 

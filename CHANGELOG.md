@@ -97,6 +97,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DE:** Ein Linkcheck über alle `docs/**/*.md` findet nach der Korrektur keine fehlerhaften
   relativen Links; alle Versionsangaben zum Ist-Zustand lauten nun 0.6.9.
 
+## [0.7.0] - 2026-11-27
+
+### Added / Hinzugefügt
+
+- **EN:** Audit entries now carry a language-neutral source tag: `[user]` for user actions,
+  `[session]` for connect/disconnect, `[reconnect]` for a successful reconnect and `[system]`
+  for handled structural failures. The diagnostic report additionally lists the last
+  connection, the last unreachable event and the last successful reconnect. The new retention
+  label and hint are translated into all six supported languages.
+- **DE:** Audit-Einträge tragen jetzt einen sprachneutralen Quell-Tag: `[user]` für
+  Benutzeraktionen, `[session]` für Verbinden/Trennen, `[reconnect]` für eine erfolgreiche
+  Wiederverbindung und `[system]` für behandelte Strukturfehler. Der Diagnosebericht nennt
+  zusätzlich die letzte Verbindung, den letzten `Unreachable`-Zeitpunkt und die letzte
+  erfolgreiche Wiederverbindung. Die neuen Aufbewahrungstexte sind in allen sechs Sprachen
+  übersetzt.
+
+### Changed / Geändert
+
+- **EN:** `audit.retentionDays` is a new setting in the Settings tab (1..365 days, default 30).
+  On startup, entries older than the cutoff are removed with a parameterised
+  `DELETE FROM audit_log ... julianday(at) < julianday($cutoff)`; no schema migration is needed.
+  The read limit remains 500 entries in the API and 100 in the UI. This replaces the earlier
+  manual deletion procedure; the documented diagnosis remains local and unsent.
+- **DE:** `audit.retentionDays` ist eine neue Einstellung im Reiter „Einstellungen“ (1..365
+  Tage, Default 30). Beim Start werden Einträge vor der Grenze mit einem parametrisierten
+  `DELETE FROM audit_log ... julianday(at) < julianday($cutoff)` entfernt; eine
+  Schema-Migration ist nicht nötig. Das Leselimit bleibt 500 Einträge in der API und 100 in der
+  UI. Damit entfällt das bisherige manuelle Löschen; die Diagnose bleibt lokal und wird nicht
+  versendet.
+
+### Verification / Verifikation
+
+- **EN:** Build with 0 warnings / 0 errors; 529/529 tests green on Windows and Debian 13
+  (WSL2) — Domain 64, Application 86, Protocol 198, Infrastructure 68, UI 113 — and
+  `--selfcheck` `OK` at version 0.7.0. New regression tests cover source tags, cutoff-based
+  deletion, clamping of the retention window, reconnect timestamps in the diagnostic report
+  and persistence of the new setting. The read-only opt-in hardware regression remained green.
+- **DE:** Build 0 Warnungen/0 Fehler; 529/529 Tests grün unter Windows und Debian 13 (WSL2)
+  (Domain 64, Application 86, Protocol 198, Infrastructure 68, UI 113), `--selfcheck` `OK` mit
+  Version 0.7.0. Neue Regressionstests decken Quell-Tags, Löschen an der Altersgrenze,
+  Begrenzung des Aufbewahrungsfensters, Reconnect-Zeitpunkte im Diagnosebericht und das
+  Persistieren der neuen Einstellung ab. Der rein lesende opt-in Hardwaretest blieb grün.
 ## [Unreleased]
 
 ## [0.6.8] - 2026-11-26

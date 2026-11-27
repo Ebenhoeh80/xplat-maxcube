@@ -1,4 +1,4 @@
-> English translation of docs/HARDWARE-VERIFY.md. Machine-created; native-speaker review pending.
+> English translation of docs/HARDWARE-VERIFY.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Hardware verification on the original cube 192.168.10.60
 
@@ -421,3 +421,9 @@ Without the variable the test is a no-op so CI and developer machines do not req
 **FACT (desktop rendering):** After installation of `Microsoft.WindowsDesktop.App 10.0.15`, `MaxCube.UI.Desktop.exe` (0.6.8) started windowed with the title `MAX! Cube - Lokale App 0.6.8`. A `PrintWindow` screenshot was evaluated with Windows OCR and showed the rendered UI: host `192.168.10.60`, port `62910`, buttons `Cube suchen`, `Verbinden`, `Trennen`, `Cache laden`, the tabs `Räume`, `Wochenprofil`, `Haus`, `Konfiguration`, `Geräte`, `Cube`, `Status`, `Hilfe`, `Einstellungen`, `Über`, plus `Solltemperatur 21`, `ECO`, `Comfort`, `Temporary (1 h)`, `Nicht vom Cube gelesen`. Evidence: `C:\Users\ebenh\AppData\Local\Temp\opencode\maxcube-window.png` (session artefact, not versioned in the repo). **Residual risk:** OCR confirms text and structure, but not pixel accuracy, colours or layout at other window sizes/languages.
 
 **FACT (full suite):** Windows and Debian 13 (WSL2) each **519/519** tests green, build 0 warnings/0 errors, `--selfcheck` `OK`; GitHub CI and CodeQL on `main` green. Details in `CHANGELOG.md`.
+
+## 28. User confirmation 27.11.2026: Linux UI and language review
+
+**FACT (user, 27.11.2026):** The desktop UI on Linux was checked and found visually okay. The visual impression on a real Linux desktop is therefore confirmed. Tray specifics and "close hides window" were not explicitly checked; the protocol-specific check remains open (§9 in `ARCHITECTURE.md`).
+
+**FACT (user, 27.11.2026):** Native-speaker review is complete for German and English: both are okay. For French, Italian, Dutch and Polish the user expects feedback via issues or PRs; these four languages remain deliberately OPEN. The earlier `UNKNOWN` notes about "six languages" in previous sections therefore apply only to FR/IT/NL/PL; the German source remains authoritative.

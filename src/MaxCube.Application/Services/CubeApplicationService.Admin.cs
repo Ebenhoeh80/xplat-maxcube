@@ -703,7 +703,9 @@ public sealed partial class CubeApplicationService
         {
             try
             {
-                await _store.AppendAuditAsync($"Strukturänderung fehlgeschlagen: {exception.Message}", CancellationToken.None)
+                await _store.AppendAuditAsync(
+                        $"Strukturänderung fehlgeschlagen: {exception.Message}",
+                        AuditSource.System, CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch
@@ -898,6 +900,11 @@ public sealed partial class CubeApplicationService
     // Einstellungen der App (Sprache, Log-Aufbewahrung, Bündelung)
     // ---------------------------------------------------------------------------------
 
+    /// <summary>Löscht Audit-Einträge außerhalb der Aufbewahrung (auf 1..365 Tage begrenzt).</summary>
+    public Task<int> CleanupAuditAsync(int retentionDays, CancellationToken cancellationToken = default)
+        => _store.DeleteAuditOlderThanAsync(
+            _clock.Now.AddDays(-Math.Clamp(retentionDays, 1, 365)), cancellationToken);
+
     public Task<string?> ReadSettingAsync(string key, CancellationToken cancellationToken = default)
         => _store.GetSettingAsync(key, cancellationToken);
 
@@ -931,6 +938,9 @@ public sealed partial class CubeApplicationService
         }
 
         builder.AppendLine($"Verbindung: {_gateway.State}, offline={IsOffline}, veraltet={IsStale}");
+        builder.AppendLine($"Letzte Verbindung: {Describe(LastConnectedAt)}");
+        builder.AppendLine($"Cube unerreichbar: {Describe(LastUnreachableAt)}");
+        builder.AppendLine($"Reconnect erfolgreich: {Describe(LastReconnectedAt)}");
         if (LastAirtime is { } airtime)
         {
             builder.AppendLine($"Funkauslastung: {airtime.DutyCycle}, freie Speicherplätze: {airtime.FreeMemorySlots}");
@@ -945,6 +955,11 @@ public sealed partial class CubeApplicationService
 
         return builder.ToString();
     }
+
+    private static string Describe(DateTimeOffset? value)
+        => value is { } moment
+            ? moment.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)
+            : "nicht belegt";
 
     /// <summary>
     /// Liest den Zustand nach einer Strukturänderung erneut vom Cube (Trennen, dann Verbinden
@@ -995,11 +1010,12 @@ public sealed partial class CubeApplicationService
         }
     }
 
-    private async Task AuditAsync(string message, CancellationToken cancellationToken)
+    private async Task AuditAsync(
+        string message, CancellationToken cancellationToken, AuditSource source = AuditSource.User)
     {
         try
         {
-            await _store.AppendAuditAsync(message, cancellationToken).ConfigureAwait(false);
+            await _store.AppendAuditAsync(message, source, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

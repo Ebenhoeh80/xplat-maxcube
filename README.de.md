@@ -1,4 +1,4 @@
-> Deutsche Übersetzung von README.md. Maschinell erstellt, Muttersprachlerprüfung offen.
+> Deutsche Fassung. Muttersprachlerprüfung DE/EN am 27.11.2026 durch den Nutzer bestätigt; FR/IT/NL/PL: Rückmeldung über Issues/PRs erwartet.
 
 # xplat-maxcube
 
@@ -15,7 +15,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.9** (`Directory.Build.props:3`), am **27.11.2026** als `v0.6.9` veröffentlicht (aktuellste Version; davor 0.6.8). Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.7.0** (`Directory.Build.props:3`), am **27.11.2026** als `v0.7.0` veröffentlicht (aktuellste Version; davor 0.6.9). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
@@ -202,7 +202,7 @@ Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](do
 | `S:`-Sendestatus | `FAKT`: `S:<dutyHex>,<discarded>,<freeHex>`; Airtime und freie Slots, keine Fehlercodes |
 | UDP-Adressreihenfolge | `FAKT`: IP, Gateway, Maske, DNS 1, DNS 2; durch Java-Code und echte `c`-Antwort belegt |
 | Drag-and-drop im Wochenprogramm | nicht umgesetzt; Tagesleiste und Schnellbearbeitung vorhanden |
-| Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
+| Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | Optik vom Nutzer am 27.11.2026 als „augenscheinlich ok“ bestätigt; Tray-Verhalten weiterhin `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
 
 ## Roadmap und Ideen
 
@@ -233,6 +233,8 @@ Build **0 Warnungen / 0 Fehler**, **519/519** hardwarefreie Tests grün unter Wi
 Ein Wechsel der Oberflächensprache aktualisiert ohne Neustart und ohne Cube-Zugriff alle sichtbaren Bereiche: zwischengespeicherte Status-/Ergebnistexte, Schreibvorschau, Dirty-Hinweis, Wochentags- und Modusbezeichnungen, Gerätestatus und Fehlerhinweise (`CHANGELOG.md`, `docs/HARDWARE-VERIFY.md` §17).
 
 **FAKT (25.11.2026, freigegebene Hardwareprüfung):** Discovery, `0x11` Komfort/Eco, `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` und `z:` wurden am Original-Cube `192.168.10.60` gesendet und quittiert; der Cube-Zustand wurde auf die Ursprungswerte 21,5 °C / 16,5 °C zurückgesetzt und nur-lesend bestätigt (`docs/HARDWARE-VERIFY.md`). Die fachliche Annahme durch Thermostate ist nur teilweise per Read-back belegt.
+
+**FAKT (Nutzer, 27.11.2026):** Die Optik der Desktop-App unter Linux wurde geprüft und „augenscheinlich ok“ befunden; die Muttersprachlerprüfung ist für Deutsch und Englisch abgeschlossen. Französisch, Italienisch, Niederländisch und Polnisch erwarten Rückmeldung über Issues oder PRs (`docs/HARDWARE-VERIFY.md` §28).
 
 ## Dokumentation
 

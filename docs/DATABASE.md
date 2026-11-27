@@ -176,15 +176,16 @@ flowchart LR
 | Key | gesetzt von | gelesen von | Wert/Bedeutung |
 |---|---|---|---|
 | `schema.version` | `SqliteStateStore.InitializeSchema` (`:114`) | Diagnose/Anzeige | `"1"` = `CurrentSchemaVersion` |
-| `app.version` | `SqliteStateStore.InitializeSchema` (`:115`) | Diagnose/Anzeige | Version aus `IAppVersionProvider`, z. B. `0.6.9`; `"unbekannt"` als Fallback (`:32-34`) |
-| `cube.serial` | `CubeApplicationService.ConnectAsync` (`:208`) | `LoadCachedAsync` (`:282`) | Seriennummer des zuletzt verbundenen Cubes |
-| `cube.endpoint` | `CubeApplicationService.ConnectAsync` (`:209`) | `GetLastEndpointAsync` (`:248`) | `host:port`, z. B. `192.168.10.60:62910` |
+| `app.version` | `SqliteStateStore.InitializeSchema` (`:115`) | Diagnose/Anzeige | Version aus `IAppVersionProvider`, z. B. `0.7.0`; `"unbekannt"` als Fallback (`:32-34`) |
+| `cube.serial` | `CubeApplicationService.ConnectAsync` (`:306`) | `LoadCachedAsync` (`:370`) | Seriennummer des zuletzt verbundenen Cubes |
+| `cube.endpoint` | `CubeApplicationService.ConnectAsync` (`:307`) | `GetLastEndpointAsync` (`:347`) | `host:port`, z. B. `192.168.10.60:62910` |
 | `ui.language` | `MainWindowViewModel.Settings.cs:21` | Localizer/ViewModel | `de`, `en`, `fr`, `it`, `nl`, `pl` |
-| `log.retentionDays` | `MainWindowViewModel.Settings.cs:22` | `FileAppLog` / Einstellungen | Aufbewahrung in Tagen, Default 30 (`:25`) |
-| `ui.bundleTemperatures` | `MainWindowViewModel.Settings.cs:23` | `CubeApplicationService.QueueRoomTemperature` | gebündeltes Senden 3 s, optional |
-| `ui.closeToTray` | `MainWindowViewModel.Settings.cs:24` | `App.axaml.cs:55` | Fenster schließen nur verstecken |
+| `log.retentionDays` | `MainWindowViewModel.Settings.cs:22` | `FileAppLog` / Einstellungen | Aufbewahrung in Tagen, Default 30 (`:27`) |
+| `audit.retentionDays` | `MainWindowViewModel.Settings.cs:23` | `CubeApplicationService.CleanupAuditAsync` (`:904`) | Audit-Aufbewahrung in Tagen, Default 30 (`:27`), gültig 1..365 |
+| `ui.bundleTemperatures` | `MainWindowViewModel.Settings.cs:24` | `CubeApplicationService.QueueRoomTemperature` | gebündeltes Senden 3 s, optional |
+| `ui.closeToTray` | `MainWindowViewModel.Settings.cs:25` | `App.axaml.cs:55` | Fenster schließen nur verstecken |
 
-Beliebige weitere Keys können über `CubeApplicationService.ReadSettingAsync`/`WriteSettingAsync` (`CubeApplicationService.Admin.cs:830-834`) geschrieben werden; der Store validating Keys nicht (`GetSettingAsync`/`SetSettingAsync` akzeptieren jeden String). **INFERENZ:** dadurch können Tippfehler unbemerkt neue Keys erzeugen.
+Beliebige weitere Keys können über `CubeApplicationService.ReadSettingAsync`/`WriteSettingAsync` (`CubeApplicationService.Admin.cs:908-914`) geschrieben werden; der Store validating Keys nicht (`GetSettingAsync`/`SetSettingAsync` akzeptieren jeden String). **INFERENZ:** dadurch können Tippfehler unbemerkt neue Keys erzeugen.
 
 ## 7. Migrationen
 
@@ -200,11 +201,11 @@ Beliebige weitere Keys können über `CubeApplicationService.ReadSettingAsync`/`
 
 - **Backup:** Datenordner kopieren, mindestens `maxcube.db`; besser `maxcube.db`, `logs/`, `reports/` gemeinsam (konsistente Evidence). Die DB ist klein; ein Copy im laufenden Betrieb ist mit SQLite meist möglich, aber **empfohlen:** App vorher beenden, damit der Lock und offene Transaktionen nicht stören (`AppPaths.cs:20-28`, `InstanceLock.cs:5-10`).
 - **Recovery:** App beenden → gesicherte `maxcube.db` zurückkopieren → Start. Der nächste Connect überschreibt Räume/Geräte ohnehin vom Cube; Einstellungen und Audit bleiben aus der Sicherung.
-- **Wartung:** `audit_log` wächst unbegrenzt; bei Bedarf alte Zeilen löschen oder Rotation ergänzen (Verbesserungsvorschlag in [ARCHITECTURE.md](ARCHITECTURE.md) R-05). Logrotation erfolgt getrennt über `FileAppLog` (`FileAppLog.cs:6-9`).
+- **Wartung:** Alte `audit_log`-Zeilen werden beim Start anhand von `audit.retentionDays` gelöscht (Default 30, gültig 1..365; `MainWindowViewModel.Settings.cs:23,27,165-174`, `SqliteStateStore.cs:186-202`). Das Schema bleibt unverändert; die Logrotation erfolgt getrennt über `FileAppLog` (`FileAppLog.cs:6-9`).
 
 ## 9. Offene Fragen
 
 - Soll `room_id` als echter `FOREIGN KEY` mit `ON DELETE CASCADE` modelliert werden? Aktuell nur logisch.
 - Wie soll ein Backup bei laufender App konsistent migratorisch geprüft werden? Aktuell kein `PRAGMA integrity_check` in der App.
-- Soll `audit_log` eine Aufbewahrungsgrenze erhalten? Derzeit `UNBEKANNT`/unbegrenzt.
+- Soll die Audit-Aufbewahrung auch zur Laufzeit (nicht nur beim Start) angewendet werden? Derzeit `UNBEKANNT`.
 - Werden `week_profile`-JSONs bei Schemaänderungen versioniert? Derzeit nur als Text gespeichert.

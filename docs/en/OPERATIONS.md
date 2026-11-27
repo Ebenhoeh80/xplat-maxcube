@@ -1,4 +1,4 @@
-> English translation of docs/OPERATIONS.md. Machine-created; native-speaker review pending.
+> English translation of docs/OPERATIONS.md. Machine-created; DE/EN reviewed by the user on 27.11.2026; FR/IT/NL/PL feedback expected via issues/PRs.
 
 # Operations and infrastructure – MAX! Cube Local App
 
@@ -132,18 +132,19 @@ There is no installer and no backward database schema migration. Rollback means:
 | Mechanism | What it monitors | Limit |
 |---|---|---|
 | `--selfcheck` | paths, SQLite + native libs, instance protection, view model, six languages | no cube contact (`Program.cs:26-92`) |
-| CI matrix | build, 442 tests, self-test, publish for Ubuntu/Windows | on push/PR/manual (`.github/workflows/ci.yml:3-7`) |
+| CI matrix | build, 529 tests, self-test, publish for Ubuntu/Windows | on push/PR/manual (`.github/workflows/ci.yml:3-7`) |
 | `FileAppLog` | daily log file with retention | diagnostics, not a feature (`FileAppLog.cs:6-9`) |
-| Audit log | technical events in SQLite | last 100 in UI, 500 via API (`SqliteStateStore.cs:183-191`) |
+| Audit log | technical events in SQLite with source tag | last 100 in UI, 500 via API, retention applied at startup (`SqliteStateStore.cs:166-219`) |
 | `CubeSessionMonitor` | `L:` refresh/stale/reconnect at runtime | internal, no external notification |
 | **Alerting** | **not present** | no mail/webhook dispatch; `UNKNOWN` whether anything is triggered externally |
 
-**FACT:** The original's "Send error report" is replaced by a **local diagnostic report without transmission** (`CubeApplicationService.Admin.cs:840-844`, `MainWindowViewModel.Cube.cs:168-181`). No data is sent to eQ-3 or third parties.
+**FACT:** The original's "Send error report" is replaced by a **local diagnostic report without transmission** (`CubeApplicationService.Admin.cs:922-959`, `MainWindowViewModel.Cube.cs:220-228`). No data is sent to eQ-3 or third parties.
 
 ## 8. Logging
 
 - File: `logs/maxcube-JJJJMMTT.log` (local time), prefix `maxcube-`, suffix `.log` (`FileAppLog.cs:11-13,29-33`).
-- Retention: configurable via the settings key `log.retentionDays`, default 30 (`MainWindowViewModel.Settings.cs:22,25`).
+- Retention: configurable via the settings key `log.retentionDays`, default 30 (`MainWindowViewModel.Settings.cs:22,27`).
+- Audit: `audit.retentionDays`, default 30, valid 1..365; old entries are deleted at startup (`MainWindowViewModel.Settings.cs:23,27,165-174`, `CubeApplicationService.Admin.cs:904-906`).
 - Write errors in the log must never affect the app (`FileAppLog.cs:6-9`).
 - Avalonia trace output: `LogToTrace()` (`Program.cs:23-24`).
 - Log contents may include device names, serial numbers, and error texts; see [SECURITY.md](SECURITY.md).
@@ -167,10 +168,10 @@ Expected: `SELFCHECK OK: ... | SQLite ok`, exit code 0 (`Program.cs:89-92`). For
 ## 10. Improvement suggestions
 
 1. Sign release artifacts with SHA-256 and a signature; currently only `upload-artifact` without a signature (`.github/workflows/ci.yml:66-69`).
-2. Make `audit_log` rotation configurable (analogous to `log.retentionDays`).
-3. Extend `--selfcheck` with an optional hardware mode that **only** reads `l:`/`c:` and sends no write commands.
-4. Add management/diagnostic output for duty cycle and reconnect timestamps; currently only internal/in the audit log.
-5. Provide the documented backup procedure as a script (`backup.cmd` / `backup.sh`).
+2. Extend `--selfcheck` with an optional hardware mode that **only** reads `l:`/`c:` and sends no write commands.
+3. Provide the documented backup procedure as a script (`backup.cmd` / `backup.sh`).
+
+**Implemented in 0.7.0:** audit retention and reconnect timestamps in the diagnostic report.
 
 ## 11. Open questions
 

@@ -18,8 +18,13 @@ public sealed class DesignTimeStore : ICubeStateStore
     public Task SetSettingAsync(string key, string value, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
-    public Task AppendAuditAsync(string message, CancellationToken cancellationToken = default)
+    public Task AppendAuditAsync(
+        string message, AuditSource source = AuditSource.User, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    public Task<int> DeleteAuditOlderThanAsync(
+        DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
 
     public Task<IReadOnlyList<string>> ReadAuditAsync(CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
