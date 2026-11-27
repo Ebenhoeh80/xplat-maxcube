@@ -190,6 +190,25 @@ public class CubeApplicationServiceTests
     }
 
     [Fact]
+    public async Task Throwing_state_listener_reports_a_warning_instead_of_crashing()
+    {
+        var gateway = new FakeGateway { CubeToReturn = BuildCube() };
+        var service = new CubeApplicationService(gateway, new FakeStore(), new FakeClock());
+        var warnings = new List<string>();
+        service.Warning += (_, message) => warnings.Add(message);
+        await service.ConnectAsync(new CubeEndpoint("cube", 62910));
+        // Nur der asynchrone Live-Pfad ist hier zu prüfen; ConnectAsync meldet den Zustand
+        // synchron und lasst eine Ausnahme bewusst an den Aufrufer durchlaufen.
+        service.StateChanged += (_, _) => throw new InvalidOperationException("Listener fehlerhaft");
+        warnings.Clear();
+
+        gateway.RaiseCubeRefreshed(BuildCube());
+        await Task.Delay(50);
+
+        warnings.Should().Contain(message => message.Contains("Live-Zustand konnte nicht gemeldet"));
+    }
+
+    [Fact]
     public async Task Cached_state_can_be_loaded_after_the_gateway_faulted()
     {
         var cube = BuildCube();

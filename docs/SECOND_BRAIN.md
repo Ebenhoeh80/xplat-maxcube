@@ -36,14 +36,14 @@
 2. **Warum keine Cloud-Funktionen?** Cloud seit 01.07.2023 abgeschaltet; Nutzerhinweis 25.11.2026 (`FAKT`, nicht extern verifiziert) ergänzt Store-Entfernung. Fernzugriff, Produktkonto, Proxy und App-Update bleiben verworfen (`README.md:7`, `wiki/projekte/app-maxcube.md:50`).
 3. **Warum SQLite, obwohl das Original keine DB hatte?** Original speichert nur `~/.MAX/*.settings` via `java.util.Properties`; SQLite ist ein Neubau als Cache, Einstellungsspeicher und Audit. Der Cube bleibt Source of Truth (`wiki/projekte/app-maxcube.md:18`, `docs/DATABASE.md` §2).
 4. **Welche Port-Regel gilt?** 62910 physisch, 54321 nur virtuell/lokal, 63121 war der dynamische Web-UI-Port des Originals (`docs/INDEX.md:35,39`).
-5. **Wie belastbar sind die Tests?** 518/518 hardwarefreie Fälle unter Windows (27.11.2026); Aufteilung Domain 64 / Application 83 / Protocol 198 / Infrastructure 66 / UI 107 (`docs/DEVELOPMENT.md` §3, `CHANGELOG.md`). Der Stand 442/442 im Wiki ist historisch.
+5. **Wie belastbar sind die Tests?** 519/519 hardwarefreie Fälle unter Windows (27.11.2026); Aufteilung Domain 64 / Application 84 / Protocol 198 / Infrastructure 66 / UI 107 (`docs/DEVELOPMENT.md` §3, `CHANGELOG.md`). Der Stand 442/442 im Wiki ist historisch.
 6. **Was ist ungeklärt?** Echte UDP-Antwort, fachlich ausgewertete `S:`-Quittung, Golden-Capture, Hardwarewirkung der abgeleiteten Schreibformate und Linux-Oberfläche auf einem echten Desktop (`README.md:85-87`, `wiki/projekte/app-maxcube.md:52`).
 
 ## 4. Lessons Learned
 
 | Lektion | Konsequenz im Code / in der Doku |
 |---|---|
-| Sonnet-Runden 1–4 fanden echte Fehler (DataContext, Endianness, `l:`-Offsets, UI-Thread, Rundung, CanExecute, Localzeit Temporary) | Alle Funde behoben und mit Regressionstests unterlegt; historische Stände 243/249/251/268/442/514/515 sind überholt, maßgeblich 518/518 (`wiki/projekte/app-maxcube.md:34-42,48`, `CHANGELOG.md`) |
+| Sonnet-Runden 1–4 fanden echte Fehler (DataContext, Endianness, `l:`-Offsets, UI-Thread, Rundung, CanExecute, Localzeit Temporary) | Alle Funde behoben und mit Regressionstests unterlegt; historische Stände 243/249/251/268/442/514/515 sind überholt, maßgeblich 519/519 (`wiki/projekte/app-maxcube.md:34-42,48`, `CHANGELOG.md`) |
 | Gremium Runde 5 scheiterte an `Free usage limit reached` | Keine Modellstimmen für Runde 5; autark nach bindenden Beschlüssen der Runden 1–4 umgesetzt und so dokumentiert (`docs/gremium.md`, `wiki/projekte/app-maxcube.md:48`) |
 | Naive `[Fact]`/`[Theory]`-Zählung lag wegen `[MemberData]` zu niedrig (historisch 422 statt 442) | Ein `[MemberData]` liefert 21 Zeilen; Doku weist auf die Korrektur hin (`docs/DEVELOPMENT.md` §3) |
 | `MAX10038` weicht vom Muster `MAX\d{4}` ab | Nicht still korrigieren; Regex akzeptiert 4–5 Stellen (`ErrorCatalog.cs:54,97`, `docs/API.md` §4) |

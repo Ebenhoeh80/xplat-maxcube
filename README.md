@@ -268,7 +268,7 @@ bring your own ideas to
 
 ## Verification status
 
-Build **0 warnings / 0 errors**, **518/518** hardware-free tests green on Windows
+Build **0 warnings / 0 errors**, **519/519** hardware-free tests green on Windows
 and Debian 13 (WSL2), `--selfcheck` `OK` on both systems, self-contained Linux
 package `OK` with `LANG=de_DE.UTF-8` and `LANG=C` (`docs/gremium.md:134`,
 `docs/roadmap.md:460-487`). These results are `OBSERVATION`.

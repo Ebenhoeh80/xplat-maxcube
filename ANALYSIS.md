@@ -3,7 +3,7 @@
 > **Historisches Artefakt:** Dies ist die technische Runde-3-Stimme zum damaligen
 > Stand. Der Reconnect-Test war zu diesem Zeitpunkt bereits grün (der zuerst rote
 > Lauf ist in `docs/gremium.md` dokumentiert). Die hier genannten Zahlen 243/243
-> bzw. 249/249 sind überholt; maßgeblich ist der aktuelle Stand **518/518** in
+> bzw. 249/249 sind überholt; maßgeblich ist der aktuelle Stand **519/519** in
 > `README.md` und `CHANGELOG.md` (Unreleased). Das Max-Retry-Limit wurde als
 > bewusster Runde-1-Beschluss nicht eingebaut. Der endgültige Gremiumsbeschluss
 > steht in `docs/gremium.md`.

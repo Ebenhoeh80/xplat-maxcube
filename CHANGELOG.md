@@ -54,14 +54,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Verification / Verifikation
 
-- **EN:** Build with 0 warnings / 0 errors; 518/518 tests green on Windows and Debian 13
-  (WSL2) — Domain 64, Application 83, Protocol 198, Infrastructure 66, UI 107 — and
+- **EN:** Build with 0 warnings / 0 errors; 519/519 tests green on Windows and Debian 13
+  (WSL2) — Domain 64, Application 84, Protocol 198, Infrastructure 66, UI 107 — and
   `--selfcheck` `OK`. New regression tests cover the offline lock and cancellation of the
-  network write path as well as log retention.
-- **DE:** Build 0 Warnungen/0 Fehler; 518/518 Tests grün unter Windows und Debian 13 (WSL2)
-  (Domain 64, Application 83, Protocol 198, Infrastructure 66, UI 107), `--selfcheck` `OK`. Neue
-  Regressionstests decken Offline-Sperre und Abbruch des Netzwerk-Schreibpfads sowie die
-  Log-Aufbewahrung ab.
+  network write path, log retention and a throwing `StateChanged` subscriber.
+- **DE:** Build 0 Warnungen/0 Fehler; 519/519 Tests grün unter Windows und Debian 13 (WSL2)
+  (Domain 64, Application 84, Protocol 198, Infrastructure 66, UI 107), `--selfcheck` `OK`. Neue
+  Regressionstests decken Offline-Sperre und Abbruch des Netzwerk-Schreibpfads, die
+  Log-Aufbewahrung und einen werfenden `StateChanged`-Subscriber ab.
 
 ## [0.6.8] - 2026-11-26
 
