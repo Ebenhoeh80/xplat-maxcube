@@ -489,3 +489,28 @@ run `45977502002` and release
 windowless with `SELFCHECK OK … 0.8.0 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13
 trixie; exit code 0 each). The release notes were extracted from the `## [0.8.0]` section of
 `CHANGELOG.md`. **Documentation addendum without a new tag.**
+
+## 31. Version 0.8.1: fix for the Temporary date field (27.11.2026)
+
+**FACT (defect):** In the rooms and house tabs the `Temporary` end-date field showed
+`System.InvalidCastException: Could not convert '11/27/2026 00:00:00' (System.DateTime) to
+'System.Nullable`1[System.DateTimeOffset]'` (user screenshot, room "Esszimmer"). **Cause (code):**
+`DatePicker.SelectedDate` is a `DateTimeOffset?` in Avalonia 12, while the property
+`MainWindowViewModel.TemporaryEndDate` was `DateTime?`. **Fix:** the property is now
+`DateTimeOffset?`; time and offset are preserved when the date changes.
+
+**OBSERVATION (verification):** A new headless test renders the real window and checks the picker
+value, validation errors and write-back. Windows 10 and Debian 13 (WSL2): build 0/0, **554/554**
+tests (UI 131), `dotnet format --verify-no-changes` exit 0, no vulnerable packages, publish +
+`--selfcheck` `OK` at 0.8.1. No Cube access, no `nmap`.
+
+**FACT (release):** PR [#40](https://github.com/Ebenhoeh80/xplat-maxcube/pull/40) was merged as
+squash `1498134237d556fded6d7f013ac8455b538d9e1e` (seven checks green); the annotated tag
+`v0.8.1` points to the merge commit. Release run `45983196495`,
+[release v0.8.1](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1).
+`xplat-maxcube-0.8.1-win-x64.zip` SHA-256
+`884e668f082bbbd2b6224b77bedbe10ca69918766a60dc4af95a5384a36c909f`,
+`xplat-maxcube-0.8.1-linux-x64.zip` SHA-256
+`431bc24e8ce32d4c2a425fad23633f488594cd05107b2cb53a3330e911e0d7a6`; both match
+`SHA256SUMS.txt` (`sha256sum -c` green). Both downloaded packages ran with
+`SELFCHECK OK … 0.8.1 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; exit code 0 each).

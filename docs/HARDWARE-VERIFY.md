@@ -488,3 +488,28 @@ mit `SHA256SUMS.txt` und der GitHub-API überein (`sha256sum -c`: grün). Beide 
 Pakete liefen fensterlos mit `SELFCHECK OK … 0.8.0 … SQLite ok` (Windows 10.0.26300,
 Debian GNU/Linux 13 trixie; Exitcode 0 je). Die Release-Notes stammen aus dem Abschnitt
 `## [0.8.0]` des `CHANGELOG.md`. **Doku-Nachtrag ohne neues Tag.**
+
+## 31. Version 0.8.1: Korrektur des Temporary-Datumsfelds (27.11.2026)
+
+**FAKT (Fehler):** Im Räume- und Haus-Reiter zeigte das Datumsfeld der `Temporary`-Endzeit
+`System.InvalidCastException: Could not convert '11/27/2026 00:00:00' (System.DateTime) to
+'System.Nullable`1[System.DateTimeOffset]'` (Nutzer-Screenshot, Raum „Esszimmer“). **Ursache
+(Code):** `DatePicker.SelectedDate` ist in Avalonia 12 ein `DateTimeOffset?`, die Property
+`MainWindowViewModel.TemporaryEndDate` war `DateTime?`. **Fix:** Property auf `DateTimeOffset?`
+umgestellt; Zeit und Offset bleiben beim Datumswechsel erhalten.
+
+**BEOBACHTUNG (Prüfung):** Neuer Headless-Test rendert das echte Fenster und prüft Picker-Wert,
+Validierungsfehler und Zurückschreiben. Windows 10 und Debian 13 (WSL2): Build 0/0,
+**554/554** Tests (UI 131), `dotnet format --verify-no-changes` Exit 0, keine anfälligen Pakete,
+Publish + `--selfcheck` `OK` mit 0.8.1. Kein Cube-Zugriff, kein `nmap`.
+
+**FAKT (Release):** PR [#40](https://github.com/Ebenhoeh80/xplat-maxcube/pull/40) wurde als
+Squash `1498134237d556fded6d7f013ac8455b538d9e1e` gemergt (sieben Checks grün); der annotierte Tag
+`v0.8.1` zeigt auf den Merge-Commit. Release-Lauf `45983196495`,
+[Release v0.8.1](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1).
+`xplat-maxcube-0.8.1-win-x64.zip` SHA-256
+`884e668f082bbbd2b6224b77bedbe10ca69918766a60dc4af95a5384a36c909f`,
+`xplat-maxcube-0.8.1-linux-x64.zip` SHA-256
+`431bc24e8ce32d4c2a425fad23633f488594cd05107b2cb53a3330e911e0d7a6`; beide stimmen mit
+`SHA256SUMS.txt` überein (`sha256sum -c` grün). Beide heruntergeladenen Pakete liefen mit
+`SELFCHECK OK … 0.8.1 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; Exitcode 0 je).
