@@ -253,7 +253,7 @@ public partial class MainWindowViewModel
         {
             await _service.RebootCubeAsync(true, token);
             OnUiThread(() => ConfirmReboot = false);
-        }, L("ErrReboot"), L("OkReboot"), previewText: L("PreviewReboot"));
+        }, L("ErrReboot"), L("OkReboot"), previewText: L("PreviewReboot"), actionName: L("RebootCube"));
 
     [RelayCommand(CanExecute = nameof(CanFactoryResetCube))]
     private Task FactoryResetCubeAsync()
@@ -261,7 +261,8 @@ public partial class MainWindowViewModel
         {
             await _service.FactoryResetCubeAsync(true, token);
             OnUiThread(() => ConfirmFactoryReset = false);
-        }, L("ErrFactoryReset"), L("OkFactoryReset"), previewText: L("PreviewFactoryReset"));
+        }, L("ErrFactoryReset"), L("OkFactoryReset"), previewText: L("PreviewFactoryReset"),
+           actionName: L("FactoryResetCube"));
 
     // --- Wake-up (v0.8.0): explizit bestätigt, nie automatisch vor anderen Schreiben ---
 
@@ -285,7 +286,8 @@ public partial class MainWindowViewModel
             await _service.WakeUpRoomAsync(roomId, true, minutes, token);
             OnUiThread(() => ConfirmWakeUp = false);
         }, L("ErrWakeUp"), L("OkWakeUp"),
-           previewText: L(localizer => localizer.Format("PreviewWakeUp", name, minutes)));
+           previewText: L(localizer => localizer.Format("PreviewWakeUp", name, minutes)),
+           actionName: L("WakeUp"));
     }
 
     // --- Gemeinsame Zustandslogik ----------------------------------------------------
@@ -531,7 +533,8 @@ public partial class MainWindowViewModel
             await RefreshAuditAsync();
             MarkConfigurationSaved();
         }, L("ErrConfig"), L("OkConfig"),
-            previewText: PreviewConfiguration(L("SendConfig")), contextText: L("SendConfig").Append(" …"));
+            previewText: PreviewConfiguration(L("SendConfig")), contextText: L("SendConfig").Append(" …"),
+            actionName: L("SendConfig"));
     }
 
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
@@ -549,7 +552,7 @@ public partial class MainWindowViewModel
                 room.Id, BoostMinutes, BoostValveAngle, DecalcificationDay, DecalcificationHour, token);
             await RefreshAuditAsync();
             MarkConfigurationSaved();
-        }, L("ErrBoost"), L("OkBoost"));
+        }, L("ErrBoost"), L("OkBoost"), actionName: L("SendBoost"));
     }
 
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
@@ -566,7 +569,7 @@ public partial class MainWindowViewModel
             await _service.SetValveOffsetAsync(room.Id, ValveOffsetPercent, token);
             await RefreshAuditAsync();
             MarkConfigurationSaved();
-        }, L("ErrValveOffset"), L("OkValveOffset"));
+        }, L("ErrValveOffset"), L("OkValveOffset"), actionName: L("SendValveOffset"));
     }
 
     /// <summary>
@@ -594,7 +597,7 @@ public partial class MainWindowViewModel
             await RefreshAuditAsync();
         }, L("ErrConfig"), L("OkCopyConfig", targets.Length),
             previewText: PreviewConfigurationCopy(targets.Length),
-            contextText: L("CopyConfig").Append(" …"));
+            contextText: L("CopyConfig").Append(" …"), actionName: L("CopyConfig"));
     }
 
     private RoomConfigurationValues CurrentConfigurationValues() => new(
@@ -640,7 +643,7 @@ public partial class MainWindowViewModel
             PushLowerMode = configuration.Lower.Mode;
             PushLowerTemperature = configuration.Lower.Temperature?.Value ?? PushLowerTemperature;
             ConfigStatus.Update(DisplayState, DisplayTime);
-        }, L("ErrPushButton"), L("OkPushButtonRead"), status: ConfigStatus);
+        }, L("ErrPushButton"), L("OkPushButtonRead"), status: ConfigStatus, actionName: L("ReadPushButton"));
     }
 
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
@@ -652,7 +655,7 @@ public partial class MainWindowViewModel
                 Key(PushUpperMode, PushUpperTemperature), Key(PushLowerMode, PushLowerTemperature));
             await _service.SetPushButtonAsync(configuration, token);
             await RefreshAuditAsync();
-        }, L("ErrPushButton"), L("OkPushButton"));
+        }, L("ErrPushButton"), L("OkPushButton"), actionName: L("SendPushButton"));
     }
 
     private static PushButtonKeyConfiguration Key(PushButtonKeyMode mode, double temperature)
@@ -698,6 +701,7 @@ public partial class MainWindowViewModel
 
             await RefreshAuditAsync();
         }, L("ErrCopyProfile"), L("OkCopyWeek", plan.Length, targets.Length),
-            previewText: PreviewWeekCopy(plan.Length), contextText: L("CopyWeek").Append(" …"));
+            previewText: PreviewWeekCopy(plan.Length), contextText: L("CopyWeek").Append(" …"),
+            actionName: L("CopyWeek"));
     }
 }

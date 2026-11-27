@@ -9,6 +9,7 @@ using MaxCube.Domain.Configuration;
 using MaxCube.Domain.Enums;
 using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
+using MaxCube.Protocol.Exceptions;
 using MaxCube.UI.Localization;
 using MaxCube.UI.ViewModels;
 using Xunit;
@@ -249,7 +250,8 @@ public class AdminViewModelTests : IDisposable
         public required FakeMaintenance Maintenance { get; init; }
     }
 
-    private static async Task<Harness> CreateAsync(bool withAdmin = true, bool connect = true)
+    private static async Task<Harness> CreateAsync(
+        bool withAdmin = true, bool connect = true, ILogStore? logStore = null)
     {
         var cube = BuildCube();
         var core = new FakeCore { CubeToReturn = cube };
@@ -261,7 +263,7 @@ public class AdminViewModelTests : IDisposable
         var service = new CubeApplicationService(
             core, store, clock, admin: withAdmin ? admin : null, network: withAdmin ? network : null,
             maintenance: withAdmin ? maintenance : null);
-        var viewModel = new MainWindowViewModel(service, clock);
+        var viewModel = new MainWindowViewModel(service, clock, logStore: logStore);
         if (connect)
         {
             await viewModel.ConnectCommand.ExecuteAsync(null);
@@ -759,6 +761,32 @@ public class AdminViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task A_failed_silent_read_does_not_log_a_generic_success()
+    {
+        var log = new NullLogStore { IsEnabled = true };
+        var h = await CreateAsync(logStore: log);
+        h.ViewModel.LogEnabled = true;
+        h.Network.ReadHook = _ => throw new CubeCommunicationFailedException(
+            "The cube did not answer the UDP request.", new TimeoutException("No UDP response from the cube."));
+
+        h.ViewModel.SelectedTabIndex = TabIndex.Cube;
+        using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!log.Entries.Any(entry => entry.Contains("Netzwerk: CubeCommunicationFailedException", StringComparison.Ordinal))
+               && !wait.IsCancellationRequested)
+        {
+            await Task.Delay(10, wait.Token);
+        }
+
+        log.Entries.Should().Contain(entry => entry.Contains("Cube-Reiter liest Zustand automatisch", StringComparison.Ordinal));
+        log.Entries.Should().Contain(entry =>
+            entry.Contains("Netzwerk: CubeCommunicationFailedException", StringComparison.Ordinal)
+            && entry.Contains("TimeoutException: No UDP response from the cube.", StringComparison.Ordinal));
+        log.Entries.Should().NotContain(entry =>
+            entry.Contains("Aktion abgeschlossen", StringComparison.Ordinal),
+            "ein fehlgeschlagener Abschnitt darf nicht als erfolgreiche Aktion erscheinen");
+    }
+
+    [Fact]
     public async Task Explicit_network_read_waits_for_the_silent_cube_tab_read()
     {
         var h = await CreateAsync();
@@ -1244,14 +1272,21 @@ public class AdminViewModelTests : IDisposable
     {
         public List<CubeNetworkConfiguration> Written { get; } = new();
         public List<string> ReadCalls { get; } = new();
+        public Func<CancellationToken, Task>? ReadHook { get; set; }
 
         public CubeNetworkConfiguration Configuration { get; set; } = new(
             "192.168.178.3", "255.255.255.0", "192.168.178.1", "192.168.178.1", "8.8.8.8", true);
 
-        public Task<CubeNetworkConfiguration> ReadAsync(string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
+        public async Task<CubeNetworkConfiguration> ReadAsync(
+            string serialNumber, string ipAddress, CancellationToken cancellationToken = default)
         {
             ReadCalls.Add(ipAddress);
-            return Task.FromResult(Configuration);
+            if (ReadHook is not null)
+            {
+                await ReadHook(cancellationToken);
+            }
+
+            return Configuration;
         }
 
         public Task WriteAsync(

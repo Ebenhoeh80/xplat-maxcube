@@ -7,6 +7,7 @@ using MaxCube.Domain.Aggregates;
 using MaxCube.Domain.Enums;
 using MaxCube.Domain.Schedules;
 using MaxCube.Domain.ValueObjects;
+using MaxCube.Protocol.Exceptions;
 using MaxCube.UI.Localization;
 using MaxCube.UI.Services;
 using MaxCube.UI.ViewModels;
@@ -720,6 +721,38 @@ public class ViewModelTests
         log.Entries.Should().Contain("[INFO] Temperatur gesendet.");
         log.Entries.Should().NotContain(entry =>
             entry.Contains("Temperatur konnte nicht gesendet werden: Temperatur gesendet", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Started_actions_log_an_action_name_not_a_failure_prefix()
+    {
+        using var viewModel = CreateViewModelWithLog(out _, out var log);
+        viewModel.LogEnabled = true;
+
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+        await viewModel.DiscoverCubesCommand.ExecuteAsync(null);
+
+        log.Entries.Should().Contain("[INFO] Aktion gestartet: Verbinden");
+        log.Entries.Should().Contain("[INFO] Aktion gestartet: Cube suchen");
+        log.Entries.Should().NotContain(entry =>
+            entry.Contains("Aktion gestartet: Verbindung fehlgeschlagen", StringComparison.Ordinal));
+        log.Entries.Should().NotContain(entry =>
+            entry.Contains("Aktion gestartet: Cube-Suche fehlgeschlagen", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Logs_include_the_inner_cause_of_a_udp_failure()
+    {
+        using var viewModel = CreateViewModelWithLog(out _, out var log, out var gateway);
+        viewModel.LogEnabled = true;
+        gateway.ConnectHook = _ => throw new CubeCommunicationFailedException(
+            "The cube did not answer the UDP request.", new TimeoutException("No UDP response from the cube."));
+
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+
+        log.Entries.Should().Contain(entry =>
+            entry.Contains("CubeCommunicationFailedException", StringComparison.Ordinal)
+            && entry.Contains("TimeoutException: No UDP response from the cube.", StringComparison.Ordinal));
     }
 
     [Fact]

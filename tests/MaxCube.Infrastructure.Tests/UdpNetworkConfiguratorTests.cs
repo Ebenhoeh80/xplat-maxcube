@@ -151,6 +151,34 @@ public class UdpNetworkConfiguratorTests
     }
 
     [Fact]
+    public async Task A_malformed_datagram_does_not_consume_the_attempt()
+    {
+        using var fakeCube = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var port = ((IPEndPoint)fakeCube.Client.LocalEndPoint!).Port;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var requests = 0;
+        var server = Task.Run(async () =>
+        {
+            var first = await fakeCube.ReceiveAsync(timeout.Token);
+            requests++;
+            var wrongOpcode = Response((byte)'h', []);
+            await fakeCube.SendAsync(wrongOpcode, wrongOpcode.Length, first.RemoteEndPoint);
+
+            // Die gültige Antwort folgt im selben 2-s-Fenster. Ohne Empfangsschleife
+            // hätte der fehlerhafte Opcode den Versuch verbraucht.
+            var answer = Response((byte)'c', NetworkData(false));
+            await fakeCube.SendAsync(answer, answer.Length, first.RemoteEndPoint);
+        }, timeout.Token);
+
+        var configuration = await new UdpNetworkConfigurator(port)
+            .ReadAsync("JEQ0001234", "127.0.0.1", timeout.Token);
+        await server;
+
+        configuration.IpAddress.Should().Be("192.168.178.3");
+        requests.Should().Be(1, "die gültige Antwort kommt im selben 2-s-Fenster ohne erneuten Request");
+    }
+
+    [Fact]
     public async Task A_silent_cube_ends_in_a_clear_error()
     {
         using var silent = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));

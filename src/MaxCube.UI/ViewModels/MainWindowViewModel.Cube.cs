@@ -123,7 +123,8 @@ public partial class MainWindowViewModel
 
     [RelayCommand(CanExecute = nameof(CanAdmin))]
     private Task ReadTimeZoneAsync()
-        => RunAsync(ReadTimeZoneCoreAsync, L("ErrCubeSetting"), L("OkZoneRead"), status: TimeZoneStatus);
+        => RunAsync(ReadTimeZoneCoreAsync, L("ErrCubeSetting"), L("OkZoneRead"),
+            status: TimeZoneStatus, actionName: L("ReadZone"));
 
     [RelayCommand(CanExecute = nameof(CanWriteCubeSetting))]
     private async Task SendTimeZoneAsync()
@@ -137,7 +138,7 @@ public partial class MainWindowViewModel
 
             await _service.SetTimeZoneAsync(zone, token);
             await RefreshAuditAsync();
-        }, L("ErrCubeSetting"), L("OkZone"));
+        }, L("ErrCubeSetting"), L("OkZone"), actionName: L("SendZone"));
     }
 
     [RelayCommand(CanExecute = nameof(CanWriteCubeSetting))]
@@ -147,7 +148,7 @@ public partial class MainWindowViewModel
         {
             await _service.SetCubeTimeAsync(token);
             await RefreshAuditAsync();
-        }, L("ErrCubeSetting"), L("OkCubeTime"));
+        }, L("ErrCubeSetting"), L("OkCubeTime"), actionName: L("SetCubeTime"));
     }
 
     private async Task ReadNtpCoreAsync(CancellationToken token)
@@ -163,7 +164,8 @@ public partial class MainWindowViewModel
 
     [RelayCommand(CanExecute = nameof(CanAdmin))]
     private Task ReadNtpAsync()
-        => RunAsync(ReadNtpCoreAsync, L("ErrCubeSetting"), L("OkNtpRead"), status: NtpStatus);
+        => RunAsync(ReadNtpCoreAsync, L("ErrCubeSetting"), L("OkNtpRead"),
+            status: NtpStatus, actionName: L("ReadNtp"));
 
     [RelayCommand(CanExecute = nameof(CanWriteCubeSetting))]
     private async Task SendNtpAsync()
@@ -172,7 +174,7 @@ public partial class MainWindowViewModel
         {
             await _service.SetNtpServersAsync([NtpServer1, NtpServer2], token);
             await RefreshAuditAsync();
-        }, L("ErrCubeSetting"), L("OkNtp"));
+        }, L("ErrCubeSetting"), L("OkNtp"), actionName: L("SendNtp"));
     }
 
     private async Task ReadNetworkCoreAsync(CancellationToken token)
@@ -191,7 +193,8 @@ public partial class MainWindowViewModel
     [RelayCommand(CanExecute = nameof(CanNetwork))]
     private Task ReadNetworkAsync()
         => CanNetwork
-            ? RunAsync(ReadNetworkCoreAsync, L("ErrNetwork"), L("OkNetworkRead"), status: NetworkStatus)
+            ? RunAsync(ReadNetworkCoreAsync, L("ErrNetwork"), L("OkNetworkRead"),
+                status: NetworkStatus, actionName: L("ReadNetwork"))
             : Task.CompletedTask;
 
     [RelayCommand(CanExecute = nameof(CanSendNetwork))]
@@ -209,7 +212,7 @@ public partial class MainWindowViewModel
             await _service.WriteNetworkConfigurationAsync(configuration, ConfirmNetwork, token);
             ConfirmNetwork = false;
             await RefreshAuditAsync();
-        }, L("ErrNetwork"), L("OkNetwork"));
+        }, L("ErrNetwork"), L("OkNetwork"), actionName: L("SendNetwork"));
     }
 
     /// <summary>

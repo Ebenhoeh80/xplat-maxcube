@@ -311,6 +311,8 @@ internal static class Strings
         ["OkMode"] = T("Modus {0} gesendet.", "Mode {0} sent.", "Mode {0} envoyé.", "Modalità {0} inviata.", "Modus {0} verzonden.", "Tryb {0} wysłany."),
         ["OkAction"] = T("Aktion abgeschlossen.", "Action completed.", "Action terminée.", "Azione completata.", "Actie voltooid.", "Akcja zakończona."),
         ["ActionStarted"] = T("Aktion gestartet: {0}", "Action started: {0}", "Action démarrée : {0}", "Azione avviata: {0}", "Actie gestart: {0}", "Akcja rozpoczęta: {0}"),
+        // 0.8.3: Ohne ausdrücklichen Aktionsnamen nie den Fehlerprefix als Starttext ausgeben.
+        ["ActionStartedPlain"] = T("Aktion gestartet.", "Action started.", "Action démarrée.", "Azione avviata.", "Actie gestart.", "Akcja rozpoczęta."),
         ["Cancelled"] = T("Abgebrochen.", "Cancelled.", "Annulé.", "Annullato.", "Geannuleerd.", "Anulowano."),
 
         // --- Herkunft und Alter der angezeigten Werte (Gremium 0.5.0) ---
