@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.9] - 2026-11-27
 
 ### Changed / Geändert
 
@@ -51,6 +51,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `file:line` references were corrected.
 - **DE:** Veraltete Testzahlen (488/488, 442/442), die Versionsangabe in `README.de.md` und veraltete
   `Datei:Zeile`-Verweise wurden korrigiert.
+- **EN:** Twelve low-risk sweep findings were fixed: three broken `../README.md` links in `docs/en/`
+  now point to `../../README.md`; stale `file:line` references in DEVELOPMENT, API,
+  TROUBLESHOOTING and `README.de.md` match the current code again; current-state version
+  references in both DEVELOPMENT files, ARCHITECTURE/DATABASE and the RUNBOOKs read 0.6.9;
+  the EN index back-link and the untranslated comment lines were corrected; the `RelayCommand`
+  inventory is 62 and the
+  translation-completeness test is named exactly; two German typos (`local` to `lokal`,
+  `Geleste` to `Gelesene`) were removed.
+- **DE:** Zwölf risikoarme Sweep-Befunde behoben: drei kaputte `../README.md`-Links in `docs/en/`
+  zeigen jetzt auf `../../README.md`; veraltete `Datei:Zeile`-Verweise in DEVELOPMENT, API,
+  TROUBLESHOOTING und `README.de.md` passen wieder zum Code; Versionsangaben zum Ist-Zustand in
+  beiden DEVELOPMENT-Dateien, in ARCHITECTURE/DATABASE und in den RUNBOOKs lauten 0.6.9; der
+  EN-Index-Rücklink und die unübersetzten Kommentarzeilen wurden korrigiert; das
+  `RelayCommand`-Inventar beträgt 62 und der
+  Übersetzungsvollständigkeitstest ist namentlich benannt; zwei deutsche Tippfehler
+  (`local` zu `lokal`, `Geleste` zu `Gelesene`) wurden entfernt.
 
 ### Verification / Verifikation
 
@@ -75,6 +91,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Host/Port, Schaltflächen, alle Tabs, Temperaturen). Alle 25 `docs/*.md` haben jetzt englische
   Übersetzungen unter `docs/en/`; diese sind maschinell erstellt und mit
   `native-speaker review pending` gekennzeichnet.
+- **EN:** A link check over all `docs/**/*.md` found zero broken relative links after the fix;
+  all current-state version references now read 0.6.9.
+- **DE:** Ein Linkcheck über alle `docs/**/*.md` findet nach der Korrektur keine fehlerhaften
+  relativen Links; alle Versionsangaben zum Ist-Zustand lauten nun 0.6.9.
+
+## [Unreleased]
 
 ## [0.6.8] - 2026-11-26
 

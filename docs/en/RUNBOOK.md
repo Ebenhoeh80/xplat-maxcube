@@ -32,7 +32,7 @@ bash start.sh
 
 Both scripts look for a .NET 10 SDK, build incrementally, and start the desktop DLL (`start.cmd:8-43`, `start.sh:8-35`). Without an SDK: start the published self-contained package from `publish/win-x64` or `publish/linux-x64` (`ci.yml:39-69`).
 
-**Expected:** window with nine tabs; title/status show version `0.6.6` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
+**Expected:** window with nine tabs; title/status show version `0.6.9` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
 
 ### 1.2 Stop
 
@@ -176,7 +176,7 @@ The real UDP response and `0x11` comfort/eco are `FACT` (25.11.2026, `docs/HARDW
 
 ## 8. Linked documents
 
-[README.md](../README.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [DEVELOPMENT.md](DEVELOPMENT.md) · [API.md](API.md) · [DATABASE.md](DATABASE.md) · [OPERATIONS.md](OPERATIONS.md) · [SECURITY.md](SECURITY.md) · [TROUBLESHOOTING.md](TROUBLESHOOTING.md) · [SECOND_BRAIN.md](SECOND_BRAIN.md)
+[README.md](../../README.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [DEVELOPMENT.md](DEVELOPMENT.md) · [API.md](API.md) · [DATABASE.md](DATABASE.md) · [OPERATIONS.md](OPERATIONS.md) · [SECURITY.md](SECURITY.md) · [TROUBLESHOOTING.md](TROUBLESHOOTING.md) · [SECOND_BRAIN.md](SECOND_BRAIN.md)
 
 ## 9. Open questions
 

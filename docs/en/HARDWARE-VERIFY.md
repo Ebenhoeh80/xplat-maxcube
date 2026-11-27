@@ -173,7 +173,7 @@ Selfcheck: SELFCHECK OK: MAX! Cube - Aplikacja lokalna 0.3.0 | Microsoft Windows
 | [API.md](API.md) | Wire protocol `0x11` now with hardware evidence; mark UDP response format as evidenced |
 | [RUNBOOK.md](RUNBOOK.md) | Add hardware test result and wait-time note |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Record "discovery finds nothing → local port 23272" as FACT |
-| [README.md](../README.md) | Update open-items list (UDP response no longer open) |
+| [README.md](../../README.md) | Update open-items list (UDP response no longer open) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Resolve risk "discovery port" |
 | [SECOND_BRAIN.md](SECOND_BRAIN.md) | Add feedback as FACT; wiki change remains open pending user decision |
 | `docs/features.md`, `wiki/projekte/app-maxcube.md` | only after user approval for the wiki, no change to `raw/` |

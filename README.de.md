@@ -15,7 +15,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.8** (`Directory.Build.props:3`), am **26.11.2026** als `v0.6.8` veröffentlicht (aktuellste Version; davor 0.6.7). Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.6.9** (`Directory.Build.props:3`), am **27.11.2026** als `v0.6.9` veröffentlicht (aktuellste Version; davor 0.6.8). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
@@ -109,7 +109,7 @@ Der Datenordner ist `%LOCALAPPDATA%\MaxCube` unter Windows bzw. `$XDG_DATA_HOME/
 8. **Diagnoseprotokoll:** In den Einstellungen oder der Statusleiste opt-in einschalten (Standard aus). Der Viewer im Reiter „Status“ zeigt die letzten Einträge; der ZIP-Export entsteht nur auf Klick und bleibt im Datenordner. Er kann IP-Adressen, Seriennummern und Raumwerte enthalten – vor der Weitergabe prüfen.
 9. **Über:** Autor, MIT-Lizenz und GitHub-Link; ausdrücklich inoffiziell und nicht von eQ-3. Der Link öffnet erst nach Benutzerklick.
 
-Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Cache-Werte sind nur offline schreibbar: Bei bestehender Verbindung werden sie nie auf den Cube zurückgeschrieben (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:280`). Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
+Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Cache-Werte sind nur offline schreibbar: Bei bestehender Verbindung werden sie nie auf den Cube zurückgeschrieben (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:428-434`). Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
 
 ## Datenherkunft und Schreibschutz
 
@@ -119,7 +119,7 @@ Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Ober
 | `Loading` | Ein Lesevorgang läuft | Nein |
 | `Live` | In dieser Sitzung vom Cube gelesen | Ja, mit Bestätigung |
 | `Cached` | Aus dem lokalen SQLite-Cache gelesen, mit Zeitstempel | Nur offline, mit Bestätigung |
-| `Stale` | Geleste Daten sind zu alt | Nein |
+| `Stale` | Gelesene Daten sind zu alt | Nein |
 | `Failed` | Lesen fehlgeschlagen | Nein |
 
 `CubeSnapshot.CapturedAt` liefert den Cache-Zeitstempel. Trennen setzt alle Bereichszustände auf *nicht gelesen* zurück. Es wird nie ohne vorheriges Lesen, Bestätigung und einen nicht veralteten, online-Zustand auf den Cube geschrieben.

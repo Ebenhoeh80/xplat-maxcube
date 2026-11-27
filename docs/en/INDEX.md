@@ -7,7 +7,7 @@
 >
 > **Note on the public repo:** The RE inputs (`decompiled/`, `extracted/`, `evidence/`) are not part of `xplat-maxcube` for licensing reasons. The `file:line` references below point to these local inputs; only our own analyses under `docs/` are published.
 
-**German original:** All 25 documents under `docs/` have an English translation under [`docs/en/`](INDEX.md). The translations are machine-created and marked `native-speaker review pending`; the German source is authoritative.
+**German original:** The authoritative source is [`docs/INDEX.md`](../INDEX.md). All 25 documents under `docs/` have an English translation here in `docs/en/`; the translations are machine-created and marked `native-speaker review pending`.
 
 ---
 
@@ -37,7 +37,7 @@ Ten target files of the assignment – one root file and nine files in `docs/`. 
 
 | Target | Document | Content |
 |---|---|---|
-| Quick start | [README.md](../README.md) | start Windows/Linux, self-test, limits, verification status |
+| Quick start | [README.md](../../README.md) | start Windows/Linux, self-test, limits, verification status |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | senior architect view: context, layers, ADRs, risks, improvements |
 | Development | [DEVELOPMENT.md](DEVELOPMENT.md) | setup, conventions, 519/519 tests, extension recipes, versioning |
 | API | [API.md](API.md) | local C# interfaces + cube wire protocol; **no HTTP API** |
@@ -145,10 +145,10 @@ Complete REA results: `evidence/{maxlocalapp,essentials,localbackend,settings,ro
 
 ```
 app-maxcube/
-├── docs/          → dieses Wiki + 10 Phasendokumente
-├── evidence/      → 25 REA-CLI-JSONs, javap-Ausgabe, Jar-Inventare
-├── extracted/     → REA-extrahierte JAR/WAR-Inhalte (Konfiguration, JS, Properties)
-└── decompiled/    → jadx-dekompilierter Java-Quellcode (480 .java, Analysezwecke)
+├── docs/          → this wiki + 10 phase documents
+├── evidence/      → 25 REA-CLI JSONs, javap output, JAR inventories
+├── extracted/     → REA-extracted JAR/WAR contents (configuration, JS, properties)
+└── decompiled/    → jadx-decompiled Java source (480 .java files, for analysis)
 ```
 
 **Note:** `decompiled/` is an intermediate stage of the analysis. The target implementation must **not** copy any code from it; it follows exclusively the technical specifications in `docs/`.
