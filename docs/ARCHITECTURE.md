@@ -1,6 +1,6 @@
 # Architektur – MAX! Cube Local App
 
-> Rolle: Senior Solution Architect. Stand: 27.11.2026. Version: 0.7.0.
+> Rolle: Senior Solution Architect. Stand: 27.11.2026. Version: 0.8.0.
 > Kennzeichnung: `FAKT` = direkt im Artefakt belegt, `BEOBACHTUNG` = im Testlauf gesehen, `INFERENZ` = aus Code/Doku abgeleitet, `UNBEKANNT` = nicht belegbar. Belege als `Datei:Zeile`.
 
 ## 1. Executive Summary
@@ -40,7 +40,7 @@ Verbindung und Discovery, Raum-/Geräteansicht, Solltemperatur und Modi, Hausste
 C4Context
   title Systemkontext – MAX! Cube Local App
   Person(Betreiber, "Betreiber", "Steuert Heizung lokal am PC")
-  System(App, "MAX! Cube Local App 0.7.0", "Avalonia-Desktop-App, Windows/Linux")
+  System(App, "MAX! Cube Local App 0.8.0", "Avalonia-Desktop-App, Windows/Linux")
   System(Cube, "eQ-3 MAX! Cube", "Firmware 273–275, TCP 62910, UDP 23272")
   SystemDb(Cache, "maxcube.db", "SQLite-Cache, Einstellungen, Audit")
   SystemExt(Cloud, "MAX! Cloud", "seit 01.07.2023 abgeschaltet; App laut Nutzerhinweis aus Stores entfernt")
@@ -272,17 +272,22 @@ Der Cache wird bei jedem Connect vollständig überschrieben (`SqliteStateStore.
 | R-09 | Runde 5 ohne Modellstimmen (Free-Limit) | organisatorisch | Keine externe Gegencheck-Stimme für letzten Umfang | `docs/gremium.md:90-97` |
 | R-10 | `MAX10038` weicht vom Muster `MAX\d{4}` ab | niedrig | Regex `MAX\d{4,5}` berücksichtigt es; Konsumenten mit fester Länge könnten es übersehen | `ErrorCatalog.cs:54,97` |
 
-## 9. Verbesserungsvorschläge (separat, nicht umgesetzt)
+## 9. Verbesserungsvorschläge (offen bzw. teilweise offen)
 
 1. Hardwaretest mit Paketmitschnitt für alle `INFERENZ`-Formate; anschließend Belegstatus in `docs/features.md` heben oder Kodierung korrigieren.
 2. Golden-Capture eines echten Cubes inklusive `S:`-Quittung und UDP-Antwort; Testfixtures daraus ableiten.
 3. Linux-Desktop-Sichtprüfung: Der Nutzer bestätigte am 26.11.2026 grundsätzlich „Linux Desktop funktiojniert auch" und am 27.11.2026, dass die Optik „augenscheinlich ok“ ist (`HARDWARE-VERIFY.md` §28). Tray und „Schließen versteckt Fenster" sind damit nicht ausdrücklich geprüft; die protokollspezifische Prüfung bleibt offen.
-4. Drag-and-drop im Wochenprogramm-Editor als Ergänzung zur Tagesleiste.
+4. Größenänderung von Wochenprogramm-Intervallen durch Ziehen der Intervallenden; das Verschieben eines Punktes ist umgesetzt.
 5. Fehlercatalog-Einträge mit Herstellersprachen statt Deutungen ergänzen, sobald belegbar.
-6. Self-contained Pakete mit Hash/Signatur ausliefern; aktuell nur CI-Artefakte ohne Signatur (`ci.yml:66-69`).
+6. Self-contained Pakete zusätzlich signieren; `SHA256SUMS.txt` liegt den Release-Artefakten bei, eine Signatur bleibt offen (`release.yml:91-105,134`).
 
 **Umgesetzt in 0.7.0:** konfigurierbare Audit-Aufbewahrung (`audit.retentionDays`),
 Quell-Tags im Audit-Log und Reconnect-Zeitpunkte im Diagnosebericht.
+
+**Umgesetzt in 0.8.0:** freie `Temporary`-Endzeit, tablokale Raumauswahl,
+Drag-and-drop-Verschiebung von Schaltpunkten, bestätigter Wake-up (`z:`) als
+eigene Benutzeraktion und SHA-256-Prüfsummen im Release. Die vier Umbauten sind
+mit 553/553 Tests unter Windows und Debian/WSL2 belegt.
 
 ## 10. Offene Fragen
 

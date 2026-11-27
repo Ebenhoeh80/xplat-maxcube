@@ -199,6 +199,19 @@ public class CubeGatewayAdminTests
         cube.Sent.Should().Contain("t:01,1," + Convert.ToBase64String([0x1D, 0x2A, 0x3C]));
     }
 
+    [Fact]
+    public async Task Wake_up_uses_the_documented_z_command_for_rooms_and_devices()
+    {
+        var (gateway, cube, _) = await ConnectAsync();
+        await using var _ = gateway;
+
+        await gateway.WakeUpRoomAsync(5, 45);
+        await gateway.WakeUpDeviceAsync(new RadioAddress(0x1D2A3C));
+
+        cube.Sent.Should().Contain("z:2d,G,05");
+        cube.Sent.Should().Contain("z:1e,D,1d2a3c");
+    }
+
     private sealed class ReactiveCube : ICubeTransport
     {
         private readonly Channel<string?> _incoming = Channel.CreateUnbounded<string?>();
@@ -240,6 +253,7 @@ public class CubeGatewayAdminTests
                 _ when line.StartsWith("s:", StringComparison.Ordinal) => "S:09,0,2f",
                 _ when line.StartsWith("c:", StringComparison.Ordinal) => "C:1d2a3c," + Convert.ToBase64String(_configuration),
                 _ when line.StartsWith("v:", StringComparison.Ordinal) => "A:",
+                _ when line.StartsWith("z:", StringComparison.Ordinal) => "A:",
                 _ when line.StartsWith("w:", StringComparison.Ordinal) => "A:",
                 _ when line.StartsWith("t:", StringComparison.Ordinal) => "A:",
                 _ when line == "f:" => "F:pool.ntp.org",

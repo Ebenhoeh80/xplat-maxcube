@@ -38,6 +38,25 @@ public class CubeCommandsTests
         => command.WireLine.Should().Be(expected);
 
     [Fact]
+    public void Wakeup_duration_covers_one_byte_and_rejects_larger_values()
+    {
+        new WakeupCommand(WakeupContext.Group, 5, 0xFF).WireLine.Should().Be("z:ff,G,05");
+        var tooLarge = () => new WakeupCommand(WakeupContext.Group, 5, 256);
+        tooLarge.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public async Task Wakeup_uses_the_acknowledgement_path()
+    {
+        var acknowledged = await ExecuteWithSingleResponseAsync(new WakeupCommand(WakeupContext.All, 0), "A:");
+        acknowledged.Should().BeTrue();
+
+        var rejected = async () => await ExecuteWithSingleResponseAsync(
+            new WakeupCommand(WakeupContext.Group, 5), "r:01");
+        await rejected.Should().ThrowAsync<CubeCommandRejectedException>();
+    }
+
+    [Fact]
     public async Task Acknowledge_is_success_but_r_and_unknown_prefixes_are_errors()
     {
         var ack = new AcknowledgedCommand("u:http://www.eq3.de");

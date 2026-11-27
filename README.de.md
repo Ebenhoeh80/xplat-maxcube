@@ -15,7 +15,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.7.0** (`Directory.Build.props:3`), am **27.11.2026** als `v0.7.0` veröffentlicht (aktuellste Version; davor 0.6.9). Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.8.0** (`Directory.Build.props:3`), vorgesehen am **27.11.2026** als `v0.8.0` (davor veröffentlicht: `v0.7.0`). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
@@ -42,8 +42,9 @@ Version **0.7.0** (`Directory.Build.props:3`), am **27.11.2026** als `v0.7.0` ve
 ## Funktionen
 
 - **Räume und Geräte:** Soll-/Isttemperatur, Ventilstellung, Fensterstatus, Gerätestatus; Modi Auto / Permanent / Temporary sowie ECO / COMFORT.
-- **Wochenprogramm:** bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung in 0,5-°C-/5-Minuten-Schritten und Kopieren auf andere Räume. Ungelesene Platzhalterprofile können nicht gesendet werden.
-- **Administration:** Raumkonfiguration, Boost / Entkalkung / Ventileinstellungen, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit / Zeitzone / NTP und UDP-Netzwerkkonfiguration.
+- **Wochenprogramm:** bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung in 0,5-°C-/5-Minuten-Schritten, Drag-and-drop eines Punktes auf die Tagesleiste (5-Minuten-Raster, Reihenfolge- und 13-Punkte-Prüfung) und Kopieren auf andere Räume. Wochenprofil-, Konfigurations- und Geräte-Reiter behalten jeweils ihre eigene Raumauswahl. Ungelesene Platzhalterprofile können nicht gesendet werden.
+- **Temporary:** freie Endzeit in Räume- und Haus-Reiter; im Protokoll bleibt die Rundung auf 30 Minuten.
+- **Administration:** Raumkonfiguration, Boost / Entkalkung / Ventileinstellungen, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit / Zeitzone / NTP und UDP-Netzwerkkonfiguration. Wake-up (`z:`) nur als ausdrücklich bestätigte Funkaktion; `A:` quittiert nur die Annahme durch den Cube.
 - **Diagnose:** Funkauslastung aus dem `S:`-Sendestatus, lokaler Fehlerbericht und Fehlercode-Katalog `MAX0001`–`MAX1051`. Es wird nichts nach außen gesendet.
 - **Anwendungsprotokoll:** opt-in (`log.enabled`, Standard aus), INFO/WARN/ERROR, Viewer in der App und lokaler ZIP-Export nur auf Klick (`src/MaxCube.UI/ViewModels/MainWindowViewModel.StatusBar.cs`).
 - **Statusleiste:** Verbindung, Host/Port, Datenherkunft mit Lesezeitpunkt, letzte Aktion mit Uhrzeit und Protokollstatus immer sichtbar – mit Symbol **und** Text.
@@ -63,7 +64,7 @@ Version **0.7.0** (`Directory.Build.props:3`), am **27.11.2026** als `v0.7.0` ve
 
 ### Fertige Pakete (empfohlen)
 
-Unter [Releases](https://github.com/Ebenhoeh80/xplat-maxcube/releases) liegen selbstständige Pakete für `win-x64` und `linux-x64` (self-contained, kein .NET-SDK nötig). Die Archive werden bei jedem `v*`-[Tag](https://github.com/Ebenhoeh80/xplat-maxcube/tags) automatisch von GitHub Actions gebaut, mit dem fensterlosen Selbsttest geprüft und an das Release angehängt.
+Unter [Releases](https://github.com/Ebenhoeh80/xplat-maxcube/releases) liegen selbstständige Pakete für `win-x64` und `linux-x64` (self-contained, kein .NET-SDK nötig). Die Archive werden bei jedem `v*`-[Tag](https://github.com/Ebenhoeh80/xplat-maxcube/tags) automatisch von GitHub Actions gebaut, mit dem fensterlosen Selbsttest geprüft und zusammen mit `SHA256SUMS.txt` an das Release angehängt. Die Datei enthält reine Prüfsummen, keine Signatur.
 
 - **Windows:** ZIP entpacken, `MaxCube.UI.Desktop.exe` starten.
 - **Linux:** zuerst die Systembibliotheken installieren (`sudo apt-get update && sudo apt-get install -y libfontconfig1 libx11-6 libxcursor1 libxext6 libxfixes3 libxi6 libxrandr2 libice6 libsm6 libgl1 libvulkan1 xdg-utils` (xdg-utils nur für externe Links); das ZIP enthält keine Systembibliotheken), dann ZIP entpacken, `chmod +x MaxCube.UI.Desktop` und `./MaxCube.UI.Desktop`. Für die Oberfläche sind X11 oder Wayland nötig. Mit `./MaxCube.UI.Desktop --check-linux-deps` lässt sich die Voraussetzung vorab prüfen; fehlen Bibliotheken, erscheint ein konkreter Hinweis statt eines Stacktraces. Im Quellcheckout installiert `./start.sh --install-deps` die Pakete nach Eingabe des sudo-Passworts. Zum Öffnen des Projekt-Links wird `xdg-open`, `gio` oder `wslview` benötigt; ohne einen solchen Opener zeigt die App die URL in der Statusleiste an, statt sich zu beenden.
@@ -101,15 +102,16 @@ Der Datenordner ist `%LOCALAPPDATA%\MaxCube` unter Windows bzw. `$XDG_DATA_HOME/
 
 1. **Cube verbinden:** Entweder den gespeicherten Endpoint verwenden oder **Cube suchen**. Der UDP-Broadcast wird ausschließlich auf diese Benutzeraktion hin gesendet, niemals beim App-Start (`UdpDiscoveryTransport.cs`). Der lokale UDP-Port ist `23272`; die eigentliche Steuerungsverbindung läuft über TCP `host:62910`.
 2. **Räume und Geräte:** Räume, Ist-/Solltemperaturen und Gerätestatus werden aus dem Cube gelesen. Modi Auto/Permanent/Temporary sowie ECO/COMFORT und Haussteuerung sind verfügbar.
-3. **Wochenprofile:** Bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung im 0,5-°C-/5-Minuten-Raster und Kopieren auf andere Räume.
-4. **Administration:** Raumkonfiguration, Boost/Entkalkung/Ventil, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit/Zeitzone/NTP und UDP-Netzwerkkonfiguration.
-5. **Diagnose:** Funkauslastung aus dem `S:`-Sendestatus, lokaler Fehlerbericht und Fehlercode-Katalog `MAX0001`–`MAX1051`. Es wird nichts nach außen gesendet.
-6. **Datenherkunft:** Jeder Bereich zeigt „nicht vom Cube gelesen“, „Cache vom …“, „Live …“ oder „veraltet“ mit Uhrzeit. Der Cube-Reiter liest beim Aktivieren automatisch, wenn eine Verbindung besteht. Ungelesene Platzhalter (z. B. im Wochenprofil) sind nicht sendbar.
-7. **Statusleiste:** Verbindung, Host/Port, Datenherkunft, letzte Aktion mit Uhrzeit und Protokollstatus bleiben dauerhaft sichtbar – mit Symbol **und** Text.
-8. **Diagnoseprotokoll:** In den Einstellungen oder der Statusleiste opt-in einschalten (Standard aus). Der Viewer im Reiter „Status“ zeigt die letzten Einträge; der ZIP-Export entsteht nur auf Klick und bleibt im Datenordner. Er kann IP-Adressen, Seriennummern und Raumwerte enthalten – vor der Weitergabe prüfen.
-9. **Über:** Autor, MIT-Lizenz und GitHub-Link; ausdrücklich inoffiziell und nicht von eQ-3. Der Link öffnet erst nach Benutzerklick.
+3. **Wochenprofile:** Bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung im 0,5-°C-/5-Minuten-Raster, Drag-and-drop eines Punktes auf die Tagesleiste (5-Minuten-Raster, Reihenfolge- und 13-Punkte-Prüfung) und Kopieren auf andere Räume. Wochenprofil-, Konfigurations- und Geräte-Reiter behalten jeweils ihre eigene Raumauswahl.
+4. **Temporary:** Freie Endzeit in Räume- und Haus-Reiter; im Protokoll bleibt die Rundung auf 30 Minuten.
+5. **Administration:** Raumkonfiguration, Boost/Entkalkung/Ventil, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit/Zeitzone/NTP und UDP-Netzwerkkonfiguration. Wake-up (`z:`) nur als ausdrücklich bestätigte Funkaktion; `A:` quittiert nur die Annahme durch den Cube.
+6. **Diagnose:** Funkauslastung aus dem `S:`-Sendestatus, lokaler Fehlerbericht und Fehlercode-Katalog `MAX0001`–`MAX1051`. Es wird nichts nach außen gesendet.
+7. **Datenherkunft:** Jeder Bereich zeigt „nicht vom Cube gelesen“, „Cache vom …“, „Live …“ oder „veraltet“ mit Uhrzeit. Der Cube-Reiter liest beim Aktivieren automatisch, wenn eine Verbindung besteht. Ungelesene Platzhalter (z. B. im Wochenprofil) sind nicht sendbar.
+8. **Statusleiste:** Verbindung, Host/Port, Datenherkunft, letzte Aktion mit Uhrzeit und Protokollstatus bleiben dauerhaft sichtbar – mit Symbol **und** Text.
+9. **Diagnoseprotokoll:** In den Einstellungen oder der Statusleiste opt-in einschalten (Standard aus). Der Viewer im Reiter „Status“ zeigt die letzten Einträge; der ZIP-Export entsteht nur auf Klick und bleibt im Datenordner. Er kann IP-Adressen, Seriennummern und Raumwerte enthalten – vor der Weitergabe prüfen.
+10. **Über:** Autor, MIT-Lizenz und GitHub-Link; ausdrücklich inoffiziell und nicht von eQ-3. Der Link öffnet erst nach Benutzerklick.
 
-Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Cache-Werte sind nur offline schreibbar: Bei bestehender Verbindung werden sie nie auf den Cube zurückgeschrieben (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:428-434`). Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
+Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Cache-Werte sind nur offline schreibbar: Bei bestehender Verbindung werden sie nie auf den Cube zurückgeschrieben (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:1074-1106,1210-1225`). Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
 
 ## Datenherkunft und Schreibschutz
 
@@ -201,7 +203,7 @@ Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](do
 | Golden-Capture der Schreibformate `m:`, `w:`, `v:`, `z:` | `FAKT` (Wire-Format und `A:`-Quittung am Original-Cube), fachliche Gerätewirkung teils `UNBEKANNT` |
 | `S:`-Sendestatus | `FAKT`: `S:<dutyHex>,<discarded>,<freeHex>`; Airtime und freie Slots, keine Fehlercodes |
 | UDP-Adressreihenfolge | `FAKT`: IP, Gateway, Maske, DNS 1, DNS 2; durch Java-Code und echte `c`-Antwort belegt |
-| Drag-and-drop im Wochenprogramm | nicht umgesetzt; Tagesleiste und Schnellbearbeitung vorhanden |
+| Drag-and-drop im Wochenprogramm | Verschieben eines Punktes umgesetzt; Größenänderung eines Intervallendes weiterhin offen |
 | Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | Optik vom Nutzer am 27.11.2026 als „augenscheinlich ok“ bestätigt; Tray-Verhalten weiterhin `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
 
 ## Roadmap und Ideen
@@ -209,11 +211,9 @@ Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](do
 Geplant und in Betrachtung – **reagiere auf das, was dir wichtig ist**, und bringe eigene Ideen ein in [Discussions → Ideas](https://github.com/Ebenhoeh80/xplat-maxcube/discussions/categories/ideas):
 
 - Fein abgestufte Protokollstufen, Filter und ein geschwärzter Support-Export.
-- Raumauswahl direkt in den Reitern Wochenprofil und Konfiguration.
-- Freie Endzeit für `Temporary`-Modus.
 - Nur-lesende Firmware-Abfragen (`latest` / `least compatible`).
-- Drag-and-drop-Bearbeitung und Größenänderung von Schaltpunkten im Wochenprogramm.
-- `autoSetupTimeZoneConfiguration` und Anbindung von `WakeupCommand`.
+- Größenänderung von Wochenprogramm-Intervallen durch Ziehen der Intervallenden (Verschieben ist umgesetzt).
+- `autoSetupTimeZoneConfiguration` und automatisches Vorwecken (bewusst nicht verdrahtet: Schreiben bleibt explizit).
 - Echte Read-backs für abgeleitete Schreibformate, UDP-`C:`-Schreiben, `F:`-NTP-Format, Golden-Captures mit 8–13 Schaltpunkten.
 - Screenshots und ein Desktop-Smoke-Test unter Linux.
 
@@ -228,7 +228,7 @@ Geplant und in Betrachtung – **reagiere auf das, was dir wichtig ist**, und br
 
 ## Verifikationsstand
 
-Build **0 Warnungen / 0 Fehler**, **519/519** hardwarefreie Tests grün unter Windows und Debian 13 (WSL2), `--selfcheck` unter beiden Systemen `OK`, self-contained Linux-Paket mit `LANG=de_DE.UTF-8` und `LANG=C` `OK` (`docs/gremium.md:134`, `docs/roadmap.md:460-487`). Diese Ergebnisse sind `BEOBACHTUNG`.
+Build **0 Warnungen / 0 Fehler** und **553/553** hardwarefreie Tests grün unter Windows 10 und Debian 13 (WSL2) - Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 130. `dotnet format --verify-no-changes`, die NuGet-Schwachstellenprüfung und das YAML-Parsing beider Workflows sind grün; `--selfcheck` meldet `OK` mit 0.8.0 auf beiden Systemen und in beiden selbstständigen Publish-Paketen. Für Wake-up wurde kein Hardware-Schreibtest hinzugefügt (`docs/HARDWARE-VERIFY.md` §30). Diese Ergebnisse sind `BEOBACHTUNG`.
 
 Ein Wechsel der Oberflächensprache aktualisiert ohne Neustart und ohne Cube-Zugriff alle sichtbaren Bereiche: zwischengespeicherte Status-/Ergebnistexte, Schreibvorschau, Dirty-Hinweis, Wochentags- und Modusbezeichnungen, Gerätestatus und Fehlerhinweise (`CHANGELOG.md`, `docs/HARDWARE-VERIFY.md` §17).
 

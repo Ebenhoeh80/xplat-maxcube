@@ -55,6 +55,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool _suppressRequestedTemperatureSync;
 
     /// <summary>
+    /// Beim Neuaufbau der Raumliste (StateChanged/Sprachwechsel) werden alle vier
+    /// tablokalen Auswahlen gesetzt. Die einzelnen Handler dürfen dabei nicht vier Mal
+    /// dieselben Daten nachladen.
+    /// </summary>
+    private bool _suppressRoomSelectionHandlers;
+
+    /// <summary>
     /// Raum, für den das Wochenprofil zuletzt aus dem Cube geladen wurde. Ein StateChanged
     /// mit demselben Raum darf die gerade bearbeiteten Schaltpunkte nicht zurücksetzen.
     /// </summary>
@@ -205,6 +212,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        TemporaryEnd = _clock.Now.AddHours(1);
         _dispatcher = dispatcher ?? new ImmediateUiDispatcher();
         _discovery = discovery ?? new DesignTimeDiscovery();
         _loc = localizer ?? new Localizer("de");
@@ -389,10 +397,46 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(SetHouseEcoCommand))]
     [NotifyCanExecuteChangedFor(nameof(SetHouseComfortCommand))]
     [NotifyCanExecuteChangedFor(nameof(SetHouseTemporaryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(WakeUpRoomCommand))]
     private bool isConnected;
 
     [ObservableProperty]
     private double requestedTemperature = 21.0;
+
+    /// <summary>
+    /// Freie Endzeit für Temporary. Der Startwert kommt aus der injizierten Clock, damit
+    /// Tests und Designzeit-Vorschau deterministisch bleiben (v0.8.0).
+    /// </summary>
+    [ObservableProperty]
+    private DateTimeOffset temporaryEnd;
+
+    /// <summary>Datumsteil für den DatePicker; die Zeit bleibt dabei erhalten.</summary>
+    public DateTime? TemporaryEndDate
+    {
+        get => TemporaryEnd.DateTime.Date;
+        set
+        {
+            var date = (value ?? TemporaryEnd.DateTime).Date;
+            TemporaryEnd = new DateTimeOffset(date.Add(TemporaryEnd.TimeOfDay), TemporaryEnd.Offset);
+        }
+    }
+
+    /// <summary>Zeitteil für den TimePicker; das Datum bleibt dabei erhalten.</summary>
+    public TimeSpan? TemporaryEndTime
+    {
+        get => TemporaryEnd.TimeOfDay;
+        set
+        {
+            var time = value ?? TemporaryEnd.TimeOfDay;
+            TemporaryEnd = new DateTimeOffset(TemporaryEnd.DateTime.Date.Add(time), TemporaryEnd.Offset);
+        }
+    }
+
+    partial void OnTemporaryEndChanged(DateTimeOffset value)
+    {
+        OnPropertyChanged(nameof(TemporaryEndDate));
+        OnPropertyChanged(nameof(TemporaryEndTime));
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyTemperatureCommand))]
@@ -400,8 +444,31 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(SetEcoCommand))]
     [NotifyCanExecuteChangedFor(nameof(SetComfortCommand))]
     [NotifyCanExecuteChangedFor(nameof(SetTemporaryCommand))]
-    [NotifyCanExecuteChangedFor(nameof(SaveWeekProfileCommand))]
     private RoomViewModel? selectedRoom;
+
+    /// <summary>Tablokale Auswahl des Wochenprogramm-Reiters (v0.8.0).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveWeekProfileCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyDayToWeekCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyWeekToSelectedRoomsCommand))]
+    private RoomViewModel? selectedWeekRoom;
+
+    /// <summary>Tablokale Auswahl des Konfigurations- und Wartungs-Reiters (v0.8.0).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ApplyRoomConfigurationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyBoostAndDecalcificationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyValveOffsetCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyConfigurationToSelectedRoomsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(WakeUpRoomCommand))]
+    private RoomViewModel? selectedConfigRoom;
+
+    /// <summary>Tablokale Auswahl des Geräte-/Struktur-Reiters (v0.8.0).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RenameRoomCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteRoomCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoveRoomUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoveRoomDownCommand))]
+    private RoomViewModel? selectedDevicesRoom;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveWeekProfileCommand))]
@@ -465,14 +532,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         get
         {
             if (!IsConnected || IsStale || !CanWriteFrom(RoomsStatus)
-                || SelectedRoom is null || !SelectedDay.WasReadFromCube)
+                || SelectedWeekRoom is null || !SelectedDay.WasReadFromCube)
             {
                 return false;
             }
 
             try
             {
-                return _service.HasWeekProfile(SelectedRoom.Id, SelectedDay.Day);
+                return _service.HasWeekProfile(SelectedWeekRoom.Id, SelectedDay.Day);
             }
             catch (Exception exception) when (exception is InvalidOperationException
                 or MaxCube.Domain.Exceptions.DomainValidationException)
@@ -660,6 +727,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Rooms.Clear();
             Devices.Clear();
             SelectedRoom = null;
+            SelectedWeekRoom = null;
+            SelectedConfigRoom = null;
+            SelectedDevicesRoom = null;
             _weekProfileLoadedFor = null;
             SetProfileRoom(L("NoRoomSelected"));
             MarkAllNotRead();
@@ -772,7 +842,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var room = SelectedRoom;
         if (room is not null)
         {
-            await SetModeAsync(room.Id, RoomControlMode.Temporary, _clock.Now.AddHours(1));
+            await SetModeAsync(room.Id, RoomControlMode.Temporary, TemporaryEnd);
         }
     }
 
@@ -817,7 +887,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     case HouseMode.Temporary:
                         await _service.SetRoomControlModeAsync(
                             room.Id, RoomControlMode.Temporary, new Temperature(RequestedTemperature),
-                            _clock.Now.AddHours(1), token);
+                            TemporaryEnd, token);
                         break;
                 }
             }
@@ -834,7 +904,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanSaveWeekProfile))]
     private async Task CopyDayToWeekAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedWeekRoom;
         if (room is null)
         {
             return;
@@ -876,7 +946,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanSaveWeekProfile))]
     private async Task SaveWeekProfileAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedWeekRoom;
         if (room is null)
         {
             return;
@@ -904,6 +974,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void AddSwitchPoint() => SelectedDay.AddPoint();
+
+    /// <summary>Drag-and-drop: Zielzeit aus der Tagesleiste auf den 5-Minuten-Raster schnappen.</summary>
+    public bool MoveSwitchPoint(SwitchPointViewModel point, TimeOnly until)
+        => SelectedDay.TryMovePoint(point, until);
 
     [RelayCommand]
     private void RemoveSwitchPoint(SwitchPointViewModel? point)
@@ -965,24 +1039,24 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// <summary>Nach Laden oder erfolgreichem Senden: current state becomes the saved baseline.</summary>
     internal void MarkWeekSaved()
     {
-        _savedWeekRoomId = SelectedRoom?.Id;
+        _savedWeekRoomId = SelectedWeekRoom?.Id;
         _savedWeekSignature = WeekSignature();
         RefreshDirtyState();
     }
 
     internal void MarkConfigurationSaved()
     {
-        _savedConfigRoomId = SelectedRoom?.Id;
+        _savedConfigRoomId = SelectedConfigRoom?.Id;
         _savedConfigSignature = ConfigSignature();
         RefreshDirtyState();
     }
 
     private void RefreshDirtyState()
     {
-        var weekDirty = SelectedRoom is not null && _savedWeekRoomId == SelectedRoom.Id
+        var weekDirty = SelectedWeekRoom is not null && _savedWeekRoomId == SelectedWeekRoom.Id
             && _savedWeekSignature is not null
             && !string.Equals(_savedWeekSignature, WeekSignature(), StringComparison.Ordinal);
-        var configDirty = SelectedRoom is not null && _savedConfigRoomId == SelectedRoom.Id
+        var configDirty = SelectedConfigRoom is not null && _savedConfigRoomId == SelectedConfigRoom.Id
             && _savedConfigSignature is not null
             && !string.Equals(_savedConfigSignature, ConfigSignature(), StringComparison.Ordinal);
 
@@ -997,7 +1071,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Ein Grund statt einer stumm deaktivierten Schaltfläche.</summary>
-    private string WriteHint(bool needsRoom, bool needsLoadedWeek, bool needsConfigStatus)
+    private string WriteHint(
+        bool needsRoom, bool needsLoadedWeek, bool needsConfigStatus, RoomViewModel? room)
     {
         if (IsBusy)
         {
@@ -1019,12 +1094,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return L("WriteBlockedNotRead");
         }
 
-        if (needsRoom && SelectedRoom is null)
+        if (needsRoom && room is null)
         {
             return L("WriteBlockedNoRoom");
         }
 
-        if (needsLoadedWeek && (SelectedRoom is null || !SelectedDay.WasReadFromCube))
+        if (needsLoadedWeek && (room is null || !SelectedDay.WasReadFromCube))
         {
             return L("WriteBlockedWeekNotLoaded");
         }
@@ -1034,30 +1109,31 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     internal void RefreshWriteHints()
     {
-        WeekWriteHint = WriteHint(needsRoom: true, needsLoadedWeek: true, needsConfigStatus: false);
+        WeekWriteHint = WriteHint(
+            needsRoom: true, needsLoadedWeek: true, needsConfigStatus: false, SelectedWeekRoom);
         ConfigWriteHint = !SupportsAdministration
             ? L("WriteBlockedUnsupported")
-            : WriteHint(needsRoom: true, needsLoadedWeek: false, needsConfigStatus: true);
+            : WriteHint(needsRoom: true, needsLoadedWeek: false, needsConfigStatus: true, SelectedConfigRoom);
         HouseWriteHint = Rooms.Any(room => room.IsHouseSelected)
-            ? WriteHint(needsRoom: false, needsLoadedWeek: false, needsConfigStatus: false)
+            ? WriteHint(needsRoom: false, needsLoadedWeek: false, needsConfigStatus: false, room: null)
             : L("NoRoomsChosen");
     }
 
     private LocalizedValue PreviewWeek(DayProfile profile, LocalizedValue action)
-        => L(localizer => localizer.Format("PreviewWeek", action.In(localizer).Current, SelectedRoom!.Name,
+        => L(localizer => localizer.Format("PreviewWeek", action.In(localizer).Current, SelectedWeekRoom!.Name,
             localizer.Get(EnumLabels.Key(profile.Day)), profile.Points.Count,
             string.Join(", ", profile.Points.Select(point =>
                 $"{point.Until:HH:mm}={FormatNumber(point.Temperature.Value)}"))));
 
     private LocalizedValue PreviewWeekCopy(int count)
-        => L("PreviewWeekCopy", count, SelectedRoom!.Name);
+        => L("PreviewWeekCopy", count, SelectedWeekRoom!.Name);
 
     private LocalizedValue PreviewConfiguration(LocalizedValue action)
-        => L(localizer => localizer.Format("PreviewConfig", action.In(localizer).Current, SelectedRoom!.Name,
+        => L(localizer => localizer.Format("PreviewConfig", action.In(localizer).Current, SelectedConfigRoom!.Name,
             FormatNumber(ConfigComfort), FormatNumber(ConfigEco), FormatNumber(ConfigOffset)));
 
     private LocalizedValue PreviewConfigurationCopy(int count)
-        => L("PreviewConfigCopy", count, SelectedRoom!.Name, FormatNumber(ConfigComfort));
+        => L("PreviewConfigCopy", count, SelectedConfigRoom!.Name, FormatNumber(ConfigComfort));
 
     private async Task SetModeAsync(int roomId, RoomControlMode mode, DateTimeOffset? until)
     {
@@ -1451,7 +1527,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RoomsStatus.Update(state, at);
         DevicesStatus.Update(state, at);
 
-        var previousId = SelectedRoom?.Id;
+        var previousRoomId = SelectedRoom?.Id;
+        var previousWeekRoomId = SelectedWeekRoom?.Id;
+        var previousConfigRoomId = SelectedConfigRoom?.Id;
+        var previousDevicesRoomId = SelectedDevicesRoom?.Id;
         var houseSelection = Rooms.Where(room => room.IsHouseSelected).Select(room => room.Id).ToHashSet();
         foreach (var previous in Rooms) previous.Dispose();
         Rooms.Clear();
@@ -1462,19 +1541,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Rooms.Add(viewModel);
         }
 
-        var selected = Rooms.FirstOrDefault(room => room.Id == previousId) ?? Rooms.FirstOrDefault();
+        var selected = Rooms.FirstOrDefault(room => room.Id == previousRoomId) ?? Rooms.FirstOrDefault();
+        var week = Rooms.FirstOrDefault(room => room.Id == previousWeekRoomId) ?? selected;
+        var config = Rooms.FirstOrDefault(room => room.Id == previousConfigRoomId) ?? selected;
+        var devices = Rooms.FirstOrDefault(room => room.Id == previousDevicesRoomId) ?? selected;
         // Nur bei gleicher, bereits vorhandener Auswahl unterdrücken. Beim ersten Laden
         // und nach Disconnect (previousId == null) muss der Raum-Sollwert übernommen
         // werden (Sonnet N9); ein echter Raumwechsel läuft ohnehin ungesperrt.
-        var keepTypedValue = previousId is not null && selected?.Id == previousId;
+        var keepTypedValue = previousRoomId is not null && selected?.Id == previousRoomId;
+        _suppressRoomSelectionHandlers = true;
         _suppressRequestedTemperatureSync = keepTypedValue;
         try
         {
             SelectedRoom = selected;
+            SelectedWeekRoom = week;
+            SelectedConfigRoom = config;
+            SelectedDevicesRoom = devices;
         }
         finally
         {
             _suppressRequestedTemperatureSync = false;
+            _suppressRoomSelectionHandlers = false;
         }
 
         if (!keepTypedValue && selected is not null)
@@ -1482,10 +1569,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             RequestedTemperature = selected.SetPoint;
         }
 
-        LoadWeekProfileFor(cube, selected, keepEdited: keepTypedValue);
-        RefreshDevices(cube, selected);
+        LoadWeekProfileFor(cube, week, keepEdited: previousWeekRoomId is not null && week?.Id == previousWeekRoomId);
+        RefreshDevices(cube, devices);
         RebuildRoomOptions(cube);
-        LoadAdminStateFor(cube, selected, keepEdited: keepTypedValue);
+        LoadAdminStateFor(
+            cube, config, keepEdited: previousConfigRoomId is not null && config?.Id == previousConfigRoomId);
+        if (previousDevicesRoomId is null || devices?.Id != previousDevicesRoomId)
+        {
+            RenameRoomText = devices?.Name ?? string.Empty;
+        }
+
+        UpdateWeekStatus();
+        RefreshWriteHints();
+        RefreshAdminCommands();
     }
 
     private void RefreshDevices(Cube cube, RoomViewModel? room)
@@ -1538,7 +1634,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// <summary>Der gewählte Tag entscheidet, ob das Wochenprofil „gelesen“ ist.</summary>
     private void UpdateWeekStatus()
     {
-        if (SelectedRoom is null || !SelectedDay.WasReadFromCube)
+        if (SelectedWeekRoom is null || !SelectedDay.WasReadFromCube)
         {
             WeekStatus.Reset();
             return;
@@ -1551,20 +1647,51 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedRoomChanged(RoomViewModel? value)
     {
-        if (value is not null && !_suppressRequestedTemperatureSync)
+        // Die Räume-Auswahl steuert nur den Sollwert und die Modus-Schaltflächen.
+        // Wochenprofil, Konfiguration und Geräteliste haben seit v0.8.0 eigene Auswahlen.
+        if (value is not null && !_suppressRequestedTemperatureSync && !_suppressRoomSelectionHandlers)
         {
             RequestedTemperature = value.SetPoint;
-            if (_service.Current is { } cube)
-            {
-                LoadWeekProfileFor(cube, value, keepEdited: false);
-                // Gremium Runde 3: Ohne diesen Aufruf zeigte die Liste nach einem
-                // manuellen Raumwechsel die Geräte des alten Raums, bis der nächste
-                // StateChanged die Liste neu füllte.
-                RefreshDevices(cube, value);
-                LoadAdminStateFor(cube, value, keepEdited: false);
-            }
+        }
+    }
+
+    partial void OnSelectedWeekRoomChanged(RoomViewModel? value)
+    {
+        if (_suppressRoomSelectionHandlers || _service.Current is not { } cube)
+        {
+            return;
         }
 
+        LoadWeekProfileFor(cube, value, keepEdited: false);
+        UpdateWeekStatus();
+        RefreshWriteHints();
+        SaveWeekProfileCommand.NotifyCanExecuteChanged();
+        CopyDayToWeekCommand.NotifyCanExecuteChanged();
+        CopyWeekToSelectedRoomsCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedConfigRoomChanged(RoomViewModel? value)
+    {
+        if (_suppressRoomSelectionHandlers || _service.Current is not { } cube)
+        {
+            return;
+        }
+
+        LoadAdminStateFor(cube, value, keepEdited: false);
+        RefreshWriteHints();
+        RefreshDirtyState();
+        RefreshAdminCommands();
+    }
+
+    partial void OnSelectedDevicesRoomChanged(RoomViewModel? value)
+    {
+        if (_suppressRoomSelectionHandlers || _service.Current is not { } cube)
+        {
+            return;
+        }
+
+        RenameRoomText = value?.Name ?? string.Empty;
+        RefreshDevices(cube, value);
         RefreshAdminCommands();
     }
 

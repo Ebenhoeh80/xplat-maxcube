@@ -452,3 +452,25 @@ Publish) waren grün.
 mit der GitHub-API überein; beide heruntergeladenen Pakete liefen fensterlos mit
 `SELFCHECK OK … 0.7.0 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie; Exitcode 0
 je). **Doku-Nachtrag ohne neues Tag.**
+
+## 30. Version 0.8.0: hardwarefreie Abschlussprüfung (27.11.2026)
+
+**BEOBACHTUNG (Finalstand):** Windows 10 und Debian 13 (WSL2, SDK 10.0.404) bauen mit
+**0 Warnungen / 0 Fehler** und laufen **553/553** hardwarefreie Tests grün: Domain 64,
+Application 90, Protocol 200, Infrastructure 69, UI 130. Der UI-Test prüft im Avalonia-
+Headless-Host das Drop-Ziel und den eigenen Drag-Griff; weitere Fälle sichern 5-Minuten-
+Raster, Reihenfolge, Doppelzeiten, 13-Punkte-Grenze, freie `Temporary`-Endzeit, die
+tablokalen Raumauswahlen und den Schreib-Gate von Wake-up bei gepufferten/veralteten Werten. `dotnet format --verify-no-changes`, die NuGet-Schwachstellenprüfung
+(inklusive transitiver Pakete) und das Parsing beider Workflow-YAMLs sind grün. `actionlint`
+war in dieser Umgebung nicht verfügbar; die GitHub-Action-Analyse läuft zusätzlich im PR.
+
+**BEOBACHTUNG (Pakete):** Die selbstständigen Publish-Pakete für `win-x64` und `linux-x64`
+meldeten `--selfcheck` `OK` mit Version 0.8.0 und `SQLite ok` (Exitcode 0). Der SHA-256-Schritt
+des Release-Workflows wurde in WSL mit drei Dateien nachgefahren (`sha256sum -c`: grün).
+Die Digests sind reine Prüfsummen, keine Signaturbehauptung.
+
+**FAKT (bewusst nicht ausgeführt):** Für die neue Benutzeraktion `WakeupCommand` (`z:`) wurde
+kein Hardware-Schreibtest hinzugefügt. Die Aktion ist nur über die ausdrücklich bestätigte
+Oberflächenhandlung erreichbar und wird nie automatisch in andere Schreibpfade eingebettet.
+`A:` bestätigt nur die Annahme durch den Cube, nicht die fachliche Wirkung an Geräten. Es wurde
+kein `nmap` eingesetzt und keine nicht freigegebene Hardware angesprochen.

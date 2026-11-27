@@ -178,7 +178,7 @@ flowchart LR
 | Key | set by | read by | Value/meaning |
 |---|---|---|---|
 | `schema.version` | `SqliteStateStore.InitializeSchema` (`:114`) | diagnostics/display | `"1"` = `CurrentSchemaVersion` |
-| `app.version` | `SqliteStateStore.InitializeSchema` (`:115`) | diagnostics/display | version from `IAppVersionProvider`, e.g. `0.7.0`; `"unbekannt"` as fallback (`:32-34`) |
+| `app.version` | `SqliteStateStore.InitializeSchema` (`:115`) | diagnostics/display | version from `IAppVersionProvider`, e.g. `0.8.0`; `"unbekannt"` as fallback (`:32-34`) |
 | `cube.serial` | `CubeApplicationService.ConnectAsync` (`:306`) | `LoadCachedAsync` (`:370`) | serial number of the last connected cube |
 | `cube.endpoint` | `CubeApplicationService.ConnectAsync` (`:307`) | `GetLastEndpointAsync` (`:347`) | `host:port`, e.g. `192.168.10.60:62910` |
 | `ui.language` | `MainWindowViewModel.Settings.cs:21` | Localizer/view model | `de`, `en`, `fr`, `it`, `nl`, `pl` |

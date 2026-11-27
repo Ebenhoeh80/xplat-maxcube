@@ -231,6 +231,54 @@ public sealed partial class DayProfileViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanAddPoint));
     }
 
+    /// <summary>
+    /// Drag-and-drop (v0.8.0): setzt den Punkt auf das 5-Minuten-Raster und sortiert ihn
+    /// wieder in die zeitliche Reihenfolge ein. Der Tagesabschluss 00:00 bleibt fest der
+    /// letzte Punkt. Bei einer ungültigen Reihenfolge, einem vollen Tag oder einem
+    /// unbekannten Punkt wird nichts verändert.
+    /// </summary>
+    public bool TryMovePoint(SwitchPointViewModel point, TimeOnly until)
+    {
+        if (!Points.Contains(point) || point.Until == TimeOnly.MinValue || Points.Count == 0)
+        {
+            return false;
+        }
+
+        var minutes = (int)Math.Round(
+            ((until.Hour * 60) + until.Minute) / 5.0, MidpointRounding.AwayFromZero) * 5;
+        minutes = Math.Clamp(minutes, 5, (23 * 60) + 55);
+        var snapped = new TimeOnly(minutes / 60, minutes % 60);
+
+        var others = Points.Where(candidate => !ReferenceEquals(candidate, point)).ToList();
+        var insertion = others.FindIndex(candidate => candidate.Until > snapped);
+        if (insertion < 0)
+        {
+            insertion = others.Count - 1; // vor den festen Tagesabschluss 00:00
+        }
+
+        var candidatePoints = others
+            .Select(candidate => new SwitchPoint(
+                ReferenceEquals(candidate, point) ? snapped : candidate.Until,
+                new Temperature(candidate.Temperature)))
+            .ToList();
+        candidatePoints.Insert(insertion, new SwitchPoint(snapped, new Temperature(point.Temperature)));
+
+        try
+        {
+            DayProfile.Validate(new DayProfile(Day, candidatePoints));
+        }
+        catch (MaxCube.Domain.Exceptions.DomainValidationException)
+        {
+            return false;
+        }
+
+        Points.Remove(point);
+        Points.Insert(insertion, point);
+        point.UntilText = snapped.ToString("HH:mm", CultureInfo.InvariantCulture);
+        OnPropertyChanged(nameof(CanAddPoint));
+        return true;
+    }
+
     public DayProfile ToProfile()
     {
         var invalid = Points.FirstOrDefault(point => !point.HasValidUntil);

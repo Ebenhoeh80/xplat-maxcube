@@ -100,6 +100,15 @@ public interface ICubeAdminGateway
     Task<string> QueryNtpServersAsync(CancellationToken cancellationToken = default);
 
     Task SetNtpServersAsync(IReadOnlyList<string> servers, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Benutzerinitiierter Wake-up (`z:`) für einen Raum. Kein automatisches Voranschalten
+    /// vor anderen Schreibbefehlen; das <c>A:</c> quittiert nur die Annahme durch den Cube.
+    /// </summary>
+    Task WakeUpRoomAsync(int roomId, int durationMinutes = 30, CancellationToken cancellationToken = default);
+
+    /// <summary>Benutzerinitiierter Wake-up (`z:`) für ein einzelnes Gerät.</summary>
+    Task WakeUpDeviceAsync(RadioAddress device, int durationMinutes = 30, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Netzwerkkonfiguration über UDP (benutzerinitiiert; kein Broadcast beim Start).</summary>

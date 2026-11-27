@@ -132,7 +132,7 @@ There is no installer and no backward database schema migration. Rollback means:
 | Mechanism | What it monitors | Limit |
 |---|---|---|
 | `--selfcheck` | paths, SQLite + native libs, instance protection, view model, six languages | no cube contact (`Program.cs:26-92`) |
-| CI matrix | build, 529 tests, self-test, publish for Ubuntu/Windows | on push/PR/manual (`.github/workflows/ci.yml:3-7`) |
+| CI matrix | build, 553 tests, self-test, publish for Ubuntu/Windows | on push/PR/manual (`.github/workflows/ci.yml:3-7`) |
 | `FileAppLog` | daily log file with retention | diagnostics, not a feature (`FileAppLog.cs:6-9`) |
 | Audit log | technical events in SQLite with source tag | last 100 in UI, 500 via API, retention applied at startup (`SqliteStateStore.cs:166-219`) |
 | `CubeSessionMonitor` | `L:` refresh/stale/reconnect at runtime | internal, no external notification |
@@ -167,11 +167,13 @@ Expected: `SELFCHECK OK: ... | SQLite ok`, exit code 0 (`Program.cs:89-92`). For
 
 ## 10. Improvement suggestions
 
-1. Sign release artifacts with SHA-256 and a signature; currently only `upload-artifact` without a signature (`.github/workflows/ci.yml:66-69`).
+1. Sign release artefacts in addition; `SHA256SUMS.txt` is already generated and attached (`release.yml:91-105,134`), a signature remains open.
 2. Extend `--selfcheck` with an optional hardware mode that **only** reads `l:`/`c:` and sends no write commands.
 3. Provide the documented backup procedure as a script (`backup.cmd` / `backup.sh`).
 
 **Implemented in 0.7.0:** audit retention and reconnect timestamps in the diagnostic report.
+
+**Implemented in 0.8.0:** `SHA256SUMS.txt` in the release, per-tab room selection, free `Temporary` end time, drag-and-drop moving and confirmed wake-up.
 
 ## 11. Open questions
 

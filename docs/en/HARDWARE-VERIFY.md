@@ -453,3 +453,25 @@ section. `xplat-maxcube-0.7.0-win-x64.zip` has SHA-256
 GitHub API; both downloaded packages ran headless with
 `SELFCHECK OK … 0.7.0 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13 trixie; exit code 0
 each). **Documentation added after the release without a new tag.**
+
+## 30. Version 0.8.0: hardware-free final verification (27.11.2026)
+
+**OBSERVATION (final state):** Windows 10 and Debian 13 (WSL2, SDK 10.0.404) build with
+**0 warnings / 0 errors** and pass **553/553** hardware-free tests: Domain 64, Application 90,
+Protocol 200, Infrastructure 69, UI 130. The Avalonia headless test checks the drop target and
+the dedicated drag handle; further cases cover the 5-minute grid, ordering, duplicate times,
+the 13-point limit, free `Temporary` end time, per-tab room selections and the wake-up
+write gate for cached/stale state. `dotnet format --verify-no-changes`, the NuGet vulnerability audit (including transitive
+packages) and YAML parsing of both workflows are green. `actionlint` was unavailable in this
+environment; GitHub's action analysis runs additionally on the PR.
+
+**OBSERVATION (packages):** The self-contained `win-x64` and `linux-x64` publish packages
+reported `--selfcheck` `OK` at version 0.8.0 with `SQLite ok` (exit code 0). The release
+workflow's SHA-256 step was replayed in WSL with three files (`sha256sum -c`: green).
+The digests are plain checksums, not a signature claim.
+
+**FACT (deliberately not executed):** No hardware write test was added for the new
+`WakeupCommand` (`z:`) action. It is reachable only through an explicitly confirmed UI action
+and is never automatically embedded in other write paths. `A:` confirms only that the Cube
+accepted the command, not its effect on devices. No `nmap` was used and no non-approved
+hardware was addressed.

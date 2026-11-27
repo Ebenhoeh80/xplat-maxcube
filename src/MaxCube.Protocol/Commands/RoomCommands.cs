@@ -12,7 +12,8 @@ public sealed class SetRoomAutoModeCommand : SendRadiogramCommand
     public SetRoomAutoModeCommand(RadioAddress master, int roomId)
         : base(RadiogramBuilder.ForRoom(FrameTypes.ControlMode, master, roomId)
             .WriteControlMode(10, 6, RoomControlMode.Auto)
-            .ToBytes()) { }
+            .ToBytes())
+    { }
 }
 
 /// <summary>SetRoomPermanentMode.java:36-39 – Frame 0x40, Modus 1 + Solltemperatur in Byte 10.</summary>
@@ -22,7 +23,8 @@ public sealed class SetRoomPermanentModeCommand : SendRadiogramCommand
         : base(RadiogramBuilder.ForRoom(FrameTypes.ControlMode, master, roomId)
             .WriteControlMode(10, 6, RoomControlMode.Permanently)
             .WriteTemperature(10, 0, temperature)
-            .ToBytes()) { }
+            .ToBytes())
+    { }
 }
 
 /// <summary>
@@ -42,7 +44,8 @@ public sealed class SetRoomTemporaryModeCommand : SendRadiogramCommand
             .WriteDay(11, 0, until)
             .WriteYear(12, 0, until)
             .WriteTime30Minutes(13, 0, until)
-            .ToBytes()) { }
+            .ToBytes())
+    { }
 }
 
 /// <summary>
@@ -69,7 +72,8 @@ public sealed class SetRoomConfigurationCommand : SendRadiogramCommand
             .WriteOffsetTemperature(14, offset)
             .WriteTemperature(15, 0, windowOpen)
             .WriteWindowOpenTime(16, windowOpenMinutes)
-            .ToBytes()) { }
+            .ToBytes())
+    { }
 }
 
 /// <summary>
@@ -96,7 +100,8 @@ public sealed class SetRoomValveFunctionsCommand : SendRadiogramCommand
         int maxValveRaw,
         int valveOffsetRaw)
         : base(Build(master, roomId, boostMinutes, boostValveAngle, decalcificationDay,
-            decalcificationHour, maxValveRaw, valveOffsetRaw)) { }
+            decalcificationHour, maxValveRaw, valveOffsetRaw))
+    { }
 
     /// <summary>Boost-Dauer in 3-Bit-Code; nur die Werte der Lesetabelle sind erlaubt.</summary>
     public static int BoostCode(int minutes)
@@ -153,7 +158,8 @@ public sealed class SetDisplayModeCommand : SendRadiogramCommand
     public SetDisplayModeCommand(RadioAddress wallThermostat, bool showActualTemperature)
         : base(RadiogramBuilder.ForDevice(FrameTypes.SwitchDisplaySetPointActual, wallThermostat)
             .WriteBits(10, 0, 8, showActualTemperature ? 0x04 : 0x00)
-            .ToBytes(11)) { }
+            .ToBytes(11))
+    { }
 }
 
 /// <summary>
@@ -165,7 +171,8 @@ public sealed class SetGroupAddressCommand : SendRadiogramCommand
     public SetGroupAddressCommand(RadioAddress device, int groupId)
         : base(RadiogramBuilder.ForDevice(FrameTypes.SetGroupAddress, device)
             .WriteBits(10, 0, 8, groupId)
-            .ToBytes(11)) { }
+            .ToBytes(11))
+    { }
 }
 
 /// <summary>
@@ -178,7 +185,8 @@ public sealed class RemoveGroupAddressCommand : SendRadiogramCommand
     public RemoveGroupAddressCommand(RadioAddress device, int roomId)
         : base(RadiogramBuilder.ForDevice(FrameTypes.RemoveGroupAddress, device)
             .WriteBits(10, 0, 8, roomId)
-            .ToBytes(11)) { }
+            .ToBytes(11))
+    { }
 }
 
 /// <summary>
@@ -189,7 +197,8 @@ public sealed class LinkPartnerCommand : SendRadiogramCommand
 {
     public LinkPartnerCommand(RadioAddress device, RadioAddress partner, int partnerNumericType, bool add)
         : base(Build(RadiogramBuilder.ForDevice(
-            add ? FrameTypes.AddLinkPartner : FrameTypes.RemoveLinkPartner, device), partner, partnerNumericType)) { }
+            add ? FrameTypes.AddLinkPartner : FrameTypes.RemoveLinkPartner, device), partner, partnerNumericType))
+    { }
 
     internal static byte[] Build(RadiogramBuilder builder, RadioAddress partner, int partnerNumericType)
     {
@@ -217,7 +226,8 @@ public sealed class LinkPartnerInRoomCommand : SendRadiogramCommand
         : base(LinkPartnerCommand.Build(
             RadiogramBuilder.ForRoom(add ? FrameTypes.AddLinkPartner : FrameTypes.RemoveLinkPartner, master, roomId),
             partner,
-            partnerNumericType)) { }
+            partnerNumericType))
+    { }
 }
 
 /// <summary>Ein Tagesprofil-Telegramm (0x10). Für 8..13 Punkte zwei Instanzen senden.</summary>

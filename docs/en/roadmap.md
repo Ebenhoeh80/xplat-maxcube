@@ -479,12 +479,13 @@ app update in decision 1; a local app must work without the manufacturer's cloud
 | UI | Nine tabs, graphical day bar, quick editing, modal wait/error dialogs, six languages (`Localizer`, completeness test against XAML and code), multilingual help with context buttons, settings, tray, instance-protection notice window, wrapping layout. | `src/MaxCube.UI/Views/MainWindow.axaml`, `Localization/*`, `ViewModels/MainWindowViewModel.*.cs`, `tests/MaxCube.UI.Tests/AdminViewModelTests.cs` |
 | Platform | `Composition.cs`, `--selfcheck`, CI matrix Windows+Linux (including self-contained packages), `start.sh`, `.gitattributes`. Self-test findings: container must be disposed asynchronously; `InvariantGlobalization` makes .NET culture detection ineffective → own system language detection. | `.github/workflows/ci.yml`, `src/MaxCube.UI.Desktop/*`, `start.sh` |
 
-**Verification:** Build 0 warnings/0 errors; `dotnet test MaxCube.slnx` **519/519** green under
-Windows and – in a Debian 13 WSL2 instance with Linux SDK 10.0.404 – also **519/519**
-(Domain 64, Application 84, Protocol 198, Infrastructure 66, UI 107); `--selfcheck` under
-both systems `OK`; Windows GUI starts stably. **Not evidenced:** real hardware for the
-inferred write formats, real UDP response, Linux UI on a desktop.
+**Verification:** Build 0 warnings/0 errors; `dotnet test MaxCube.slnx` **553/553** green under
+Windows 10 and – in a Debian 13 WSL2 instance with Linux SDK 10.0.404 – also **553/553**
+(Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 130); `--selfcheck` under
+both systems and in both self-contained publish packages `OK`; Windows GUI starts stably,
+and the user checked the Linux UI on 27.11.2026. **Not evidenced:** real hardware for the
+inferred write formats, real UDP response, tray behaviour.
 
 **What remains (see README "Next steps"):** hardware test and packet capture of the
-`INFERENCE` formats, golden capture for `S:`/UDP, Linux desktop visual check, optional
-drag-and-drop in the weekly-program editor.
+`INFERENCE` formats, golden capture for `S:`/UDP, resizing weekly-program intervals by
+dragging their edges (moving a point is implemented).

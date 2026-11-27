@@ -130,7 +130,7 @@ Es gibt keinen Installer und keine Datenbankschema-Rückwärtsmigration. Rollbac
 | Mechanismus | Was überwacht er | Grenze |
 |---|---|---|
 | `--selfcheck` | Pfade, SQLite + native Lib, Instanzschutz, ViewModel, sechs Sprachen | kein Cube-Kontakt (`Program.cs:26-92`) |
-| CI-Matrix | Build, 529 Tests, Selbsttest, Publish für Ubuntu/Windows | bei Push/PR/manuell (`.github/workflows/ci.yml:3-7`) |
+| CI-Matrix | Build, 553 Tests, Selbsttest, Publish für Ubuntu/Windows | bei Push/PR/manuell (`.github/workflows/ci.yml:3-7`) |
 | `FileAppLog` | tägliche Logdatei mit Aufbewahrung | Diagnose, keine Funktion (`FileAppLog.cs:6-9`) |
 | Audit-Log | fachliche Ereignisse in SQLite mit Quell-Tag | letzte 100 in UI, 500 via API, Aufbewahrung beim Start (`SqliteStateStore.cs:166-219`) |
 | `CubeSessionMonitor` | `L:`-Refresh/Stale/Reconnect zur Laufzeit | intern, keine externe Meldung |
@@ -165,11 +165,13 @@ Erwartung: `SELFCHECK OK: ... | SQLite ok`, Exitcode 0 (`Program.cs:89-92`). Bei
 
 ## 10. Verbesserungsvorschläge
 
-1. Release-Artefakte mit SHA-256 und Signatur versehen; aktuell nur `upload-artifact` ohne Signatur (`.github/workflows/ci.yml:66-69`).
+1. Release-Artefakte zusätzlich signieren; `SHA256SUMS.txt` wird bereits erzeugt und angehängt (`release.yml:91-105,134`), eine Signatur bleibt offen.
 2. `--selfcheck` um einen optionalen Hardwaremodus erweitern, der **nur** `l:`/`c:` liest und keine Schreibkommandos sendet.
 3. Dokumentierte Backup-Prozedur als Skript (`backup.cmd` / `backup.sh`) bereitstellen.
 
 **In 0.7.0 umgesetzt:** Audit-Aufbewahrung und Reconnect-Zeitpunkte im Diagnosebericht.
+
+**In 0.8.0 umgesetzt:** `SHA256SUMS.txt` im Release, tablokale Raumauswahl, freie `Temporary`-Endzeit, Drag-and-drop-Verschiebung und bestätigter Wake-up.
 
 ## 11. Offene Fragen
 
