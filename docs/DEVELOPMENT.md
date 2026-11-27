@@ -129,7 +129,7 @@ Tray: laufzeitgeneriertes Icon ohne Binärasset (`TrayIconFactory.cs:9-17`), `Tr
 | `MaxCube.Infrastructure.Tests` | SQLite, Gateway, UDP, Plattform, Sprache | `tests/MaxCube.Infrastructure.Tests/*Tests.cs` |
 | `MaxCube.UI.Tests` | ViewModel, Admin-ViewModel | `tests/MaxCube.UI.Tests/*Tests.cs` |
 
-**BEOBACHTUNG (24.11.2026):** 442/442 Tests grün unter Windows und Debian 13 (WSL2). **FAKT (statische Inventur 25.11.2026):** die 442 Fälle sind codegestützt nachvollziehbar – Application 80, Domain 64, Infrastructure 50, Protocol 187, UI 61; die einzige `[MemberData]`-Quelle liefert 21 Zeilen (`CubeCommandsTests.cs:35-38` mit Daten in `:12-32`), daher ist eine naive Attributzählung (422) um 20 zu niedrig. Belege: `tests/*/*.cs`, `docs/roadmap.md:480-482`, `SecondBrain/wiki/projekte/app-maxcube.md:28,48`. Hardwarefrei: Der End-to-End-Test nutzt `LoopbackFakeCube`/`FakeGateway`/`FakeStore`, **keinen** Golden-Capture (`LoopbackFakeCube.cs:10-12`).
+**BEOBACHTUNG (27.11.2026):** 518/518 Tests grün unter Windows; Debian 13 (WSL2) wird in der CI-Matrix geprüft. **FAKT (Testlauf 27.11.2026):** Domain 64, Application 83, Infrastructure 66, Protocol 198, UI 107; die einzige `[MemberData]`-Quelle liefert 21 Zeilen (`CubeCommandsTests.cs:12-33`). Die alten Stände 442/442 (24.11.) und 514/515 (26.11.) sind historisch und in `CHANGELOG.md` dokumentiert. Belege: `tests/*/*.cs`, `CHANGELOG.md`. Hardwarefrei: Der End-to-End-Test nutzt `LoopbackFakeCube`/`FakeGateway`/`FakeStore`, **keinen** Golden-Capture (`LoopbackFakeCube.cs:10-12`).
 
 ### 3.1 Testregeln
 

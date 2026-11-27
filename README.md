@@ -58,11 +58,11 @@ Version **0.6.8** (`Directory.Build.props:3`), released on 2026-11-26 as
 3. Every section shows where its values came from: *not read from Cube*, *cache
    from …*, *live …*, *stale* or *failed* — with a symbol **and** localised text,
    never colour alone. Activating the Cube tab reads it automatically when
-   connected (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:340`).
+   connected (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:524`).
 4. Writing needs an explicit confirmation **and** a genuinely read basis.
    Unread placeholders, stale data and offline state block write commands;
    cached values are writable only while offline, never over an active
-   connection (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:280`).
+   connection (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:1144-1154`).
 5. A persistent status bar shows connection, host, data provenance, the last
    action with a timestamp and the log state. Diagnostics are opt-in and stay
    local; the viewer and ZIP export are in the **Status** tab.
@@ -268,7 +268,7 @@ bring your own ideas to
 
 ## Verification status
 
-Build **0 warnings / 0 errors**, **488/488** hardware-free tests green on Windows
+Build **0 warnings / 0 errors**, **518/518** hardware-free tests green on Windows
 and Debian 13 (WSL2), `--selfcheck` `OK` on both systems, self-contained Linux
 package `OK` with `LANG=de_DE.UTF-8` and `LANG=C` (`docs/gremium.md:134`,
 `docs/roadmap.md:460-487`). These results are `OBSERVATION`.

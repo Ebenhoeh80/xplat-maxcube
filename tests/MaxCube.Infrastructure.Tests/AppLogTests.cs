@@ -165,6 +165,24 @@ public sealed class AppLogTests
         return reader.ReadToEnd();
     }
 
+    [Fact]
+    public void Cleanup_removes_only_files_older_than_the_retention_window()
+    {
+        using var folder = new TempFolder();
+        Directory.CreateDirectory(folder.Path);
+        var old = Path.Combine(folder.Path, "maxcube-20260101.log");
+        var recent = Path.Combine(folder.Path, "maxcube-20261125.log");
+        File.WriteAllText(old, "[INFO] alt");
+        File.WriteAllText(recent, "[INFO] aktuell");
+        var log = new FileAppLog(folder.Path, new FixedTime(ExportTime));
+
+        var removed = log.Cleanup(7);
+
+        removed.Should().Be(1);
+        File.Exists(old).Should().BeFalse();
+        File.Exists(recent).Should().BeTrue();
+    }
+
     private sealed class FixedTime : TimeProvider
     {
         public FixedTime(DateTimeOffset now) => Now = now;

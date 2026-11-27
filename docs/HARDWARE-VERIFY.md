@@ -18,7 +18,7 @@ flowchart LR
 | Auto-Discovery über die App-Codepfade `CubeDiscoveryService` + `UdpDiscoveryTransport` | **FEHLGESCHLAGEN** vor der Korrektur, **ERFOLGREICH** danach | Abschnitt 3 |
 | Senden der Standardkonfiguration (`0x11`, Komfort/Eco) über dieselbe `SetRoomConfigurationAsync`-Logik wie die Konfigurationsseite | **ERFOLGREICH**, Änderung nach Funkübernahme am Cube lesbar | Abschnitt 4 |
 | Rücksetzung auf Ursprungswerte | **ERFOLGREICH** (Komfort 21,5 °C, Eco 16,5 °C) | Abschnitt 4 |
-| Regression nach Codekorrektur | Build ohne Fehler, 442/442 Tests grün, `--selfcheck OK` | Abschnitt 5 |
+| Regression nach Codekorrektur (historisch) | Build ohne Fehler, 442/442 Tests grün, `--selfcheck OK` | Abschnitt 5 |
 
 **FAKT:** Der Cube war während der gesamten Prüfung über TCP `192.168.10.60:62910` erreichbar (Seriennummer `JEQ0355273`, Firmware `275`, 6 Räume). Die Seriennummer ist laut Nutzerlinie nicht schützenswert (`SecondBrain/CLAUDE.md:109-114`).
 

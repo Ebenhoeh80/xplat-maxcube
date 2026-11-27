@@ -324,7 +324,11 @@ public sealed partial class CubeApplicationService
             _pendingTemperatures.Clear();
             var cts = _bundleCts;
             _bundleCts = null;
-            cts?.Cancel();
+            if (cts is not null)
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
         }
 
         var sent = 0;
@@ -837,14 +841,23 @@ public sealed partial class CubeApplicationService
         RequireConfirmed(confirmed);
         ArgumentNullException.ThrowIfNull(configuration);
         ValidateNetwork(configuration);
+        RequireOnline();
         var network = _network ?? throw new InvalidOperationException("Die Netzwerkkonfiguration ist nicht verfügbar.");
         var cube = RequireCube();
         var endpoint = _lastEndpoint ?? throw new InvalidOperationException("Es ist kein Cube-Endpoint bekannt.");
-        await network.WriteAsync(cube.SerialNumber.Value, endpoint.Host, configuration, cancellationToken)
-            .ConfigureAwait(false);
-        await AuditAsync(
-            $"Netzwerkkonfiguration gesendet ({(configuration.Dhcp ? "DHCP" : configuration.IpAddress)})",
-            cancellationToken).ConfigureAwait(false);
+        var lease = await _gate.EnterAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await network.WriteAsync(cube.SerialNumber.Value, endpoint.Host, configuration, lease.Token)
+                .ConfigureAwait(false);
+            await AuditAsync(
+                $"Netzwerkkonfiguration gesendet ({(configuration.Dhcp ? "DHCP" : configuration.IpAddress)})",
+                lease.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            lease.Dispose();
+        }
     }
 
     /// <summary>Alle Adressfelder müssen vier Oktette sein, sonst wird nichts gesendet.</summary>
