@@ -172,4 +172,45 @@ public class UdpNetworkConfiguratorTests
 
         await act.Should().ThrowAsync<ArgumentException>();
     }
+
+    [Fact]
+    public async Task Parallel_reads_serialize_on_the_fixed_local_udp_port()
+    {
+        using var fakeCube = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var port = ((IPEndPoint)fakeCube.Client.LocalEndPoint!).Port;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var server = Task.Run(async () =>
+        {
+            for (var requestNumber = 0; requestNumber < 2; requestNumber++)
+            {
+                var request = await fakeCube.ReceiveAsync(timeout.Token);
+                var answer = Response((byte)'c', NetworkData(false));
+                await fakeCube.SendAsync(answer, answer.Length, request.RemoteEndPoint);
+            }
+        }, timeout.Token);
+
+        // Vor dem Port-Gate bindet die zweite Instanz denselben Port 23272 und endet
+        // sofort in einer rohen SocketException (Kundenlog 27.11., 11:48:17).
+        var results = await Task.WhenAll(
+            new UdpNetworkConfigurator(port).ReadAsync("JEQ0001234", "127.0.0.1", timeout.Token),
+            new UdpNetworkConfigurator(port).ReadAsync("JEQ0001234", "127.0.0.1", timeout.Token));
+
+        await server;
+        results.Should().HaveCount(2)
+            .And.OnlyContain(configuration => configuration.IpAddress == "192.168.178.3");
+    }
+
+    [Fact]
+    public async Task Socket_errors_end_in_a_cube_communication_exception()
+    {
+        var configurator = new UdpNetworkConfigurator();
+        // Der feste lokale Port ist bereits belegt (z. B. durch einen parallelen Auto-Read).
+        using var blocker = new UdpClient(new IPEndPoint(IPAddress.Any, CubeUdpCodec.Port));
+
+        var act = () => configurator.ReadAsync("JEQ0001234", "127.0.0.1");
+
+        var exception = await act.Should().ThrowAsync<CubeCommunicationFailedException>();
+        exception.Which.Message.Should().Contain(CubeUdpCodec.Port.ToString());
+        exception.Which.InnerException.Should().BeOfType<SocketException>();
+    }
 }

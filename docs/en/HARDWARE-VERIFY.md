@@ -514,3 +514,38 @@ squash `1498134237d556fded6d7f013ac8455b538d9e1e` (seven checks green); the anno
 `431bc24e8ce32d4c2a425fad23633f488594cd05107b2cb53a3330e911e0d7a6`; both match
 `SHA256SUMS.txt` (`sha256sum -c` green). Both downloaded packages ran with
 `SELFCHECK OK … 0.8.1 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; exit code 0 each).
+
+## 32. Version 0.8.2: UDP race in the user log (27.11.2026)
+
+**FACT (input):** The user log of 27.11.2026 contains an `InvalidOperationException` at
+11:48:08 and a `SocketException` at 11:48:17, both prefixed with "network configuration failed".
+Both lines come from `MainWindowViewModel.RunAsync` with `errorPrefix = L("ErrNetwork")`, i.e.
+from an explicit network action, not from the silent tab read (`TryReadAsync` writes WARN/status
+only).
+
+**FACT (code):** The automatic cube-tab read calls `ReloadAsync`; during that call `_current` is
+briefly null between `DisconnectAsync` and `ConnectAsync`. `CanAdmin` depended only on `IsBusy`
+and `IsConnected`, and the silent read does not set `IsBusy`. `UdpNetworkConfigurator`,
+`UdpDiscoveryTransport` and `CubeMaintenanceGateway` all bound the same local UDP port 23272
+without a lock. The retry loop did not catch `SocketException` on send/receive.
+
+**INFERENCE (sequence):** A click on "Read network" during the automatic read lands in the
+disconnect/connect gap and produces the `InvalidOperationException`; a second attempt collides
+with the still-running UDP read on port 23272 and produces the `SocketException`. The clicks
+themselves were not logged; the sequence is derived from code and timestamps.
+
+**FACT (measures):** `IsCubeAutoReading` disables admin commands and guards the `RunAsync` path
+for explicit actions while the silent read runs. A process-wide `UdpPortGate` serialises discovery,
+network configuration and reboot on port 23272. Bind and receive errors are wrapped as
+`CubeCommunicationFailedException` with their cause. The log now records the action start,
+exception type plus detail (`SocketError`/native code) and a WARN for every failed automatic-read
+section. No new packets, no hardware write access, no `nmap`.
+
+**OBSERVATION (verification):** Windows 10 and Debian 13 (WSL2): build 0 warnings/0 errors,
+**558/558** tests (Domain 64, Application 90, Protocol 200, Infrastructure 71, UI 133),
+`dotnet format --verify-no-changes` exit 0, NuGet audit without findings, both workflow YAML files
+parsed, `--selfcheck` `OK` at 0.8.2 in debug and publish outputs on both systems. Four regression
+tests cover parallel UDP reads, a port conflict wrapped as `CubeCommunicationFailedException`,
+admin commands blocked during the automatic read, and exception detail in the log.
+**UNKNOWN:** the actual clicks, the `SocketErrorCode` in the original log and the hardware reply
+on UDP 23272; causality therefore remains INFERENCE, but removal of the race is proven without hardware.

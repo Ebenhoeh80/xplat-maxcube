@@ -18,9 +18,9 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.8.1** (`Directory.Build.props:3`), published on 2026-11-27 as
-`v0.8.1` (previous release: `v0.8.0`). See [CHANGELOG.md](CHANGELOG.md) and the
-[release](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1).
+Version **0.8.2** (`Directory.Build.props:3`), published on 2026-11-27 as
+`v0.8.2` (previous release: `v0.8.1`). See [CHANGELOG.md](CHANGELOG.md) and the
+[release](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.2).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
 > MAX! cloud control and removed the cloud app from the app stores. Remote
@@ -275,13 +275,14 @@ bring your own ideas to
 
 ## Verification status
 
-Build **0 warnings / 0 errors** and **554/554** hardware-free tests green on Windows
+Build **0 warnings / 0 errors** and **558/558** hardware-free tests green on Windows
 10 and Debian 13 (WSL2) - Domain 64, Application 90, Protocol 200, Infrastructure
-69, UI 131. `dotnet format --verify-no-changes`, the NuGet vulnerability audit and
-YAML parsing of both workflows are green; `--selfcheck` reports `OK` at 0.8.1 on
+71, UI 133. `dotnet format --verify-no-changes`, the NuGet vulnerability audit and
+YAML parsing of both workflows are green; `--selfcheck` reports `OK` at 0.8.2 on
 both systems and in both self-contained publish outputs. No hardware write test
-was added for wake-up (`docs/HARDWARE-VERIFY.md` §30). These results are
-`OBSERVATION`.
+was added for wake-up (`docs/HARDWARE-VERIFY.md` §30); the UDP race from the user
+log of 27.11.2026 is fixed without hardware access (`docs/HARDWARE-VERIFY.md` §32).
+These results are `OBSERVATION`.
 
 Switching the UI language updates every visible area without a restart or Cube
 access: cached status/result texts, confirmation preview, dirty hint, weekday and

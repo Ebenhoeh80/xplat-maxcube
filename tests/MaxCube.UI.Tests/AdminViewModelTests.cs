@@ -759,6 +759,32 @@ public class AdminViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Explicit_network_read_waits_for_the_silent_cube_tab_read()
+    {
+        var h = await CreateAsync();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Core.ConnectHook = _ => release.Task;
+
+        // Der Reiter-Read ruft ReloadAsync auf; ConnectAsync bleibt absichtlich stehen.
+        h.ViewModel.SelectedTabIndex = TabIndex.Cube;
+
+        h.ViewModel.IsCubeAutoReading.Should().BeTrue();
+        h.ViewModel.ReadNetworkCommand.CanExecute(null).Should().BeFalse();
+        await h.ViewModel.ReadNetworkCommand.ExecuteAsync(null);
+        h.Network.ReadCalls.Should().BeEmpty("die explizite Aktion darf nicht in den Reload-Spalt laufen");
+
+        release.SetResult();
+        using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (h.ViewModel.IsCubeAutoReading && !wait.IsCancellationRequested)
+        {
+            await Task.Delay(10, wait.Token);
+        }
+
+        h.ViewModel.IsCubeAutoReading.Should().BeFalse();
+        h.ViewModel.ReadNetworkCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Maintenance_actions_require_checkbox_preview_and_separate_confirmation()
     {
         var h = await CreateAsync();
@@ -1041,6 +1067,7 @@ public class AdminViewModelTests : IDisposable
     private sealed class FakeCore : ICubeGateway
     {
         public Cube? CubeToReturn { get; set; }
+        public Func<CancellationToken, Task>? ConnectHook { get; set; }
         public List<(int RoomId, Temperature SetPoint)> TemperatureCalls { get; } = new();
         public List<(int RoomId, DayOfWeek Day)> ProfileCalls { get; } = new();
         public CubeConnectionState State { get; private set; } = CubeConnectionState.Disconnected;
@@ -1049,11 +1076,16 @@ public class AdminViewModelTests : IDisposable
         public event EventHandler<Cube>? CubeRefreshed { add { } remove { } }
         public event EventHandler? SessionUnreachable { add { } remove { } }
 
-        public Task<Cube> ConnectAsync(CubeEndpoint endpoint, CancellationToken cancellationToken = default)
+        public async Task<Cube> ConnectAsync(CubeEndpoint endpoint, CancellationToken cancellationToken = default)
         {
+            if (ConnectHook is not null)
+            {
+                await ConnectHook(cancellationToken);
+            }
+
             State = CubeConnectionState.Connected;
             StateChanged?.Invoke(this, State);
-            return Task.FromResult(CubeToReturn!);
+            return CubeToReturn!;
         }
 
         public Task SetRoomTemperatureAsync(

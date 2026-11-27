@@ -291,7 +291,8 @@ public partial class MainWindowViewModel
     // --- Gemeinsame Zustandslogik ----------------------------------------------------
 
     /// <summary>Lesen bleibt immer möglich; Schreiben setzt eine echte Lesung voraus.</summary>
-    private bool CanAdmin => IsConnected && !IsBusy && _service.SupportsAdministration;
+    private bool CanAdmin
+        => IsConnected && !IsBusy && !IsCubeAutoReading && _service.SupportsAdministration;
 
     private bool CanWriteAdmin => CanAdmin && !IsStale && CanWriteFrom(ConfigStatus);
 
@@ -385,6 +386,8 @@ public partial class MainWindowViewModel
         RefreshAdminCommands();
         RefreshStatusBar();
     }
+
+    partial void OnIsCubeAutoReadingChanged(bool value) => RefreshAdminCommands();
 
     partial void OnSelectedDeviceChanged(DeviceViewModel? value)
     {

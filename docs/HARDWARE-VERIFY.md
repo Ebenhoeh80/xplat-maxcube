@@ -513,3 +513,39 @@ Squash `1498134237d556fded6d7f013ac8455b538d9e1e` gemergt (sieben Checks grün);
 `431bc24e8ce32d4c2a425fad23633f488594cd05107b2cb53a3330e911e0d7a6`; beide stimmen mit
 `SHA256SUMS.txt` überein (`sha256sum -c` grün). Beide heruntergeladenen Pakete liefen mit
 `SELFCHECK OK … 0.8.1 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; Exitcode 0 je).
+
+## 32. Version 0.8.2: UDP-Race im Nutzerprotokoll (27.11.2026)
+
+**FAKT (Eingabe):** Das Nutzerprotokoll vom 27.11.2026 enthält um 11:48:08 einen
+`InvalidOperationException`- und um 11:48:17 einen `SocketException`-Fehler mit dem Prefix
+„Netzwerkkonfiguration fehlgeschlagen". Beide Zeilen stammen aus `MainWindowViewModel.RunAsync`
+mit `errorPrefix = L("ErrNetwork")`, also aus einer expliziten Netzwerkaktion, nicht aus dem
+leisen Reiter-Read (`TryReadAsync` schreibt nur WARN/Status).
+
+**FAKT (Code):** Der Auto-Read des Cube-Reiters ruft `ReloadAsync` auf; dabei ist `_current`
+zwischen `DisconnectAsync` und `ConnectAsync` kurz null. `CanAdmin` war nur an `IsBusy` und
+`IsConnected` gebunden; der leise Read setzt `IsBusy` nicht. `UdpNetworkConfigurator`,
+`UdpDiscoveryTransport` und `CubeMaintenanceGateway` banden alle ohne Sperre denselben lokalen
+UDP-Port 23272. Die Retry-Schleife fing `SocketException` beim Senden/Empfangen nicht ab.
+
+**INFERENZ (Ablauf):** Ein Klick auf „Netzwerk lesen" während des Auto-Reads läuft in die
+Trenn-/Verbindungslücke und erzeugt die `InvalidOperationException`. Ein zweiter Versuch kollidiert
+mit dem noch laufenden UDP-Read auf Port 23272 und erzeugt die `SocketException`. Die Klicks selbst
+sind nicht protokolliert; der Ablauf ist aus Code und Zeitstempeln abgeleitet.
+
+**FAKT (Maßnahmen):** `IsCubeAutoReading` sperrt Admin-Befehle und den `RunAsync`-Pfad für
+explizite Aktionen, solange der leise Read läuft. Ein prozessweites `UdpPortGate` serialisiert
+Discovery, Netzwerkkonfiguration und Reboot auf Port 23272. Bind- und Empfangsfehler werden als
+`CubeCommunicationFailedException` mit Ursache gewrappt. Das Log enthält jetzt Aktionsstart,
+Ausnahmetyp plus Detail (`SocketError`/nativer Code) und WARN je fehlgeschlagenem
+Auto-Read-Abschnitt. Kein neues Paket, kein Hardware-Schreibzugriff, kein `nmap`.
+
+**BEOBACHTUNG (Verifikation):** Windows 10 und Debian 13 (WSL2): Build 0 Warnungen/0 Fehler,
+**558/558** Tests (Domain 64, Application 90, Protocol 200, Infrastructure 71, UI 133),
+`dotnet format --verify-no-changes` Exit 0, NuGet-Audit ohne Funde, YAML beider Workflows
+geparst, `--selfcheck` `OK` mit 0.8.2 in Debug- und Publish-Ausgaben auf beiden Systemen.
+Vier Regressionstests belegen parallele UDP-Lesungen, Portkonflikt als
+`CubeCommunicationFailedException`, blockierte Admin-Befehle während des Auto-Reads und
+Exception-Detail im Log. **UNBEKANNT:** die tatsächlichen Klicks, der `SocketErrorCode` im
+Originalprotokoll und die Hardware-Antwort auf UDP 23272; die Kausalität bleibt daher INFERENZ,
+die Race-Beseitigung ist jedoch hardwarefrei bewiesen.

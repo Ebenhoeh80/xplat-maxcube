@@ -39,7 +39,7 @@ Ten target files of the assignment – one root file and nine files in `docs/`. 
 |---|---|---|
 | Quick start | [README.md](../../README.md) | start Windows/Linux, self-test, limits, verification status |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | senior architect view: context, layers, ADRs, risks, improvements |
-| Development | [DEVELOPMENT.md](DEVELOPMENT.md) | setup, conventions, 554/554 tests, extension recipes, versioning |
+| Development | [DEVELOPMENT.md](DEVELOPMENT.md) | setup, conventions, 558/558 tests, extension recipes, versioning |
 | API | [API.md](API.md) | local C# interfaces + cube wire protocol; **no HTTP API** |
 | Database | [DATABASE.md](DATABASE.md) | SQLite schema, migration, settings, audit |
 | Operations | [OPERATIONS.md](OPERATIONS.md) | network, paths, CI, packages, backup; no server/Kubernetes |

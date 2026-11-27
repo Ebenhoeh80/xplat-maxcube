@@ -32,26 +32,35 @@ public sealed class CubeMaintenanceGateway : ICubeMaintenanceGateway
         }
 
         var request = CubeUdpCodec.BuildRequest(serialNumber, CubeUdpCodec.Reboot);
-        using var client = new UdpClient(new IPEndPoint(IPAddress.Any, CubeUdpCodec.Port));
-        await client.SendAsync(request, request.Length, new IPEndPoint(address, _port)).ConfigureAwait(false);
-
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(ResponseTimeout);
         try
         {
-            var response = await client.ReceiveAsync(timeout.Token).ConfigureAwait(false);
-            if (!response.RemoteEndPoint.Address.Equals(address))
-            {
-                throw new CubeCommunicationFailedException("Reboot acknowledgement came from an unexpected source.");
-            }
+            using var port = await UdpPortGate.EnterAsync(cancellationToken).ConfigureAwait(false);
+            using var client = new UdpClient(new IPEndPoint(IPAddress.Any, CubeUdpCodec.Port));
+            await client.SendAsync(request, request.Length, new IPEndPoint(address, _port)).ConfigureAwait(false);
 
-            CubeUdpCodec.ParseResponse(response.Buffer, serialNumber, CubeUdpCodec.Reboot);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(ResponseTimeout);
+            try
+            {
+                var response = await client.ReceiveAsync(timeout.Token).ConfigureAwait(false);
+                if (!response.RemoteEndPoint.Address.Equals(address))
+                {
+                    throw new CubeCommunicationFailedException("Reboot acknowledgement came from an unexpected source.");
+                }
+
+                CubeUdpCodec.ParseResponse(response.Buffer, serialNumber, CubeUdpCodec.Reboot);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Genau einmal gesendet. Kein Retry: ein zweiter Reboot wäre hardware riskant.
+                throw new CubeCommunicationFailedException(
+                    "Reboot was sent, but no acknowledgement was received.", new TimeoutException("No UDP response from the cube."));
+            }
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (SocketException exception)
         {
-            // Genau einmal gesendet. Kein Retry: ein zweiter Reboot wäre hardware riskant.
             throw new CubeCommunicationFailedException(
-                "Reboot was sent, but no acknowledgement was received.", new TimeoutException("No UDP response from the cube."));
+                $"MAX1008: UDP-Fehler auf Port {CubeUdpCodec.Port} ({exception.SocketErrorCode}).", exception);
         }
     }
 
