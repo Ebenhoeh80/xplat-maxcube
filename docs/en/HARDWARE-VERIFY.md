@@ -549,3 +549,14 @@ tests cover parallel UDP reads, a port conflict wrapped as `CubeCommunicationFai
 admin commands blocked during the automatic read, and exception detail in the log.
 **UNKNOWN:** the actual clicks, the `SocketErrorCode` in the original log and the hardware reply
 on UDP 23272; causality therefore remains INFERENCE, but removal of the race is proven without hardware.
+
+**FACT (release):** PR [#42](https://github.com/Ebenhoeh80/xplat-maxcube/pull/42) was merged as
+squash `574c2d265b881292c6051e17e8db8145fc6e6d45` (seven checks green); the annotated tag
+`v0.8.2` points to the merge commit. Release run `45991073744`,
+[release v0.8.2](https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.2).
+`xplat-maxcube-0.8.2-win-x64.zip` SHA-256
+`8400335318a36e7c3bbe7bc47389e18bcc0d1118afd6c5f5e135e58c05439f76`,
+`xplat-maxcube-0.8.2-linux-x64.zip` SHA-256
+`172615969a9c83cfd9d5d34f8c1e80a7e6deb0b26a6e911b4e76eec0e0001c3f`; both match
+`SHA256SUMS.txt` (`sha256sum -c` green). Both downloaded packages ran with
+`SELFCHECK OK … 0.8.2 … SQLite ok` (Windows 10.0.26300, Debian GNU/Linux 13; exit code 0 each).
