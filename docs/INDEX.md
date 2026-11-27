@@ -5,6 +5,8 @@
 >
 > **Hinweis zum öffentlichen Repo:** Die RE-Eingaben (`decompiled/`, `extracted/`, `evidence/`) sind aus Lizenzgründen nicht Bestandteil von `xplat-maxcube`. Die nachfolgenden `Datei:Zeile`-Belege verweisen auf diese lokalen Eingaben; veröffentlicht sind ausschließlich unsere eigenen Auswertungen unter `docs/`.
 
+**Englische Fassung:** Alle 25 Dokumente unter `docs/` haben eine englische Übersetzung unter [`docs/en/`](en/INDEX.md). Die Übersetzungen sind maschinell erstellt und mit `native-speaker review pending` gekennzeichnet; maßgeblich ist die deutsche Quelle.
+
 ---
 
 ## 1. Dokumentationsindex
@@ -35,7 +37,7 @@ Zehn Zieldateien des Auftrags – eine Root-Datei und neun Dateien in `docs/`. S
 |---|---|---|
 | Schnelleinstieg | [README.md](../README.md) | Start Windows/Linux, Selbsttest, Grenzen, Verifikationsstand |
 | Architektur | [ARCHITECTURE.md](ARCHITECTURE.md) | Senior-Architekt-Sicht: Kontext, Schichten, ADRs, Risiken, Verbesserungen |
-| Entwicklung | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, Konventionen, 442 Tests, Erweiterungsrezepte, Versionierung |
+| Entwicklung | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, Konventionen, 519/519 Tests, Erweiterungsrezepte, Versionierung |
 | API | [API.md](API.md) | lokale C#-Interfaces + Cube-Wire-Protokoll; **keine HTTP-API** |
 | Datenbank | [DATABASE.md](DATABASE.md) | SQLite-Schema, Migration, Einstellungen, Audit |
 | Betrieb | [OPERATIONS.md](OPERATIONS.md) | Netz, Pfade, CI, Pakete, Backup; keine Server/Kubernetes |

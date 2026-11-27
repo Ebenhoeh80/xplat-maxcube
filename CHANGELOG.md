@@ -57,11 +57,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **EN:** Build with 0 warnings / 0 errors; 519/519 tests green on Windows and Debian 13
   (WSL2) — Domain 64, Application 84, Protocol 198, Infrastructure 66, UI 107 — and
   `--selfcheck` `OK`. New regression tests cover the offline lock and cancellation of the
-  network write path, log retention and a throwing `StateChanged` subscriber.
+  network write path, log retention and a throwing `StateChanged` subscriber. With the
+  user-released endpoint `192.168.10.60:62910` (HA integration disabled), the read-only opt-in
+  hardware test `Hardware_disconnect_releases_the_only_cube_session` also passed 1/1. After
+  installing `Microsoft.WindowsDesktop.App 10.0.15`, the real desktop window started and a
+  `PrintWindow` screenshot evaluated with Windows OCR showed the rendered UI (host/port,
+  buttons, all tabs, temperatures). All 25 `docs/*.md` files now have English translations in
+  `docs/en/`; they are machine-created with a `native-speaker review pending` notice.
 - **DE:** Build 0 Warnungen/0 Fehler; 519/519 Tests grün unter Windows und Debian 13 (WSL2)
   (Domain 64, Application 84, Protocol 198, Infrastructure 66, UI 107), `--selfcheck` `OK`. Neue
   Regressionstests decken Offline-Sperre und Abbruch des Netzwerk-Schreibpfads, die
-  Log-Aufbewahrung und einen werfenden `StateChanged`-Subscriber ab.
+  Log-Aufbewahrung und einen werfenden `StateChanged`-Subscriber ab. Mit dem freigegebenen
+  Endpoint `192.168.10.60:62910` (HA-Integration deaktiviert) lief auch der rein lesende
+  opt-in-Hardwaretest `Hardware_disconnect_releases_the_only_cube_session` 1/1 grün. Nach
+  Installation des `Microsoft.WindowsDesktop.App 10.0.15` startete das echte Desktop-Fenster,
+  und ein per Windows-OCR ausgewerteter `PrintWindow`-Screenshot zeigte die gerenderte Oberfläche
+  (Host/Port, Schaltflächen, alle Tabs, Temperaturen). Alle 25 `docs/*.md` haben jetzt englische
+  Übersetzungen unter `docs/en/`; diese sind maschinell erstellt und mit
+  `native-speaker review pending` gekennzeichnet.
 
 ## [0.6.8] - 2026-11-26
 

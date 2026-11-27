@@ -1,3 +1,5 @@
+> Deutsche Übersetzung von README.md. Maschinell erstellt, Muttersprachlerprüfung offen.
+
 # xplat-maxcube
 
 > Cross-platform MAX! Cube desktop application for Windows and Linux.
@@ -19,16 +21,43 @@ Version **0.6.8** (`Directory.Build.props:3`), am **26.11.2026** als `v0.6.8` ve
 
 ## Inhalt
 
+- [Funktionen](#funktionen)
+- [Voraussetzungen](#voraussetzungen)
 - [Installation](#installation)
 - [Verwendung](#verwendung)
+- [Datenherkunft und Schreibschutz](#datenherkunft-und-schreibschutz)
+- [Konfiguration und Datenordner](#konfiguration-und-datenordner)
+- [Unterstützte Funktionen](#unterstützte-funktionen)
 - [Screenshots](#screenshots)
 - [Entwicklung](#entwicklung)
 - [Architektur](#architektur)
 - [Grenzen und bewusste Ausschlüsse](#grenzen-und-bewusste-ausschüsse)
+- [Roadmap und Ideen](#roadmap-und-ideen)
+- [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
 - [Verifikationsstand](#verifikationsstand)
 - [Dokumentation](#dokumentation)
 - [Projekt unterstützen](#projekt-unterstützen)
 - [Mitmachen und Lizenz](#mitmachen-und-lizenz)
+
+## Funktionen
+
+- **Räume und Geräte:** Soll-/Isttemperatur, Ventilstellung, Fensterstatus, Gerätestatus; Modi Auto / Permanent / Temporary sowie ECO / COMFORT.
+- **Wochenprogramm:** bis zu 13 Schaltpunkte pro Tag, grafische Tagesleiste, Schnellbearbeitung in 0,5-°C-/5-Minuten-Schritten und Kopieren auf andere Räume. Ungelesene Platzhalterprofile können nicht gesendet werden.
+- **Administration:** Raumkonfiguration, Boost / Entkalkung / Ventileinstellungen, Wandthermostat-Anzeige, Tasterkonfiguration, Anlernen, Gerätezuordnung, Strukturpflege, Uhrzeit / Zeitzone / NTP und UDP-Netzwerkkonfiguration.
+- **Diagnose:** Funkauslastung aus dem `S:`-Sendestatus, lokaler Fehlerbericht und Fehlercode-Katalog `MAX0001`–`MAX1051`. Es wird nichts nach außen gesendet.
+- **Anwendungsprotokoll:** opt-in (`log.enabled`, Standard aus), INFO/WARN/ERROR, Viewer in der App und lokaler ZIP-Export nur auf Klick (`src/MaxCube.UI/ViewModels/MainWindowViewModel.StatusBar.cs`).
+- **Statusleiste:** Verbindung, Host/Port, Datenherkunft mit Lesezeitpunkt, letzte Aktion mit Uhrzeit und Protokollstatus immer sichtbar – mit Symbol **und** Text.
+- **Datenherkunft:** einheitlicher Status für jeden Bereich mit Lesezeitpunkt in DE / EN / FR / IT / NL / PL (`src/MaxCube.UI/ViewModels/DataStatusViewModel.cs:13`).
+- **Über-Seite:** Autor `Ebenhoeh80`, MIT-Lizenz, Projektlink und ausdrücklicher Hinweis *inoffiziell, nicht von eQ-3*. Der Link öffnet erst nach Benutzerklick.
+- **Self-contained-Pakete** für `win-x64` und `linux-x64`; keine installierte .NET-Runtime nötig.
+
+## Voraussetzungen
+
+- Ein **eQ-3 MAX! Cube LAN Gateway**, im lokalen Netz erreichbar (Standardport `62910`). Kein Flashen, kein CUL/CUN, keine Cloud.
+- Windows 10+ oder Linux mit X11/Wayland für die Desktop-Oberfläche. Auf Debian/Ubuntu benötigen SkiaSharp/Avalonia Systembibliotheken, die nicht im ZIP enthalten sind:
+  `sudo apt-get update && sudo apt-get install -y libfontconfig1 libx11-6 libxcursor1 libxext6 libxfixes3 libxi6 libxrandr2 libice6 libsm6 libgl1 libvulkan1 xdg-utils` (`xdg-utils` nur für externe Links).
+  Prüfen mit `./MaxCube.UI.Desktop --check-linux-deps`. Zum Öffnen des Projekt-Links werden `xdg-open`, `gio` oder `wslview` benötigt; ohne sie zeigt die App die URL in der Statusleiste an, statt sich zu beenden.
+- Zum Bauen aus Quellen: **.NET 10 SDK**. Die veröffentlichten ZIPs benötigen es nicht.
 
 ## Installation
 
@@ -81,6 +110,38 @@ Der Datenordner ist `%LOCALAPPDATA%\MaxCube` unter Windows bzw. `$XDG_DATA_HOME/
 9. **Über:** Autor, MIT-Lizenz und GitHub-Link; ausdrücklich inoffiziell und nicht von eQ-3. Der Link öffnet erst nach Benutzerklick.
 
 Alle Cube-Schreibzugriffe erfordern eine ausdrückliche Bestätigung in der Oberfläche **und** eine tatsächlich gelesene Ausgangsbasis; `Stale` und Offline sperren das Senden. Cache-Werte sind nur offline schreibbar: Bei bestehender Verbindung werden sie nie auf den Cube zurückgeschrieben (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:280`). Der Normalbetrieb ist lesend; die SQLite-Datenbank ist ausschließlich Cache und Audit-Log.
+
+## Datenherkunft und Schreibschutz
+
+| Zustand | Bedeutung | Schreiben erlaubt? |
+| :--- | :--- | :--- |
+| `NotRead` | Noch kein Lesen vom Cube – Platzhalter oder leer | Nein |
+| `Loading` | Ein Lesevorgang läuft | Nein |
+| `Live` | In dieser Sitzung vom Cube gelesen | Ja, mit Bestätigung |
+| `Cached` | Aus dem lokalen SQLite-Cache gelesen, mit Zeitstempel | Nur offline, mit Bestätigung |
+| `Stale` | Geleste Daten sind zu alt | Nein |
+| `Failed` | Lesen fehlgeschlagen | Nein |
+
+`CubeSnapshot.CapturedAt` liefert den Cache-Zeitstempel. Trennen setzt alle Bereichszustände auf *nicht gelesen* zurück. Es wird nie ohne vorheriges Lesen, Bestätigung und einen nicht veralteten, online-Zustand auf den Cube geschrieben.
+
+## Konfiguration und Datenordner
+
+Der Datenordner ist `%LOCALAPPDATA%\MaxCube` unter Windows und `$XDG_DATA_HOME/MaxCube` (Standard `~/.local/share/MaxCube`) unter Linux. `MAXCUBE_DATA_DIR` verschiebt ihn für portablen Betrieb (`AppPaths.cs:3-10`). Host und Port des gespeicherten Endpoints werden lokal aufbewahrt und beim Start wiederhergestellt. Tägliche Protokolldateien liegen im Unterordner `logs/`; der ZIP-Export wird daneben im Datenordner geschrieben.
+
+## Unterstützte Funktionen
+
+Die meisten lokalen Funktionen der ehemaligen MAX! Local Application sind umgesetzt; 49 von 61 katalogisierten Funktionen sind vollständig, 1 teilweise, 1 ersetzt und 10 nicht abbildbar (Cloud/Update/Firmware-Schreiben) (`docs/features.md`).
+
+| Bereich | Lesen | Schreiben |
+| :--- | :--- | :--- |
+| Räume, Temperaturen, Modi | ja | ja, bestätigt |
+| Wochenprogramme (Thermostate) | ja | ja, bestätigt |
+| Wandthermostat-Anzeige, Boost, Ventil, Entkalkung | ja | ja, bestätigt |
+| Anlernen, Gerätezuordnung, Struktur | ja | ja, bestätigt |
+| Uhrzeit, Zeitzone, NTP | ja | ja, bestätigt |
+| UDP-Netzwerkkonfiguration | ja | ja, bestätigt |
+| Funkauslastung (`S:`) | ja | entfällt |
+| Firmware-Version | ja (nur lesend) | nein, bewusst deaktiviert |
 
 ## Screenshots
 
@@ -142,6 +203,28 @@ Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](do
 | UDP-Adressreihenfolge | `FAKT`: IP, Gateway, Maske, DNS 1, DNS 2; durch Java-Code und echte `c`-Antwort belegt |
 | Drag-and-drop im Wochenprogramm | nicht umgesetzt; Tagesleiste und Schnellbearbeitung vorhanden |
 | Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
+
+## Roadmap und Ideen
+
+Geplant und in Betrachtung – **reagiere auf das, was dir wichtig ist**, und bringe eigene Ideen ein in [Discussions → Ideas](https://github.com/Ebenhoeh80/xplat-maxcube/discussions/categories/ideas):
+
+- Fein abgestufte Protokollstufen, Filter und ein geschwärzter Support-Export.
+- Raumauswahl direkt in den Reitern Wochenprofil und Konfiguration.
+- Freie Endzeit für `Temporary`-Modus.
+- Nur-lesende Firmware-Abfragen (`latest` / `least compatible`).
+- Drag-and-drop-Bearbeitung und Größenänderung von Schaltpunkten im Wochenprogramm.
+- `autoSetupTimeZoneConfiguration` und Anbindung von `WakeupCommand`.
+- Echte Read-backs für abgeleitete Schreibformate, UDP-`C:`-Schreiben, `F:`-NTP-Format, Golden-Captures mit 8–13 Schaltpunkten.
+- Screenshots und ein Desktop-Smoke-Test unter Linux.
+
+## Datenschutz und Sicherheit
+
+- Vollständig lokal. **Keine Cloud, keine Telemetrie, kein HTTP, kein Update-Check, keine Browser-Abhängigkeit, kein AGPL-Code.** Externe Links öffnen erst nach Benutzerklick.
+- TCP-Schreibbefehle und der UDP-Broadcast erfordern eine Benutzeraktion; beim Start wird nie automatisch Discovery durchgeführt.
+- Es werden keine Passwörter, Tokens oder Secrets im Repository oder im Wiki gespeichert.
+- Das optionale Protokoll kann IP-Adressen, Seriennummern und Raumwerte enthalten; einen ZIP-Export vor der Weitergabe prüfen. Es werden keine Nutzdaten, Zugangsdaten oder Tokens protokolliert (`src/MaxCube.Application/Abstractions/IAppLog.cs:1-5`).
+- Die Reverse-Engineering-Eingaben (`decompiled/`, `extracted/`, `evidence/`) sind **nicht** Teil dieses Repositories; nur unsere eigene Dokumentation unter `docs/` ist quelloffen (siehe [docs/INDEX.md](docs/INDEX.md)).
+- Die dekompilierten und extrahierten Artefakte der eQ-3 MAX! Local Application unterliegen weiterhin ihren ursprünglichen Lizenzen.
 
 ## Verifikationsstand
 
