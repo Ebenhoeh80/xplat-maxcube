@@ -65,6 +65,59 @@ public class ViewModelTests
     }
 
     [Fact]
+    public void Dragging_a_switch_point_snaps_to_the_grid_and_reorders()
+    {
+        var day = new DayProfileViewModel(DayOfWeek.Monday);
+        var morning = new SwitchPointViewModel { UntilText = "06:00", Temperature = 20.5 };
+        var noon = new SwitchPointViewModel { UntilText = "12:00", Temperature = 21.0 };
+        var end = new SwitchPointViewModel { UntilText = "00:00", Temperature = 21.0 };
+        day.Points.Add(morning);
+        day.Points.Add(noon);
+        day.Points.Add(end);
+
+        day.TryMovePoint(morning, new TimeOnly(13, 7)).Should().BeTrue();
+
+        morning.UntilText.Should().Be("13:05");
+        day.Points.Should().Equal(noon, morning, end);
+        day.ToProfile().Points.Select(point => point.Until).Should().Equal(
+            new TimeOnly(12, 0), new TimeOnly(13, 5), TimeOnly.MinValue);
+    }
+
+    [Fact]
+    public void Dragging_rejects_duplicate_times_and_never_moves_the_end_point()
+    {
+        var day = new DayProfileViewModel(DayOfWeek.Monday);
+        var first = new SwitchPointViewModel { UntilText = "06:00", Temperature = 20.5 };
+        var second = new SwitchPointViewModel { UntilText = "12:00", Temperature = 21.0 };
+        var end = new SwitchPointViewModel { UntilText = "00:00", Temperature = 21.0 };
+        day.Points.Add(first);
+        day.Points.Add(second);
+        day.Points.Add(end);
+
+        day.TryMovePoint(first, new TimeOnly(12, 1)).Should().BeFalse("12:05 would duplicate 12:00");
+        day.TryMovePoint(end, new TimeOnly(18, 0)).Should().BeFalse("00:00 is the fixed end of day");
+        day.TryMovePoint(new SwitchPointViewModel { UntilText = "08:00" }, new TimeOnly(8, 0))
+            .Should().BeFalse("ein Punkt, der nicht im Tag liegt, bleibt unberührt");
+
+        day.Points.Should().Equal(first, second, end);
+        first.UntilText.Should().Be("06:00");
+    }
+
+    [Fact]
+    public void Main_viewmodel_passes_the_drop_time_to_the_day()
+    {
+        using var viewModel = CreateViewModel();
+        viewModel.SelectedDay.Points.Insert(0,
+            new SwitchPointViewModel { UntilText = "06:00", Temperature = 21.0 });
+        var point = viewModel.SelectedDay.Points[0];
+
+        viewModel.MoveSwitchPoint(point, new TimeOnly(7, 4)).Should().BeTrue();
+
+        point.UntilText.Should().Be("07:05");
+        viewModel.SelectedDay.Points.Should().ContainSingle(candidate => candidate.UntilText == "07:05");
+    }
+
+    [Fact]
     public void Room_and_device_viewmodels_reflect_the_domain()
     {
         var cube = new Cube(new SerialNumber("JEQ0001234"), 275, new RadioAddress(0x1D2A3C), true);
@@ -267,7 +320,7 @@ public class ViewModelTests
         await viewModel.ConnectCommand.ExecuteAsync(null);
         viewModel.Devices.Should().ContainSingle().Which.Address.Should().Be("0A0B0C");
 
-        viewModel.SelectedRoom = viewModel.Rooms.First(room => room.Id == 2);
+        viewModel.SelectedDevicesRoom = viewModel.Rooms.First(room => room.Id == 2);
 
         viewModel.Devices.Should().ContainSingle().Which.Address.Should().Be("0A0B0D");
     }
@@ -407,6 +460,21 @@ public class ViewModelTests
 
         gateway.TemperatureCalls.Should().ContainSingle()
             .Which.SetPoint.Should().Be(new Temperature(16.5));
+    }
+
+    [Fact]
+    public async Task Single_room_temporary_uses_the_entered_end_time()
+    {
+        using var viewModel = CreateViewModelWithGateway(out _, out var gateway);
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+        var until = new DateTimeOffset(2026, 11, 24, 22, 30, 0, TimeSpan.Zero);
+        viewModel.TemporaryEnd = until;
+
+        await viewModel.SetTemporaryCommand.ExecuteAsync(null);
+
+        gateway.ModeCalls.Should().ContainSingle()
+            .Which.Mode.Should().Be(RoomControlMode.Temporary);
+        gateway.UntilCalls.Should().ContainSingle().Which.Should().Be(until);
     }
 
     [Fact]
@@ -838,11 +906,14 @@ public class ViewModelTests
             return Task.CompletedTask;
         }
 
+        public List<DateTimeOffset?> UntilCalls { get; } = [];
+
         public Task SetRoomControlModeAsync(
             int roomId, RadioAddress master, RoomControlMode mode, Temperature? setPoint,
             DateTimeOffset? until, CancellationToken cancellationToken = default)
         {
             ModeCalls.Add((roomId, mode));
+            UntilCalls.Add(until);
             return Task.CompletedTask;
         }
 

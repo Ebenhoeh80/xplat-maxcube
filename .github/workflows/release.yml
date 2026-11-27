@@ -88,6 +88,22 @@ jobs:
           pattern: xplat-maxcube-*
           merge-multiple: true
 
+      - name: SHA-256-Digests erzeugen
+        shell: bash
+        run: |
+          shopt -s nullglob
+          ZIP_FILES=(release-artifacts/*.zip)
+          if [ ${#ZIP_FILES[@]} -eq 0 ]; then
+            echo "Keine ZIP-Artefakte für SHA-256 gefunden." >&2
+            exit 1
+          fi
+          (cd release-artifacts && sha256sum *.zip > SHA256SUMS.txt)
+          {
+            echo '```text'
+            cat release-artifacts/SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Release-Notes erzeugen
         shell: bash
         run: |
@@ -115,7 +131,7 @@ jobs:
           ARGS=(--title "$GITHUB_REF_NAME" --notes-file release-notes.md)
           if [[ "$VERSION" == *-* ]]; then ARGS+=(--prerelease); fi
           shopt -s nullglob
-          FILES=(release-artifacts/*.zip)
+          FILES=(release-artifacts/*.zip release-artifacts/SHA256SUMS.txt)
           if [ ${#FILES[@]} -eq 0 ]; then
             echo "Keine Release-Artefakte gefunden." >&2
             exit 1

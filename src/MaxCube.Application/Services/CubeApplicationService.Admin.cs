@@ -799,6 +799,51 @@ public sealed partial class CubeApplicationService
     }
 
     /// <summary>
+    /// Wake-up (`z:`) ist ein schreibender Funkbefehl und wird deshalb nie automatisch
+    /// in andere Schreibpfade eingebettet. Der Hersteller ruft ihn vor bestimmten
+    /// Konfigurationsbefehlen auf (LocalController.java:472-501); unsere App verlangt
+    /// eine ausdrückliche Bestätigung. Das <c>A:</c> bestätigt nur die Annahme durch den
+    /// Cube, nicht die fachliche Wirkung an den Thermostaten.
+    /// </summary>
+    public Task WakeUpRoomAsync(
+        int roomId, bool confirmed, int durationMinutes = 30, CancellationToken cancellationToken = default)
+    {
+        ValidateWakeupDuration(durationMinutes);
+        RequireConfirmed(confirmed);
+        RequireRoom(roomId);
+        return RunWriteAsync(
+            (admin, _, token) => admin.WakeUpRoomAsync(roomId, durationMinutes, token),
+            $"Wake-up Raum {roomId} gesendet ({durationMinutes})",
+            cancellationToken);
+    }
+
+    public Task WakeUpDeviceAsync(
+        RadioAddress device, bool confirmed, int durationMinutes = 30, CancellationToken cancellationToken = default)
+    {
+        ValidateWakeupDuration(durationMinutes);
+        RequireConfirmed(confirmed);
+        var cube = RequireCube();
+        if (!cube.Devices.Any(candidate => candidate.RadioAddress == device))
+        {
+            throw new DomainValidationException(DomainValidationCodes.Validation, "Gerät ist nicht verbunden.");
+        }
+
+        return RunWriteAsync(
+            (admin, _, token) => admin.WakeUpDeviceAsync(device, durationMinutes, token),
+            $"Wake-up Gerät {device} gesendet ({durationMinutes})",
+            cancellationToken);
+    }
+
+    private static void ValidateWakeupDuration(int minutes)
+    {
+        if (minutes is < 0 or > 0xFF)
+        {
+            throw new DomainValidationException(
+                DomainValidationCodes.Validation, "Wake-up-Dauer muss zwischen 0 und 255 liegen.");
+        }
+    }
+
+    /// <summary>
     /// Neustart und Werksreset sind die einzigen Befehle, die den Cube selbst neu starten
     /// bzw. seine Konfiguration löschen. Beide verlangen eine explizite Bestätigung und
     /// laufen über denselben Gate/Audit-Pfad wie andere Schreibzugriffe (0.6.4).

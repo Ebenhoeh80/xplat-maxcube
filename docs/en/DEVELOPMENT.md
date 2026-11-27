@@ -2,7 +2,7 @@
 
 # Development – MAX! Cube Local App
 
-> As of 27.11.2026. Version 0.7.0. This file describes the **as-built state of the repository**, not a desired architecture. Statements with `INFERENCE`/`UNKNOWN` are explicitly marked; evidence as `file:line`.
+> As of 27.11.2026. Version 0.8.0. This file describes the **as-built state of the repository**, not a desired architecture. Statements with `INFERENCE`/`UNKNOWN` are explicitly marked; evidence as `file:line`.
 
 ## 1. Quick start for developers
 
@@ -59,7 +59,7 @@ flowchart LR
 | `MaxCube.UI` | Avalonia MVVM, localization, day bar | Avalonia 11.3.23, CommunityToolkit.Mvvm 8.4.2 |
 | `MaxCube.UI.Desktop` | process, DI, tray, instance protection, self-test | Avalonia.Desktop/Themes 11.3.23, DI 10.0.0 |
 
-Central build properties: version `0.7.0`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`).
+Central build properties: version `0.8.0`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`). C# sources use LF line endings (`.gitattributes`, `.editorconfig`) so `dotnet format --verify-no-changes` matches on Windows and Debian.
 
 ## 2. Coding conventions
 
@@ -131,7 +131,7 @@ Tray: runtime-generated icon without a binary asset (`TrayIconFactory.cs:9-17`),
 | `MaxCube.Infrastructure.Tests` | SQLite, gateway, UDP, platform, language | `tests/MaxCube.Infrastructure.Tests/*Tests.cs` |
 | `MaxCube.UI.Tests` | view models, admin view model | `tests/MaxCube.UI.Tests/*Tests.cs` |
 
-**OBSERVATION (27.11.2026):** 519/519 tests green on Windows; Debian 13 (WSL2) is covered in the CI matrix. **FACT (test run 27.11.2026):** Domain 64, Application 84, Infrastructure 66, Protocol 198, UI 107; the only `[MemberData]` source yields 21 rows (`CubeCommandsTests.cs:12-33`). The older statuses 442/442 (24.11.) and 514/515 (26.11.) are historical and documented in `CHANGELOG.md`. Evidence: `tests/*/*.cs`, `CHANGELOG.md`. Hardware-free: the end-to-end test uses `LoopbackFakeCube`/`FakeGateway`/`FakeStore`, **no** golden capture (`LoopbackFakeCube.cs:10-12`).
+**OBSERVATION (27.11.2026):** 553/553 tests green on Windows 10 and Debian 13 (WSL2). **FACT (test run 27.11.2026):** Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 130; the only `[MemberData]` source yields 21 rows (`CubeCommandsTests.cs:12-33`). The older statuses 442/442, 514/515 and 519/519 are historical and documented in `CHANGELOG.md`. Evidence: `tests/*/*.cs`, `CHANGELOG.md`. Hardware-free: the end-to-end test uses `LoopbackFakeCube`/`FakeGateway`/`FakeStore`, **no** golden capture (`LoopbackFakeCube.cs:10-12`). Wake-up deliberately has no automatic hardware write test; the action is only reachable after confirmation.
 
 ### 3.1 Test rules
 
@@ -176,9 +176,9 @@ New tabs follow the pattern `MainWindowViewModel.<area>.cs` + `Strings` keys + c
 
 Version comes **only** from `Directory.Build.props:3-5`; `AppVersionProvider` reads the assembly attribute (`AppVersionProvider.cs:13-24`). Window title and status show the version; the cache additionally stores `app.version` and `schema.version` (`SqliteStateStore.cs:31-37,108-115`).
 
-For changes: increase the version automatically/autonomously per the user rule in SecondBrain (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Currently `0.7.0`; `schema.version` remains `1` as long as the schema stays compatible.
+For changes: increase the version automatically/autonomously per the user rule in SecondBrain (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Currently `0.8.0`; `schema.version` remains `1` as long as the schema stays compatible.
 
-CI: push/PR on `main`/`master`/`develop` or manual; matrix `ubuntu-latest` + `windows-latest`; restore/build/test/self-test, then publish `linux-x64`/`win-x64` with self-test and artifact upload (`ci.yml:3-7,13-37,39-69`). Artifacts are **unsigned**; signature/hash are an improvement suggestion (`ARCHITECTURE.md` §9.7).
+CI: push/PR on `main`/`master`/`develop` or manual; matrix `ubuntu-latest` + `windows-latest`; restore/build/test/self-test, then publish `linux-x64`/`win-x64` with self-test and artifact upload (`ci.yml:3-69`). The release workflow also creates `SHA256SUMS.txt` for both ZIPs (`release.yml:91-105,134`). Artefacts remain **unsigned**; a signature is still an improvement suggestion (`ARCHITECTURE.md` §9).
 
 ## 6. Handling of source material
 

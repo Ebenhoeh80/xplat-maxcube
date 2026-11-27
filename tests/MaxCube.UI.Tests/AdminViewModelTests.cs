@@ -269,8 +269,13 @@ public class AdminViewModelTests : IDisposable
 
         return new Harness
         {
-            ViewModel = viewModel, Core = core, Admin = admin, Store = store, Cube = cube,
-            Network = network, Maintenance = maintenance,
+            ViewModel = viewModel,
+            Core = core,
+            Admin = admin,
+            Store = store,
+            Cube = cube,
+            Network = network,
+            Maintenance = maintenance,
         };
     }
 
@@ -348,10 +353,40 @@ public class AdminViewModelTests : IDisposable
         vm.Rooms[0].IsHouseSelected = true;
 
         await vm.SetHouseTemporaryCommand.ExecuteAsync(null);
-        vm.SuccessText.Should().Contain("Temporary (1 h)");
+        vm.SuccessText.Should().Contain("Temporär");
 
         vm.SelectedLanguage = vm.Languages.Single(language => language.Code == "fr");
-        vm.SuccessText.Should().Contain("Temporaire (1 h)").And.NotContain("Temporary");
+        vm.SuccessText.Should().Contain("Temporaire").And.NotContain("Temporary");
+    }
+
+    [Fact]
+    public async Task House_temporary_uses_the_entered_end_time_for_all_selected_rooms()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        var until = new DateTimeOffset(2026, 11, 24, 21, 15, 0, TimeSpan.Zero);
+        vm.TemporaryEnd = until;
+        var chosen = vm.Rooms.Count(room => room.IsHouseSelected);
+
+        await vm.SetHouseTemporaryCommand.ExecuteAsync(null);
+
+        h.Core.UntilCalls.Should().HaveCount(chosen).And.OnlyContain(value => value == until);
+    }
+
+    [Fact]
+    public async Task Temporary_end_date_and_time_stay_in_sync()
+    {
+        var vm = (await CreateAsync()).ViewModel;
+        var baseline = vm.TemporaryEnd;
+
+        vm.TemporaryEndDate = new DateTime(2026, 11, 25);
+        vm.TemporaryEnd.Should().Be(new DateTimeOffset(
+            2026, 11, 25, baseline.Hour, baseline.Minute, baseline.Second, baseline.Offset));
+
+        vm.TemporaryEndTime = new TimeSpan(21, 45, 0);
+        vm.TemporaryEnd.Should().Be(new DateTimeOffset(2026, 11, 25, 21, 45, 0, TimeSpan.Zero));
+        vm.TemporaryEndDate.Should().Be(new DateTime(2026, 11, 25));
+        vm.TemporaryEndTime.Should().Be(new TimeSpan(21, 45, 0));
     }
 
     [Fact]
@@ -466,6 +501,46 @@ public class AdminViewModelTests : IDisposable
         h.ViewModel.ConfirmWriteCommand.CanExecute(null).Should().BeFalse();
         h.Admin.Configurations.Should().BeEmpty();
         h.ViewModel.DirtyText.Should().Contain("Konfiguration");
+    }
+
+    [Fact]
+    public async Task Wake_up_room_requires_confirmation_and_a_preview()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        vm.WakeUpRoomCommand.CanExecute(null).Should().BeFalse("die Bestätigung fehlt");
+
+        vm.WakeUpMinutes = 45;
+        vm.ConfirmWakeUp = true;
+        await vm.WakeUpRoomCommand.ExecuteAsync(null);
+
+        vm.IsWritePreviewVisible.Should().BeTrue();
+        vm.WritePreviewText.Should().Contain("Wohnen").And.Contain("45");
+        h.Admin.WakeUps.Should().BeEmpty("vor der Bestätigung darf nichts gesendet werden");
+
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+
+        h.Admin.WakeUps.Should().ContainSingle().Which.Should().Be((1, 45));
+        vm.ConfirmWakeUp.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Wake_up_obeys_the_same_write_gate_as_other_admin_actions()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        vm.ConfirmWakeUp = true;
+        vm.WakeUpRoomCommand.CanExecute(null).Should().BeTrue();
+
+        vm.ConfigStatus.Update(DataReadState.Cached, DateTimeOffset.UtcNow);
+        vm.WakeUpRoomCommand.CanExecute(null).Should().BeFalse("gepufferte Werte dürfen nicht geschrieben werden");
+        await vm.WakeUpRoomCommand.ExecuteAsync(null);
+        h.Admin.WakeUps.Should().BeEmpty();
+
+        vm.ConfigStatus.Update(DataReadState.Live, DateTimeOffset.UtcNow);
+        vm.IsStale = true;
+        vm.ConfigStatus.MarkStale(true, DataReadState.Live);
+        vm.WakeUpRoomCommand.CanExecute(null).Should().BeFalse("während eines Reconnects ist Schreiben gesperrt");
     }
 
     [Fact]
@@ -825,6 +900,61 @@ public class AdminViewModelTests : IDisposable
         h.Cube.GetRoom(2)!.ComfortTemperature.Value.Should().Be(22.0);
     }
 
+    [Fact]
+    public async Task Each_tab_keeps_its_own_room_selection()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        var kitchen = vm.Rooms.Single(room => room.Id == 2);
+
+        vm.SelectedRoom = kitchen;
+
+        vm.SelectedRoom.Should().Be(kitchen);
+        vm.SelectedWeekRoom!.Id.Should().Be(1);
+        vm.SelectedConfigRoom!.Id.Should().Be(1);
+        vm.SelectedDevicesRoom!.Id.Should().Be(1);
+        vm.Devices.Should().Contain(device => device.Address == Wall.ToString());
+        vm.ConfigComfort.Should().Be(22.0);
+
+        vm.SelectedWeekRoom = kitchen;
+        vm.ProfileRoomName.Should().Contain("Küche");
+        vm.SelectedConfigRoom!.Id.Should().Be(1, "die Wochenauswahl darf die Konfiguration nicht ändern");
+
+        vm.SelectedConfigRoom = kitchen;
+        vm.ConfigComfort.Should().Be(21.5);
+        vm.SelectedDevicesRoom!.Id.Should().Be(1);
+
+        vm.SelectedDevicesRoom = kitchen;
+        vm.Devices.Should().ContainSingle().Which.Address.Should().Be(Kitchen.ToString());
+        vm.RenameRoomText.Should().Be("Küche");
+        vm.SelectedWeekRoom.Should().Be(kitchen);
+        vm.SelectedConfigRoom.Should().Be(kitchen);
+    }
+
+    [Fact]
+    public async Task Copy_commands_use_the_source_of_their_own_tab()
+    {
+        var h = await CreateAsync();
+        var vm = h.ViewModel;
+        var kitchen = vm.Rooms.Single(room => room.Id == 2);
+
+        // Der Räume-Reiter zeigt Küche, die Kopierquellen bleiben aber zunächst Wohnen.
+        vm.SelectedRoom = kitchen;
+        vm.SelectedWeekRoom = kitchen;
+        vm.SelectedConfigRoom = kitchen;
+        vm.Rooms.Single(room => room.Id == 1).IsHouseSelected = true;
+        vm.Rooms.Single(room => room.Id == 2).IsHouseSelected = false;
+
+        await vm.CopyWeekToSelectedRoomsCommand.ExecuteAsync(null);
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+        h.Core.ProfileCalls.Should().ContainSingle().Which.Should().Be((1, DayOfWeek.Monday));
+
+        await vm.CopyConfigurationToSelectedRoomsCommand.ExecuteAsync(null);
+        await vm.ConfirmWriteCommand.ExecuteAsync(null);
+        h.Admin.Calls.Should().Contain("config:1");
+        h.Cube.GetRoom(1)!.ComfortTemperature.Value.Should().Be(21.5);
+    }
+
     // --- Tagesleiste und Schnellbearbeitung (ohne Verbindung) --------------------------
 
     [Fact]
@@ -933,10 +1063,15 @@ public class AdminViewModelTests : IDisposable
             return Task.CompletedTask;
         }
 
+        public List<DateTimeOffset?> UntilCalls { get; } = new();
+
         public Task SetRoomControlModeAsync(
             int roomId, RadioAddress master, RoomControlMode mode, Temperature? setPoint,
             DateTimeOffset? until, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        {
+            UntilCalls.Add(until);
+            return Task.CompletedTask;
+        }
 
         public Task SetWeekDayProfileAsync(
             int roomId, RadioAddress master, DayProfile profile, CancellationToken cancellationToken = default)
@@ -964,6 +1099,7 @@ public class AdminViewModelTests : IDisposable
         public List<PushButtonConfiguration> PushButtons { get; } = new();
         public List<(TimeZoneConfiguration Configuration, DateTimeOffset? Time)> TimeZones { get; } = new();
         public List<string[]> Ntp { get; } = new();
+        public List<(int RoomId, int Minutes)> WakeUps { get; } = new();
 
         public event EventHandler<AirtimeStatus>? AirtimeChanged;
 
@@ -1060,6 +1196,16 @@ public class AdminViewModelTests : IDisposable
             Ntp.Add(servers.ToArray());
             return Task.CompletedTask;
         }
+
+        public Task WakeUpRoomAsync(int roomId, int durationMinutes = 30, CancellationToken cancellationToken = default)
+        {
+            WakeUps.Add((roomId, durationMinutes));
+            return Task.CompletedTask;
+        }
+
+        public Task WakeUpDeviceAsync(
+            RadioAddress device, int durationMinutes = 30, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeNetwork : ICubeNetworkConfigurator

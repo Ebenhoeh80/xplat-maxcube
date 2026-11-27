@@ -69,11 +69,12 @@ public partial class MainWindowViewModel
 
     private bool CanStructureWrite => CanAdmin && !IsStale && CanWriteFrom(DevicesStatus);
 
-    private bool CanRenameRoom => CanStructureWrite && RenameRoomText.Trim().Length > 0;
+    private bool CanRenameRoom
+        => CanStructureWrite && SelectedDevicesRoom is not null && RenameRoomText.Trim().Length > 0;
 
     private bool CanRenameDevice => CanStructureWrite && SelectedDevice is not null && RenameDeviceText.Trim().Length > 0;
 
-    private bool CanDeleteRoom => CanStructureWrite && ConfirmChanges;
+    private bool CanDeleteRoom => CanStructureWrite && SelectedDevicesRoom is not null && ConfirmChanges;
 
     private bool CanDeleteDevice => CanStructureWrite && SelectedDevice is not null && ConfirmChanges;
 
@@ -84,12 +85,12 @@ public partial class MainWindowViewModel
         => CanStructureWrite && ConfirmChanges && FoundDevice is not null && AssignDeviceName.Trim().Length > 0
             && (NewRoomName.Trim().Length > 0 || SelectedAssignTarget is not null);
 
-    private bool CanMoveRoom => CanStructureWrite && Rooms.Count > 1;
+    private bool CanMoveRoom => CanStructureWrite && SelectedDevicesRoom is not null && Rooms.Count > 1;
 
     [RelayCommand(CanExecute = nameof(CanRenameRoom))]
     private async Task RenameRoomAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedDevicesRoom;
         if (room is null)
         {
             return;
@@ -105,7 +106,7 @@ public partial class MainWindowViewModel
     [RelayCommand(CanExecute = nameof(CanDeleteRoom))]
     private async Task DeleteRoomAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedDevicesRoom;
         if (room is null)
         {
             return;
@@ -127,7 +128,7 @@ public partial class MainWindowViewModel
 
     private async Task MoveRoomAsync(int direction)
     {
-        var room = SelectedRoom;
+        var room = SelectedDevicesRoom;
         if (room is null)
         {
             return;

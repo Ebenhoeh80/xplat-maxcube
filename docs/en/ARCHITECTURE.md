@@ -2,7 +2,7 @@
 
 # Architecture – MAX! Cube Local App
 
-> Role: Senior Solution Architect. As of: 27.11.2026. Version: 0.7.0.
+> Role: Senior Solution Architect. As of: 27.11.2026. Version: 0.8.0.
 > Markers: `FACT` = directly evidenced in the artifact, `OBSERVATION` = seen in a test run, `INFERENCE` = derived from code/docs, `UNKNOWN` = not evidenced. Evidence as `file:line`.
 
 ## 1. Executive Summary
@@ -42,7 +42,7 @@ Connection and discovery, room/device view, target temperature and modes, home c
 C4Context
   title Systemkontext – MAX! Cube Local App
   Person(Betreiber, "Betreiber", "Steuert Heizung lokal am PC")
-  System(App, "MAX! Cube Local App 0.7.0", "Avalonia-Desktop-App, Windows/Linux")
+  System(App, "MAX! Cube Local App 0.8.0", "Avalonia-Desktop-App, Windows/Linux")
   System(Cube, "eQ-3 MAX! Cube", "Firmware 273–275, TCP 62910, UDP 23272")
   SystemDb(Cache, "maxcube.db", "SQLite-Cache, Einstellungen, Audit")
   SystemExt(Cloud, "MAX! Cloud", "seit 01.07.2023 abgeschaltet; App laut Nutzerhinweis aus Stores entfernt")
@@ -274,17 +274,22 @@ The cache is completely overwritten on every connect (`SqliteStateStore.cs:236-2
 | R-09 | Round 5 without model votes (free limit) | organizational | No external cross-check voice for the last scope | `docs/gremium.md:90-97` |
 | R-10 | `MAX10038` deviates from the pattern `MAX\d{4}` | low | Regex `MAX\d{4,5}` accounts for it; fixed-length consumers might miss it | `ErrorCatalog.cs:54,97` |
 
-## 9. Improvement suggestions (separate, not implemented)
+## 9. Improvement suggestions (open or partially open)
 
 1. Hardware test with packet capture for all `INFERENCE` formats; then raise the evidence status in `docs/features.md` or correct the encoding.
 2. Golden capture of a real cube including `S:` acknowledgement and UDP response; derive test fixtures from it.
 3. Linux desktop visual check: the user confirmed on 26.11.2026 in principle "Linux Desktop funktiojniert auch" and on 27.11.2026 that the UI looks visually okay (`HARDWARE-VERIFY.md` §28). Tray and "close hides window" are not explicitly checked; the protocol-specific check remains open.
-4. Drag-and-drop in the weekly schedule editor as a complement to the day bar.
+4. Resizing weekly schedule intervals by dragging their edges; moving a point is implemented.
 5. Add error catalog entries with manufacturer wording instead of interpretations once evidenced.
-6. Deliver self-contained packages with hash/signature; currently only CI artifacts without a signature (`ci.yml:66-69`).
+6. Sign the self-contained packages in addition; `SHA256SUMS.txt` accompanies the release artefacts, a signature remains open (`release.yml:91-105,134`).
 
 **Implemented in 0.7.0:** configurable audit retention (`audit.retentionDays`), source tags in
 the audit log and reconnect timestamps in the diagnostic report.
+
+**Implemented in 0.8.0:** free `Temporary` end time, per-tab room selection,
+drag-and-drop moving of switch points, confirmed wake-up (`z:`) as a dedicated
+user action and SHA-256 checksums in the release. The four changes are covered
+by 553/553 tests on Windows and Debian/WSL2.
 
 ## 10. Open questions
 

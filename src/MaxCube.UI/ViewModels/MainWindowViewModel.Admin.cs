@@ -263,6 +263,31 @@ public partial class MainWindowViewModel
             OnUiThread(() => ConfirmFactoryReset = false);
         }, L("ErrFactoryReset"), L("OkFactoryReset"), previewText: L("PreviewFactoryReset"));
 
+    // --- Wake-up (v0.8.0): explizit bestätigt, nie automatisch vor anderen Schreiben ---
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(WakeUpRoomCommand))]
+    private bool confirmWakeUp;
+
+    [ObservableProperty]
+    private double wakeUpMinutes = 30;
+
+    private bool CanWakeUpRoom => CanWriteAdmin && ConfirmWakeUp && SelectedConfigRoom is not null;
+
+    [RelayCommand(CanExecute = nameof(CanWakeUpRoom))]
+    private Task WakeUpRoomAsync()
+    {
+        var name = SelectedConfigRoom!.Name;
+        var roomId = SelectedConfigRoom.Id;
+        var minutes = (int)Math.Clamp(WakeUpMinutes, 0, 0xFF);
+        return RunAsync(async token =>
+        {
+            await _service.WakeUpRoomAsync(roomId, true, minutes, token);
+            OnUiThread(() => ConfirmWakeUp = false);
+        }, L("ErrWakeUp"), L("OkWakeUp"),
+           previewText: L(localizer => localizer.Format("PreviewWakeUp", name, minutes)));
+    }
+
     // --- Gemeinsame Zustandslogik ----------------------------------------------------
 
     /// <summary>Lesen bleibt immer möglich; Schreiben setzt eine echte Lesung voraus.</summary>
@@ -273,8 +298,12 @@ public partial class MainWindowViewModel
     private bool CanSetDisplay
         => CanWriteAdmin && SelectedDevice?.DeviceType == DeviceType.WallMountedThermostat;
 
-    private bool CanCopyToRooms
-        => CanWriteAdmin && Rooms.Count(room => room.IsHouseSelected && room.Id != SelectedRoom?.Id) > 0;
+    private bool CanCopyToRooms(RoomViewModel? source)
+        => CanWriteAdmin && Rooms.Count(room => room.IsHouseSelected && room.Id != source?.Id) > 0;
+
+    private bool CanCopyConfigurationToRooms => CanCopyToRooms(SelectedConfigRoom);
+
+    private bool CanCopyWeekToRooms => CanCopyToRooms(SelectedWeekRoom);
 
 
     private void InitializeAdminState()
@@ -321,7 +350,6 @@ public partial class MainWindowViewModel
             DecalcificationDay = room.DecalcificationDay;
             DecalcificationHour = room.DecalcificationHour;
             ValveOffsetPercent = CubeApplicationService.ValveOffsetToPercent(room.ValveOffsetRaw);
-            RenameRoomText = room.Name;
         }
 
         // Nur die tatsächlich übernommenen Cube-Werte sind die Basis. Bei keepEdited
@@ -473,6 +501,7 @@ public partial class MainWindowViewModel
         yield return SendNetworkCommand;
         yield return RebootCubeCommand;
         yield return FactoryResetCubeCommand;
+        yield return WakeUpRoomCommand;
         yield return ExportDiagnosticsCommand;
     }
 
@@ -487,7 +516,7 @@ public partial class MainWindowViewModel
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task ApplyRoomConfigurationAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedConfigRoom;
         if (room is null)
         {
             return;
@@ -505,7 +534,7 @@ public partial class MainWindowViewModel
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task ApplyBoostAndDecalcificationAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedConfigRoom;
         if (room is null)
         {
             return;
@@ -523,7 +552,7 @@ public partial class MainWindowViewModel
     [RelayCommand(CanExecute = nameof(CanWriteAdmin))]
     private async Task ApplyValveOffsetAsync()
     {
-        var room = SelectedRoom;
+        var room = SelectedConfigRoom;
         if (room is null)
         {
             return;
@@ -541,10 +570,10 @@ public partial class MainWindowViewModel
     /// Überträgt die Temperaturkonfiguration auf die in der Haus-Ansicht gewählten Räume
     /// (Kopierfunktion von temperatureConfController.js/boostConfController.js:70-75).
     /// </summary>
-    [RelayCommand(CanExecute = nameof(CanCopyToRooms))]
+    [RelayCommand(CanExecute = nameof(CanCopyConfigurationToRooms))]
     private async Task CopyConfigurationToSelectedRoomsAsync()
     {
-        var targets = Rooms.Where(room => room.IsHouseSelected && room.Id != SelectedRoom?.Id).ToArray();
+        var targets = Rooms.Where(room => room.IsHouseSelected && room.Id != SelectedConfigRoom?.Id).ToArray();
         if (targets.Length == 0)
         {
             SetSuccess(L("NoRoomsChosen"));
@@ -635,10 +664,10 @@ public partial class MainWindowViewModel
     /// gewählten Räume. Es werden nur Tage gesendet, die in Quelle UND Ziel vom Cube gelesen
     /// wurden; die Sendesperre (M-F) bleibt dadurch auch hier bestehen.
     /// </summary>
-    [RelayCommand(CanExecute = nameof(CanCopyToRooms))]
+    [RelayCommand(CanExecute = nameof(CanCopyWeekToRooms))]
     private async Task CopyWeekToSelectedRoomsAsync()
     {
-        var source = SelectedRoom;
+        var source = SelectedWeekRoom;
         if (source is null)
         {
             return;

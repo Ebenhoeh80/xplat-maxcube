@@ -162,6 +162,12 @@ public sealed partial class CubeGateway
         return SendAsync(new SetTimezoneConfigurationCommand(payload, seconds), cancellationToken);
     }
 
+    public Task WakeUpRoomAsync(int roomId, int durationMinutes = 30, CancellationToken cancellationToken = default)
+        => SendAsync(new WakeupCommand(WakeupContext.Group, roomId, durationMinutes), cancellationToken);
+
+    public Task WakeUpDeviceAsync(RadioAddress device, int durationMinutes = 30, CancellationToken cancellationToken = default)
+        => SendAsync(new WakeupCommand(WakeupContext.Device, device.Value, durationMinutes), cancellationToken);
+
     public Task<string> QueryNtpServersAsync(CancellationToken cancellationToken = default)
         => SendAsync(new QueryNtpServerCommand(), cancellationToken);
 

@@ -1,3 +1,6 @@
 # Shell-Skripte müssen unter Linux mit LF enden, sonst bricht bash mit "\r: command not found" ab.
+# C#-Quellen einheitlich mit LF, damit `dotnet format --verify-no-changes` auf Windows
+# und Debian denselben Zeilenendstil akzeptiert.
 *.sh text eol=lf
+*.cs text eol=lf
 *.cmd text eol=crlf

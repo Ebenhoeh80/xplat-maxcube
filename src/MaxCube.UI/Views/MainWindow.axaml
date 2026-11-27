@@ -73,6 +73,11 @@
                   <Button Content="{Binding Labels[Send]}" Command="{Binding ApplyTemperatureCommand}" />
                 </WrapPanel>
                 <WrapPanel ItemSpacing="8" LineSpacing="8">
+                  <TextBlock Text="{Binding Labels[TemporaryEnd]}" VerticalAlignment="Center" />
+                  <DatePicker SelectedDate="{Binding TemporaryEndDate, Mode=TwoWay}" />
+                  <TimePicker SelectedTime="{Binding TemporaryEndTime, Mode=TwoWay}" />
+                </WrapPanel>
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
                   <Button Content="{Binding Labels[ModeAuto]}" Command="{Binding SetAutoCommand}" />
                   <Button Content="{Binding Labels[ModeEco]}" Command="{Binding SetEcoCommand}" />
                   <Button Content="{Binding Labels[ModeComfort]}" Command="{Binding SetComfortCommand}" />
@@ -123,14 +128,33 @@
             <ScrollViewer Grid.Column="1" Margin="16,0">
               <StackPanel Spacing="10">
                 <WrapPanel ItemSpacing="12" LineSpacing="4">
+                  <TextBlock Text="{Binding Labels[SelectRoom]}" VerticalAlignment="Center" />
+                  <ComboBox Width="220" ItemsSource="{Binding Rooms}"
+                            SelectedItem="{Binding SelectedWeekRoom, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Name}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </WrapPanel>
+                <WrapPanel ItemSpacing="12" LineSpacing="4">
                   <TextBlock Text="{Binding SelectedDay.DisplayName}" FontSize="18" FontWeight="Bold" />
                   <Button Content="{Binding Labels[AddPoint]}" Command="{Binding AddSwitchPointCommand}" />
                 </WrapPanel>
-                <c:DayTimeline Segments="{Binding SelectedDay.Segments}" />
+                <Border x:Name="WeekTimelineDropTarget" Background="Transparent" Height="56">
+                  <c:DayTimeline Segments="{Binding SelectedDay.Segments}" />
+                </Border>
                 <ItemsControl ItemsSource="{Binding SelectedDay.Points}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
                       <WrapPanel ItemSpacing="6" LineSpacing="4" Margin="0,4">
+                        <Border x:Name="SwitchPointDragHandle" Width="24" Height="26" Background="Transparent" Cursor="SizeAll"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                PointerPressed="OnSwitchPointPointerPressed"
+                                ToolTip.Tip="{Binding $parent[Window].DataContext.Labels[DragPoint]}">
+                          <TextBlock Text="↔" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                         <Button Content="−5" Command="{Binding EarlierCommand}"
                                 ToolTip.Tip="{Binding $parent[Window].DataContext.Labels[QuickEarlier]}" />
                         <TextBox Width="90" Text="{Binding UntilText}" />
@@ -192,6 +216,11 @@
                 <NumericUpDown Width="140" Minimum="4.5" Maximum="30.5" Increment="0.5"
                                Value="{Binding RequestedTemperature}" />
               </WrapPanel>
+              <WrapPanel ItemSpacing="8" LineSpacing="8">
+                <TextBlock Text="{Binding Labels[TemporaryEnd]}" VerticalAlignment="Center" />
+                <DatePicker SelectedDate="{Binding TemporaryEndDate, Mode=TwoWay}" />
+                <TimePicker SelectedTime="{Binding TemporaryEndTime, Mode=TwoWay}" />
+              </WrapPanel>
               <TextBlock Text="{Binding Labels[HouseHint]}" Foreground="Gray" TextWrapping="Wrap" />
               <TextBlock Text="{Binding HouseWriteHint}" Foreground="Gray" TextWrapping="Wrap"
                         automation:AutomationProperties.Name="{Binding HouseWriteHint}" />
@@ -204,7 +233,14 @@
           <ScrollViewer>
             <StackPanel Margin="16" Spacing="14">
               <WrapPanel ItemSpacing="12" LineSpacing="4">
-                <TextBlock Text="{Binding SelectedRoom.Name}" FontSize="22" FontWeight="Bold" />
+                <ComboBox Width="220" ItemsSource="{Binding Rooms}"
+                          SelectedItem="{Binding SelectedConfigRoom, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="Bold" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
                 <Button Content="?" Command="{Binding ShowHelpCommand}" CommandParameter="Config"
                         ToolTip.Tip="{Binding Labels[HelpButton]}" />
               </WrapPanel>
@@ -336,7 +372,14 @@
 
               <TextBlock Text="{Binding Labels[RoomStructure]}" FontSize="16" FontWeight="Bold" />
               <WrapPanel ItemSpacing="8" LineSpacing="8">
-                <TextBlock Text="{Binding SelectedRoom.Name}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <ComboBox Width="220" ItemsSource="{Binding Rooms}"
+                          SelectedItem="{Binding SelectedDevicesRoom, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
                 <TextBox Width="220" Text="{Binding RenameRoomText}" />
                 <Button Content="{Binding Labels[Rename]}" Command="{Binding RenameRoomCommand}" />
                 <Button Content="↑" Command="{Binding MoveRoomUpCommand}" ToolTip.Tip="{Binding Labels[MoveUp]}" />
@@ -459,6 +502,15 @@
               <WrapPanel ItemSpacing="12" LineSpacing="8">
                 <CheckBox Content="{Binding Labels[ConfirmFactoryReset]}" IsChecked="{Binding ConfirmFactoryReset}" />
                 <Button Content="{Binding Labels[FactoryResetCube]}" Command="{Binding FactoryResetCubeCommand}" />
+              </WrapPanel>
+
+              <TextBlock Text="{Binding Labels[WakeUpHint]}" Foreground="#B0712A" TextWrapping="Wrap" />
+              <WrapPanel ItemSpacing="12" LineSpacing="8">
+                <TextBlock Text="{Binding Labels[WakeUpDuration]}" VerticalAlignment="Center" />
+                <NumericUpDown Width="110" Minimum="0" Maximum="255" Increment="1"
+                               Value="{Binding WakeUpMinutes}" />
+                <CheckBox Content="{Binding Labels[ConfirmWakeUp]}" IsChecked="{Binding ConfirmWakeUp}" />
+                <Button Content="{Binding Labels[WakeUp]}" Command="{Binding WakeUpRoomCommand}" />
               </WrapPanel>
 
               <TextBlock Text="{Binding DiagnosticsStatus.Text}" Foreground="Gray" TextWrapping="Wrap" />

@@ -38,14 +38,14 @@
 2. **Why no cloud functions?** Cloud shut down since 01.07.2023; user notice 25.11.2026 (`FACT`, not externally verified) adds store removal. Remote access, product account, proxy, and app update remain discarded (`README.md:7`, `wiki/projekte/app-maxcube.md:50`).
 3. **Why SQLite although the original had no DB?** The original only stores `~/.MAX/*.settings` via `java.util.Properties`; SQLite is a new development as cache, settings store, and audit. The cube remains the source of truth (`wiki/projekte/app-maxcube.md:18`, `docs/DATABASE.md` §2).
 4. **Which port rule applies?** 62910 physical, 54321 virtual/local only, 63121 was the original's dynamic web UI port (`docs/INDEX.md:35,39`).
-5. **How reliable are the tests?** 519/519 hardware-free cases on Windows (27.11.2026); breakdown Domain 64 / Application 84 / Protocol 198 / Infrastructure 66 / UI 107 (`docs/DEVELOPMENT.md` §3, `CHANGELOG.md`). The 442/442 status in the wiki is historical.
+5. **How reliable are the tests?** 553/553 hardware-free cases on Windows 10 and Debian 13 (WSL2, 27.11.2026); breakdown Domain 64 / Application 90 / Protocol 200 / Infrastructure 69 / UI 130 (`docs/DEVELOPMENT.md` §3, `CHANGELOG.md`). The 442/442 and 519/519 statuses are historical.
 6. **What is unresolved?** Real UDP response, technically evaluated `S:` acknowledgement, golden capture, hardware effect of the derived write formats, and Linux UI on a real desktop (`README.md:85-87`, `wiki/projekte/app-maxcube.md:52`).
 
 ## 4. Lessons learned
 
 | Lesson | Consequence in code / documentation |
 |---|---|
-| Sonnet rounds 1–4 found real bugs (DataContext, endianness, `l:` offsets, UI thread, rounding, CanExecute, temporary local time) | All findings fixed and covered with regression tests; historical statuses 243/249/251/268/442/514/515 are obsolete, current is 519/519 (`wiki/projekte/app-maxcube.md:34-42,48`, `CHANGELOG.md`) |
+| Sonnet rounds 1–4 found real bugs (DataContext, endianness, `l:` offsets, UI thread, rounding, CanExecute, temporary local time) | All findings fixed and covered with regression tests; historical statuses 243/249/251/268/442/514/515/519 are obsolete, current is 553/553 (`wiki/projekte/app-maxcube.md:34-42,48`, `CHANGELOG.md`) |
 | Council round 5 failed with `Free usage limit reached` | No model votes for round 5; implemented autonomously according to the binding decisions of rounds 1–4 and documented as such (`docs/gremium.md`, `wiki/projekte/app-maxcube.md:48`) |
 | Naive `[Fact]`/`[Theory]` count was too low because of `[MemberData]` (historically 422 instead of 442) | One `[MemberData]` yields 21 rows; documentation points to the correction (`docs/DEVELOPMENT.md` §3) |
 | `MAX10038` deviates from the pattern `MAX\d{4}` | Do not silently correct; regex accepts 4–5 digits (`ErrorCatalog.cs:54,97`, `docs/API.md` §4) |

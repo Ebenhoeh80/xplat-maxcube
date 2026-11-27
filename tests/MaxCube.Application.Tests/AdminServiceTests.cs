@@ -656,6 +656,44 @@ public class AdminServiceTests
         h.Core.Calls.Count(call => call == "connect:192.168.1.5:62910").Should().Be(2);
     }
 
+    [Fact]
+    public async Task Wake_up_room_requires_confirmation_and_audits_the_send()
+    {
+        var h = new Harness();
+        var service = await h.ConnectAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.WakeUpRoomAsync(1, false, 45));
+        h.Admin.WakeUps.Should().BeEmpty();
+
+        await service.WakeUpRoomAsync(1, true, 45);
+
+        h.Admin.WakeUps.Should().ContainSingle().Which.Should().Be(("room", 1, 45));
+        h.Store.Audit.Should().Contain(text => text.Contains("Wake-up Raum 1"));
+    }
+
+    [Fact]
+    public async Task Wake_up_device_is_sent_with_the_full_24_bit_address()
+    {
+        var h = new Harness();
+        var service = await h.ConnectAsync();
+
+        await service.WakeUpDeviceAsync(Wall, true);
+
+        h.Admin.WakeUps.Should().ContainSingle().Which.Should().Be(("device", 0x0A0B0D, 30));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(256)]
+    public async Task Wake_up_rejects_durations_outside_the_protocol_field(int minutes)
+    {
+        var h = new Harness();
+        var service = await h.ConnectAsync();
+
+        await Assert.ThrowsAsync<DomainValidationException>(() => service.WakeUpRoomAsync(1, true, minutes));
+        h.Admin.WakeUps.Should().BeEmpty();
+    }
+
     // ---------------------------------------------------------------------------------
 
     private sealed class FakeClock : IClock
@@ -720,6 +758,7 @@ public class AdminServiceTests
         public List<PushButtonConfiguration> PushButtons { get; } = new();
         public List<(TimeZoneConfiguration Configuration, DateTimeOffset? Time)> TimeZones { get; } = new();
         public List<string[]> Ntp { get; } = new();
+        public List<(string Kind, int Destination, int Minutes)> WakeUps { get; } = new();
         public bool FailMetadata { get; set; }
 
         public event EventHandler<AirtimeStatus>? AirtimeChanged;
@@ -840,6 +879,19 @@ public class AdminServiceTests
         public Task SetNtpServersAsync(IReadOnlyList<string> servers, CancellationToken cancellationToken = default)
         {
             Ntp.Add(servers.ToArray());
+            return Task.CompletedTask;
+        }
+
+        public Task WakeUpRoomAsync(int roomId, int durationMinutes = 30, CancellationToken cancellationToken = default)
+        {
+            WakeUps.Add(("room", roomId, durationMinutes));
+            return Task.CompletedTask;
+        }
+
+        public Task WakeUpDeviceAsync(
+            RadioAddress device, int durationMinutes = 30, CancellationToken cancellationToken = default)
+        {
+            WakeUps.Add(("device", device.Value, durationMinutes));
             return Task.CompletedTask;
         }
     }

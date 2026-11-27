@@ -18,9 +18,8 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.7.0** (`Directory.Build.props:3`), released on 2026-11-27 as
-`v0.7.0` (latest published; previous release 0.6.9). See
-[CHANGELOG.md](CHANGELOG.md).
+Version **0.8.0** (`Directory.Build.props:3`), to be released on 2026-11-27 as
+`v0.8.0` (previous published release: `v0.7.0`). See [CHANGELOG.md](CHANGELOG.md).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
 > MAX! cloud control and removed the cloud app from the app stores. Remote
@@ -58,11 +57,11 @@ Version **0.7.0** (`Directory.Build.props:3`), released on 2026-11-27 as
 3. Every section shows where its values came from: *not read from Cube*, *cache
    from …*, *live …*, *stale* or *failed* — with a symbol **and** localised text,
    never colour alone. Activating the Cube tab reads it automatically when
-   connected (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:524`).
+   connected (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:567`).
 4. Writing needs an explicit confirmation **and** a genuinely read basis.
    Unread placeholders, stale data and offline state block write commands;
    cached values are writable only while offline, never over an active
-   connection (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:1144-1154`).
+   connection (`src/MaxCube.UI/ViewModels/MainWindowViewModel.cs:1074-1106,1210-1225`).
 5. A persistent status bar shows connection, host, data provenance, the last
    action with a timestamp and the log state. Diagnostics are opt-in and stay
    local; the viewer and ZIP export are in the **Status** tab.
@@ -76,11 +75,18 @@ the connection fails.
 - **Rooms and devices:** target/measured temperature, valve position, window
   state, device status; modes Auto / Permanent / Temporary and ECO / COMFORT.
 - **Weekly schedule:** up to 13 switch points per day, a graphical day bar,
-  quick editing in 0.5 °C / 5-minute steps and copying to other rooms.
-  Unread placeholder profiles cannot be sent.
+  quick editing in 0.5 °C / 5-minute steps, drag-and-drop of a point onto the
+  day bar (snapped to 5 minutes, order and limit validated) and copying to
+  other rooms. The weekly, configuration and device tabs keep their own room
+  selection. Unread placeholder profiles cannot be sent.
+- **Temporary mode:** a free date and time in the room and house tabs; the
+  protocol still rounds to 30-minute boundaries.
 - **Administration:** room configuration, boost / descaling / valve settings,
   wall thermostat display, button configuration, inclusion, device mapping,
   structure maintenance, time / time zone / NTP and UDP network configuration.
+- **Wake-up (`z:`):** an explicit, confirmed radio wake-up for the selected
+  room. It is never embedded in other write paths; `A:` only confirms that the
+  Cube accepted the command, not its effect on the devices.
 - **Diagnostics:** radio duty cycle from the `S:` send status, local error report
   and error-code catalogue `MAX0001`–`MAX1051`. Nothing is sent anywhere.
 - **Application log:** opt-in (`log.enabled`, default off), INFO/WARN/ERROR,
@@ -114,7 +120,8 @@ the connection fails.
 Download a self-contained archive from
 [Releases](https://github.com/Ebenhoeh80/xplat-maxcube/releases). Archives are
 built by GitHub Actions for every `v*` [tag](https://github.com/Ebenhoeh80/xplat-maxcube/tags),
-checked with the headless self-test and attached to the release.
+checked with the headless self-test and attached to the release together with
+`SHA256SUMS.txt` (plain checksums, no signature claim).
 
 - **Windows:** unzip and run `MaxCube.UI.Desktop.exe`.
 - **Linux:** install the system libraries first (see Requirements), unzip, run
@@ -217,8 +224,8 @@ mappable (cloud/update/firmware-write) (`docs/features.md`).
   configuration can be read and written.
 - A device paired with the Cube appears after a reload; removing a device is
   reflected after a reload/restart of the app.
-- Drag-and-drop editing of weekly programmes is **not implemented**; the day bar
-  and quick editing are available instead.
+- Drag-and-drop moves a switch point to a new time; it does not resize an
+  existing interval edge. Use the `−5` / `+5` buttons for fine shifts.
 - The radio duty cycle is limited by the Cube. At 100 % it pauses radio commands
   for about an hour; changing many settings at once takes time.
 - The technical wire format of `0x12`, `0x20`–`0x23`, `m:`, `w:`, `v:` and `z:`
@@ -241,11 +248,10 @@ bring your own ideas to
 [Discussions → Ideas](https://github.com/Ebenhoeh80/xplat-maxcube/discussions/categories/ideas):
 
 - Fine-grained log levels, filters and a redacted support export.
-- Room selection directly inside the weekly-profile and configuration tabs.
-- Free end time for `Temporary` mode.
+- Resizing of weekly schedule intervals by dragging their edges.
 - Read-only firmware queries (`latest` / `least compatible`).
-- Drag-and-drop editing and resizing of weekly schedule points.
-- `autoSetupTimeZoneConfiguration` and wiring of `WakeupCommand`.
+- `autoSetupTimeZoneConfiguration` and automatic pre-wake behaviour (deliberately
+  not wired: writes must stay explicit).
 - Real read-backs for derived write formats, UDP `C:` write, `F:` NTP format,
   golden captures with 8–13 schedule points.
 - Screenshots and a Linux desktop smoke check.
@@ -268,10 +274,13 @@ bring your own ideas to
 
 ## Verification status
 
-Build **0 warnings / 0 errors**, **519/519** hardware-free tests green on Windows
-and Debian 13 (WSL2), `--selfcheck` `OK` on both systems, self-contained Linux
-package `OK` with `LANG=de_DE.UTF-8` and `LANG=C` (`docs/gremium.md:134`,
-`docs/roadmap.md:460-487`). These results are `OBSERVATION`.
+Build **0 warnings / 0 errors** and **553/553** hardware-free tests green on Windows
+10 and Debian 13 (WSL2) - Domain 64, Application 90, Protocol 200, Infrastructure
+69, UI 130. `dotnet format --verify-no-changes`, the NuGet vulnerability audit and
+YAML parsing of both workflows are green; `--selfcheck` reports `OK` at 0.8.0 on
+both systems and in both self-contained publish outputs. No hardware write test
+was added for wake-up (`docs/HARDWARE-VERIFY.md` §30). These results are
+`OBSERVATION`.
 
 Switching the UI language updates every visible area without a restart or Cube
 access: cached status/result texts, confirmation preview, dirty hint, weekday and

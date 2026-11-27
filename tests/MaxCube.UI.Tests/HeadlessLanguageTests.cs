@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Headless.XUnit;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
@@ -104,6 +105,46 @@ public class HeadlessLanguageTests
         Dispatcher.UIThread.RunJobs();
 
         RenderedTexts(window).Should().Contain(label, "the settings tab must render the new retention label");
+        window.Close();
+    }
+
+    [AvaloniaTheory]
+    [InlineData("de", "Endzeit")]
+    [InlineData("en", "End time")]
+    [InlineData("fr", "Heure de fin")]
+    [InlineData("it", "Ora di fine")]
+    [InlineData("nl", "Eindtijd")]
+    [InlineData("pl", "Czas zakończenia")]
+    public void Rendered_temporary_end_label_follows_every_language(string code, string label)
+    {
+        using var viewModel = new MainWindowViewModel();
+        var window = new MainWindow { DataContext = viewModel };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        viewModel.SelectedLanguage = viewModel.Languages.Single(language => language.Code == code);
+        Dispatcher.UIThread.RunJobs();
+
+        RenderedTexts(window).Should().Contain(label, "the rooms tab must render the free end-time label");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Weekly_timeline_is_configured_as_a_drag_target()
+    {
+        using var viewModel = new MainWindowViewModel();
+        var window = new MainWindow { DataContext = viewModel };
+        window.Show();
+        viewModel.SelectedTabIndex = TabIndex.Week;
+        Dispatcher.UIThread.RunJobs();
+
+        var target = window.FindControl<Border>("WeekTimelineDropTarget");
+        target.Should().NotBeNull();
+        DragDrop.GetAllowDrop(target!).Should().BeTrue();
+        window.GetVisualDescendants().OfType<Border>()
+            .Should().Contain(control => control.Name == "SwitchPointDragHandle",
+                "nur der Griff, nicht die ganze Zeile, darf den Drag starten");
+
         window.Close();
     }
 
