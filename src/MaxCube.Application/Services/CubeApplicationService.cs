@@ -102,6 +102,13 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
     /// </summary>
     public DateTimeOffset? LastReadAt { get; private set; }
 
+    /// <summary>Zeitpunkte für die Diagnose: Verbindung, unreachable und Reconnect.</summary>
+    public DateTimeOffset? LastConnectedAt { get; private set; }
+
+    public DateTimeOffset? LastUnreachableAt { get; private set; }
+
+    public DateTimeOffset? LastReconnectedAt { get; private set; }
+
     /// <summary>Der letzte Cube-Zustand ist älter als der Live-Refresh zulässt.</summary>
     public bool IsStale => _stale;
 
@@ -145,6 +152,7 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
 
     private void OnSessionUnreachable(object? sender, EventArgs args)
     {
+        LastUnreachableAt = _clock.Now;
         SetStale(true);
         RaiseWarning("WarnCubeUnreachable", "Cube nicht erreichbar – versuche erneut zu verbinden.");
         StartReconnect();
@@ -288,13 +296,21 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             var cube = await _gateway.ConnectAsync(endpoint, active).ConfigureAwait(false);
             _current = cube;
             LastReadAt = _clock.Now;
+            LastConnectedAt = _clock.Now;
+            if (_reconnecting)
+            {
+                LastReconnectedAt = _clock.Now;
+            }
             try
             {
                 await _store.SetSettingAsync("cube.serial", cube.SerialNumber.Value, active).ConfigureAwait(false);
                 await _store.SetSettingAsync("cube.endpoint", $"{endpoint.Host}:{endpoint.Port}", active)
                     .ConfigureAwait(false);
                 await PersistAsync(active).ConfigureAwait(false);
-                await _store.AppendAuditAsync($"Connected to {endpoint.Host}:{endpoint.Port} ({cube.SerialNumber})", active)
+                await _store.AppendAuditAsync(
+                        $"Connected to {endpoint.Host}:{endpoint.Port} ({cube.SerialNumber})",
+                        _reconnecting ? AuditSource.Reconnect : AuditSource.Session,
+                        active)
                     .ConfigureAwait(false);
             }
             catch
@@ -523,7 +539,7 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             {
                 await _store.AppendAuditAsync(
                     $"Wochenprofil {roomId}/{profile.Day} gesendet (S: Sendestatus, fachliche Annahme unbelegt)",
-                    active).ConfigureAwait(false);
+                    AuditSource.User, active).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -538,7 +554,7 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             {
                 await _store.AppendAuditAsync(
                     $"Wochenprofil {roomId}/{profile.Day} fehlgeschlagen: {exception.Message}",
-                    CancellationToken.None).ConfigureAwait(false);
+                    AuditSource.User, CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {
@@ -597,7 +613,8 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
             _offline = false;
             try
             {
-                await _store.AppendAuditAsync("Disconnected", lease.Token).ConfigureAwait(false);
+                await _store.AppendAuditAsync("Disconnected", AuditSource.Session, lease.Token)
+                    .ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -634,14 +651,15 @@ public sealed partial class CubeApplicationService : IAsyncDisposable
     /// lokaler Schreibzugriff fehl, wurde der Befehl trotzdem gesendet und muss als solcher
     /// gemeldet werden (Sonnet M-A).
     /// </summary>
-    private async Task ApplyAndPublishAsync(Action mutation, string audit, CancellationToken cancellationToken)
+    private async Task ApplyAndPublishAsync(
+        Action mutation, string audit, CancellationToken cancellationToken, AuditSource source = AuditSource.User)
     {
         mutation();
         _current!.TakeDomainEvents(); // sonst wachsen die Domain-Events unbegrenzt
         try
         {
             await PersistAsync(cancellationToken).ConfigureAwait(false);
-            await _store.AppendAuditAsync(audit, cancellationToken).ConfigureAwait(false);
+            await _store.AppendAuditAsync(audit, source, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

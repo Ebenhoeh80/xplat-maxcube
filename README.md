@@ -18,8 +18,8 @@ browser, Jetty, cloud, HTTPS update check or administrator rights**. The Cube
 remains the source of truth; SQLite is only a cache, settings store and audit log
 (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.9** (`Directory.Build.props:3`), released on 2026-11-27 as
-`v0.6.9` (latest published; previous release 0.6.8). See
+Version **0.7.0** (`Directory.Build.props:3`), released on 2026-11-27 as
+`v0.7.0` (latest published; previous release 0.6.9). See
 [CHANGELOG.md](CHANGELOG.md).
 
 > **FACT (user note 2026-11-25, not independently verified):** eQ-3 has shut down
@@ -226,8 +226,8 @@ mappable (cloud/update/firmware-write) (`docs/features.md`).
   only partially confirmed by read-back** (`UNKNOWN`).
 - The `F:` NTP response format, the effect of a UDP `C:` write and golden
   captures with 8–13 schedule points remain `UNKNOWN`.
-- The Linux UI on a real desktop and tray behaviour are `UNKNOWN`; CI covers
-  the headless self-test only.
+- The Linux UI look on a real desktop was confirmed by the user on 2026-11-27 as visually okay;
+  tray behaviour remains `UNKNOWN` and CI covers the headless self-test only.
 - No screenshots of the real Cube have been published yet.
 
 Statements in this project are classified as `FACT`, `OBSERVATION`, `INFERENCE`

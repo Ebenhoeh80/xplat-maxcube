@@ -110,8 +110,8 @@ Protokollausnahmen (`CubeCommunicationFailedException`, `UnknownCubeOpcodeExcept
 | Artefakt | Pfad | Inhalt / Grenze |
 |---|---|---|
 | Tageslog | `<Datenordner>/logs/maxcube-JJJJMMTT.log` | Zeitstempel, Level, Nachricht; `InvariantCulture`; IO-Fehler werden verschluckt (`FileAppLog.cs:6-9,25-43`) |
-| Audit | `<Datenordner>/maxcube.db`, Tabelle `audit_log` | letzte 500 via `ReadAuditAsync`, UI zeigt 100; keine Rotation (`SqliteStateStore.cs:183-191`) |
-| Diagnosebericht | `<Datenordner>/reports/maxcube-diagnose-*.txt` | OS/.NET, Cube, Räume, Funk, letzte 50 Audit-Zeilen; **lokal, kein Versand** (`CubeApplicationService.Admin.cs:840-876`) |
+| Audit | `<Datenordner>/maxcube.db`, Tabelle `audit_log` | letzte 500 via `ReadAuditAsync`, UI zeigt 100; Aufbewahrung `audit.retentionDays` beim Start (`SqliteStateStore.cs:166-219`) |
+| Diagnosebericht | `<Datenordner>/reports/maxcube-diagnose-*.txt` | OS/.NET, Cube, Räume, Funk, Verbindungs-/Reconnect-Zeitpunkte, letzte 50 Audit-Zeilen; **lokal, kein Versand** (`CubeApplicationService.Admin.cs:922-959`) |
 | Datenordner | `%LOCALAPPDATA%\MaxCube` / `$XDG_DATA_HOME/MaxCube` |Override `MAXCUBE_DATA_DIR` (`AppPaths.cs:10-28`) |
 
 Logs können Gerätenamen, Seriennummern, Temperaturen und Fehlertexte enthalten; keine Zugangsdaten (`SECURITY.md` §5). Bei Weitergabe prüfen.
@@ -126,7 +126,7 @@ Logs können Gerätenamen, Seriennummern, Temperaturen und Fehlertexte enthalten
 | Offline-Anzeige leer | kein `cube.serial` oder kein Snapshot | einmal verbinden; Danach Cache gefüllt (`CubeApplicationService.cs:282,265-303`) |
 | Räume/Geräte veraltet | Cache wird nur bei Connect ersetzt | erneut verbinden oder „Zustand neu laden“ (`SqliteStateStore.cs:236-255`) |
 | `week_profile`-Spalte fehlt | alte DB vor Migration | App startet additive Migration via `pragma_table_info` (`SqliteStateStore.cs:97-106`) |
-| DB wächst durch Audit | unbegrenzte `audit_log`-Tabelle | App beenden, alte Zeilen löschen; Rotation ist Verbesserungsvorschlag (`DATABASE.md` §9) |
+| DB wächst durch Audit | `audit.retentionDays` zu hoch oder nie neu gestartet | Einstellungen prüfen (1..365, Default 30), App neu starten; bei Bedarf backupen und manuell bereinigen (`DATABASE.md` §8) |
 
 **Vorsicht:** Es gibt keine Rückwärtsmigration. Vor Downgrades die DB sichern (`SqliteStateStore.cs:108-115`, `OPERATIONS.md` §5).
 

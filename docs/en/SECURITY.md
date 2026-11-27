@@ -86,7 +86,7 @@ flowchart TB
 | Radio addresses | `cubes.rf_address`, `devices.address`, radiograms | device addressing | treat as device IDs |
 | Room/device names | `rooms.name`, `devices.name`, logs | operation | may contain personal hints (e.g. "bedroom") |
 | Temperatures/time profiles | `rooms.*`, `week_profile` | heating control | may allow conclusions about presence |
-| Audit messages | `audit_log` | diagnostics | stored without limit; check before sharing |
+| Audit messages | `audit_log` | diagnostics | source tag (`user`/`session`/`reconnect`/`system`), retention 1..365 days; check before sharing |
 | IP address/endpoint | `settings.cube.endpoint` | reconnection | local in the data folder |
 
 **FACT:** There is no transmission of this data to a manufacturer service; the diagnostic report is only displayed/optionally saved locally (`CubeApplicationService.Admin.cs:840-844`, `MainWindowViewModel.Cube.cs:168-181`).
@@ -115,10 +115,9 @@ flowchart TB
 ## 9. Improvement suggestions
 
 1. Explicitly document data folder permissions (user access only; no network share).
-2. Add source to audit messages ("user", "reconnect").
-3. Offer an optional hardware test mode with read-only commands (no writes).
-4. Sign artifacts and publish SHA-256.
-5. Remove protocol classes `SetUrlCommand`, `SetIntervalCommand`, `EncryptCommand`, `DecryptCommand` from the public command path or mark them `[Obsolete("Cloud-only, nicht lokal verwendet")]` so nobody accidentally wires them up. `ResetGatewayCommand` remains deliberately wired: since 0.6.4 only via the maintenance page, with warning, separate factory-reset checkbox, preview, second confirmation, and audit entry (`CubeMaintenanceGateway`, `CubeApplicationService.FactoryResetCubeAsync`). No automatic call exists.
+2. Offer an optional hardware test mode with read-only commands (no writes).
+3. Sign artifacts and publish SHA-256.
+4. Remove protocol classes `SetUrlCommand`, `SetIntervalCommand`, `EncryptCommand`, `DecryptCommand` from the public command path or mark them `[Obsolete("Cloud-only, nicht lokal verwendet")]` so nobody accidentally wires them up. `ResetGatewayCommand` remains deliberately wired: since 0.6.4 only via the maintenance page, with warning, separate factory-reset checkbox, preview, second confirmation, and audit entry (`CubeMaintenanceGateway`, `CubeApplicationService.FactoryResetCubeAsync`). No automatic call exists.
 
 ## 10. Open questions
 

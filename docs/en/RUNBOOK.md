@@ -32,7 +32,7 @@ bash start.sh
 
 Both scripts look for a .NET 10 SDK, build incrementally, and start the desktop DLL (`start.cmd:8-43`, `start.sh:8-35`). Without an SDK: start the published self-contained package from `publish/win-x64` or `publish/linux-x64` (`ci.yml:39-69`).
 
-**Expected:** window with nine tabs; title/status show version `0.6.9` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
+**Expected:** window with nine tabs; title/status show version `0.7.0` (`Directory.Build.props:3-5`, `AppVersionProvider.cs:13-24`).
 
 ### 1.2 Stop
 
@@ -99,9 +99,9 @@ Contents: `maxcube.db`, `logs/`, `reports/`, `maxcube.lock` (`AppPaths.cs:20-28`
 
 ### 2.4 Log and audit care
 
-- Log retention: Settings tab, `log.retentionDays`, default 30, valid 1..365 (`MainWindowViewModel.Settings.cs:22,25,120-123`, `FileAppLog.cs:45-75`).
-- Audit: **no** automatic rotation; `audit_log` grows without limit (`SqliteStateStore.cs:183-191`). If needed, quit the app and manually delete old rows; back up first.
-- Diagnostic report: "Cube" tab → "Export diagnostic report"; the file is stored under `reports/` and is **not** transmitted (`CubeApplicationService.Admin.cs:840-876`, `MainWindowViewModel.Cube.cs:168-187`).
+- Log retention: Settings tab, `log.retentionDays`, default 30, valid 1..365 (`MainWindowViewModel.Settings.cs:22,27,88-95`, `FileAppLog.cs:45-75`).
+- Audit: Settings tab, `audit.retentionDays`, default 30, valid 1..365; old rows are deleted at startup (`MainWindowViewModel.Settings.cs:23,27,95,165-174`, `SqliteStateStore.cs:186-202`). Back up before manual cleanup.
+- Diagnostic report: "Cube" tab → "Export diagnostic report"; the file is stored under `reports/`, is **not** transmitted and now also lists connection, unreachable and reconnect timestamps (`CubeApplicationService.Admin.cs:922-959`, `MainWindowViewModel.Cube.cs:220-228`).
 
 ## 3. Sending changed configuration (comfort/eco)
 

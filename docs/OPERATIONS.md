@@ -130,18 +130,19 @@ Es gibt keinen Installer und keine Datenbankschema-Rückwärtsmigration. Rollbac
 | Mechanismus | Was überwacht er | Grenze |
 |---|---|---|
 | `--selfcheck` | Pfade, SQLite + native Lib, Instanzschutz, ViewModel, sechs Sprachen | kein Cube-Kontakt (`Program.cs:26-92`) |
-| CI-Matrix | Build, 442 Tests, Selbsttest, Publish für Ubuntu/Windows | bei Push/PR/manuell (`.github/workflows/ci.yml:3-7`) |
+| CI-Matrix | Build, 529 Tests, Selbsttest, Publish für Ubuntu/Windows | bei Push/PR/manuell (`.github/workflows/ci.yml:3-7`) |
 | `FileAppLog` | tägliche Logdatei mit Aufbewahrung | Diagnose, keine Funktion (`FileAppLog.cs:6-9`) |
-| Audit-Log | fachliche Ereignisse in SQLite | letzte 100 in UI, 500 via API (`SqliteStateStore.cs:183-191`) |
+| Audit-Log | fachliche Ereignisse in SQLite mit Quell-Tag | letzte 100 in UI, 500 via API, Aufbewahrung beim Start (`SqliteStateStore.cs:166-219`) |
 | `CubeSessionMonitor` | `L:`-Refresh/Stale/Reconnect zur Laufzeit | intern, keine externe Meldung |
 | **Alerting** | **nicht vorhanden** | kein Mail-/Webhook-Versand; `UNBEKANNT`, ob extern etwas getriggert wird |
 
-**FAKT:** Der „Fehlerbericht senden“ des Originals ist ersetzt durch einen **lokalen Diagnosebericht ohne Versand** (`CubeApplicationService.Admin.cs:840-844`, `MainWindowViewModel.Cube.cs:168-181`). Es werden keine Daten an eQ-3 oder Dritte gesendet.
+**FAKT:** Der „Fehlerbericht senden“ des Originals ist ersetzt durch einen **lokalen Diagnosebericht ohne Versand** (`CubeApplicationService.Admin.cs:922-959`, `MainWindowViewModel.Cube.cs:220-228`). Es werden keine Daten an eQ-3 oder Dritte gesendet.
 
 ## 8. Logging
 
 - Datei: `logs/maxcube-JJJJMMTT.log` (lokale Zeit), Prefix `maxcube-`, Endung `.log` (`FileAppLog.cs:11-13,29-33`).
-- Aufbewahrung: konfigurierbar über den Settings-Key `log.retentionDays`, Default 30 (`MainWindowViewModel.Settings.cs:22,25`).
+- Aufbewahrung: konfigurierbar über den Settings-Key `log.retentionDays`, Default 30 (`MainWindowViewModel.Settings.cs:22,27`).
+- Audit: `audit.retentionDays`, Default 30, gültig 1..365; Löschen alter Einträge beim Start (`MainWindowViewModel.Settings.cs:23,27,165-174`, `CubeApplicationService.Admin.cs:904-906`).
 - Schreibfehler im Log dürfen die App nie beeinträchtigen (`FileAppLog.cs:6-9`).
 - Trace-Ausgaben Avalonia: `LogToTrace()` (`Program.cs:23-24`).
 - Log-Inhalte können Gerätenamen, Seriennummern und Fehlertexte enthalten; siehe [SECURITY.md](SECURITY.md).
@@ -165,10 +166,10 @@ Erwartung: `SELFCHECK OK: ... | SQLite ok`, Exitcode 0 (`Program.cs:89-92`). Bei
 ## 10. Verbesserungsvorschläge
 
 1. Release-Artefakte mit SHA-256 und Signatur versehen; aktuell nur `upload-artifact` ohne Signatur (`.github/workflows/ci.yml:66-69`).
-2. `audit_log`-Rotation konfigurierbar machen (analog `log.retentionDays`).
-3. `--selfcheck` um einen optionalen Hardwaremodus erweitern, der **nur** `l:`/`c:` liest und keine Schreibkommandos sendet.
-4. Management-/Diagnoseausgabe für Duty-Cycle und Reconnect-Zeitpunkte ergänzen; aktuell nur intern/im Audit.
-5. Dokumentierte Backup-Prozedur als Skript (`backup.cmd` / `backup.sh`) bereitstellen.
+2. `--selfcheck` um einen optionalen Hardwaremodus erweitern, der **nur** `l:`/`c:` liest und keine Schreibkommandos sendet.
+3. Dokumentierte Backup-Prozedur als Skript (`backup.cmd` / `backup.sh`) bereitstellen.
+
+**In 0.7.0 umgesetzt:** Audit-Aufbewahrung und Reconnect-Zeitpunkte im Diagnosebericht.
 
 ## 11. Offene Fragen
 

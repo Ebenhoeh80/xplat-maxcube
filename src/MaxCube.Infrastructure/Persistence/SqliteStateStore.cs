@@ -163,16 +163,37 @@ public sealed class SqliteStateStore : ICubeStateStore, IAsyncDisposable
         }
     }
 
-    public async Task AppendAuditAsync(string message, CancellationToken cancellationToken = default)
+    public async Task AppendAuditAsync(
+        string message, AuditSource source = AuditSource.User, CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             using var command = _connection.CreateCommand();
             command.CommandText = "INSERT INTO audit_log (message, at) VALUES ($message, $at)";
-            command.Parameters.AddWithValue("$message", message);
+            // Sprachneutraler Quell-Tag im Rohtext; Audit ist historisches Beweismaterial.
+            command.Parameters.AddWithValue(
+                "$message", $"[{source.ToString().ToLowerInvariant()}] {message}");
             command.Parameters.AddWithValue("$at", _clock.Now.ToString("O"));
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<int> DeleteAuditOlderThanAsync(
+        DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var command = _connection.CreateCommand();
+            // julianday() versteht den gespeicherten ISO-8601-Text inklusive Zeitzonen-Offset.
+            command.CommandText = "DELETE FROM audit_log WHERE julianday(at) < julianday($cutoff)";
+            command.Parameters.AddWithValue("$cutoff", cutoff.ToString("O"));
+            return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {

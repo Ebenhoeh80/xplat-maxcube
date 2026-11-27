@@ -32,7 +32,11 @@ public interface ICubeStateStore
 
     Task SetSettingAsync(string key, string value, CancellationToken cancellationToken = default);
 
-    Task AppendAuditAsync(string message, CancellationToken cancellationToken = default);
+    Task AppendAuditAsync(
+        string message, AuditSource source = AuditSource.User, CancellationToken cancellationToken = default);
+
+    /// <summary>Löscht Audit-Einträge vor der Grenze; liefert die Anzahl gelöschter Zeilen.</summary>
+    Task<int> DeleteAuditOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default);
 
     /// <summary>Letzte Audit-Einträge für die Statusansicht (chronologisch).</summary>
     Task<IReadOnlyList<string>> ReadAuditAsync(CancellationToken cancellationToken = default);

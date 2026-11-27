@@ -84,7 +84,7 @@ flowchart TB
 | Funkadressen | `cubes.rf_address`, `devices.address`, Radiogramme | Geräteadressierung | wie Geräte-ID behandeln |
 | Raum-/Gerätenamen | `rooms.name`, `devices.name`, Logs | Bedienung | können personenbezogene Hinweise enthalten (z. B. „Schlafzimmer“) |
 | Temperaturen/Zeitprofile | `rooms.*`, `week_profile` | Heizsteuerung | Rückschluss auf Anwesenheit möglich |
-| Audit-Nachrichten | `audit_log` | Diagnose | unbegrenzt gespeichert; bei Weitergabe prüfen |
+| Audit-Nachrichten | `audit_log` | Diagnose | Quell-Tag (`user`/`session`/`reconnect`/`system`), Aufbewahrung 1..365 Tage; bei Weitergabe prüfen |
 | IP-Adresse/Endpoint | `settings.cube.endpoint` | Wiederverbindung | lokal im Datenordner |
 
 **FAKT:** Es gibt keine Übermittlung dieser Daten an einen Herstellerdienst; der Diagnosebericht wird nur angezeigt/optional lokal gespeichert (`CubeApplicationService.Admin.cs:840-844`, `MainWindowViewModel.Cube.cs:168-181`).
@@ -113,10 +113,9 @@ flowchart TB
 ## 9. Verbesserungsvorschläge
 
 1. Rechte des Datenordners explizit dokumentieren (nur Benutzerzugriff; keine Freigabe im Netz).
-2. Audit-Nachrichten um Quelle („Benutzer“, „Reconnect“) ergänzen.
-3. Optionalen Hardware-Testmodus mit nur-Lese-Kommandos anbieten (kein Schreiben).
-4. Artefakte signieren und SHA-256 veröffentlichen.
-5. Protoklassen `SetUrlCommand`, `SetIntervalCommand`, `EncryptCommand`, `DecryptCommand` aus dem öffentlichen Kommando-Pfad entfernen oder mit `[Obsolete("Cloud-only, nicht lokal verwendet")]` markieren, damit niemand sie versehentlich verdrahtet. `ResetGatewayCommand` bleibt bewusst verdrahtet: seit 0.6.4 nur über die Wartungsseite, mit Warnung, gesonderter Werksreset-Checkbox, Vorschau, zweiter Bestätigung und Audit-Eintrag (`CubeMaintenanceGateway`, `CubeApplicationService.FactoryResetCubeAsync`). Ein automatischer Aufruf existiert nicht.
+2. Optionalen Hardware-Testmodus mit nur-Lese-Kommandos anbieten (kein Schreiben).
+3. Artefakte signieren und SHA-256 veröffentlichen.
+4. Protoklassen `SetUrlCommand`, `SetIntervalCommand`, `EncryptCommand`, `DecryptCommand` aus dem öffentlichen Kommando-Pfad entfernen oder mit `[Obsolete("Cloud-only, nicht lokal verwendet")]` markieren, damit niemand sie versehentlich verdrahtet. `ResetGatewayCommand` bleibt bewusst verdrahtet: seit 0.6.4 nur über die Wartungsseite, mit Warnung, gesonderter Werksreset-Checkbox, Vorschau, zweiter Bestätigung und Audit-Eintrag (`CubeMaintenanceGateway`, `CubeApplicationService.FactoryResetCubeAsync`). Ein automatischer Aufruf existiert nicht.
 
 ## 10. Offene Fragen
 

@@ -20,9 +20,11 @@ public partial class MainWindowViewModel
 {
     public const string LanguageSetting = "ui.language";
     public const string LogRetentionSetting = "log.retentionDays";
+    public const string AuditRetentionSetting = "audit.retentionDays";
     public const string BundleSetting = "ui.bundleTemperatures";
     public const string CloseToTraySetting = "ui.closeToTray";
     public const int DefaultLogRetentionDays = 30;
+    public const int DefaultAuditRetentionDays = 30;
 
     private static readonly string[] HelpKeys = ["Connect", "Rooms", "Week", "Config", "Devices", "Cube"];
 
@@ -40,6 +42,10 @@ public partial class MainWindowViewModel
 
     [ObservableProperty]
     private int logRetentionDays = DefaultLogRetentionDays;
+
+    /// <summary>Aufbewahrung der Audit-Historie in Tagen (1..365).</summary>
+    [ObservableProperty]
+    private int auditRetentionDays = DefaultAuditRetentionDays;
 
     /// <summary>Temperaturänderungen sammeln und nach dem Sammelfenster gemeinsam senden.</summary>
     [ObservableProperty]
@@ -82,6 +88,14 @@ public partial class MainWindowViewModel
         }
     }
 
+    partial void OnAuditRetentionDaysChanged(int value)
+    {
+        if (!_loadingSettings)
+        {
+            _ = PersistAsync(AuditRetentionSetting, value.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
     partial void OnBundleTemperaturesChanged(bool value)
     {
         if (!_loadingSettings)
@@ -101,6 +115,7 @@ public partial class MainWindowViewModel
         {
             string? language = null;
             string? retention = null;
+            string? auditRetention = null;
             string? bundle = null;
             string? tray = null;
             string? logging = null;
@@ -108,6 +123,7 @@ public partial class MainWindowViewModel
             {
                 language = await _service.ReadSettingAsync(LanguageSetting);
                 retention = await _service.ReadSettingAsync(LogRetentionSetting);
+                auditRetention = await _service.ReadSettingAsync(AuditRetentionSetting);
                 bundle = await _service.ReadSettingAsync(BundleSetting);
                 tray = await _service.ReadSettingAsync(CloseToTraySetting);
                 logging = await _service.ReadSettingAsync(LogEnabledSetting);
@@ -123,6 +139,11 @@ public partial class MainWindowViewModel
                 && days is >= 1 and <= 365
                 ? days
                 : DefaultLogRetentionDays;
+            AuditRetentionDays = int.TryParse(
+                    auditRetention, NumberStyles.Integer, CultureInfo.InvariantCulture, out var auditDays)
+                && auditDays is >= 1 and <= 365
+                ? auditDays
+                : DefaultAuditRetentionDays;
             BundleTemperatures = bundle == "1";
             CloseToTray = tray == "1";
             // Opt-in: ohne gespeicherte Freigabe bleibt das Protokoll aus.
@@ -137,6 +158,19 @@ public partial class MainWindowViewModel
         if (removed > 0)
         {
             _log.Write("INFO", $"{removed} alte Logdatei(en) entfernt (Aufbewahrung {LogRetentionDays} Tage).");
+        }
+
+        try
+        {
+            var removedAudit = await _service.CleanupAuditAsync(AuditRetentionDays);
+            if (removedAudit > 0)
+            {
+                _log.Write("INFO", $"{removedAudit} alte Audit-Einträge entfernt (Aufbewahrung {AuditRetentionDays} Tage).");
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _log.Write("WARN", "Audit-Aufbewahrung konnte nicht angewendet werden: " + exception.Message);
         }
 
         // Erstkontakt: den gespeicherten Endpoint übernehmen statt 127.0.0.1 raten zu lassen.

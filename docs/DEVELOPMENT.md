@@ -1,6 +1,6 @@
 # Entwicklung – MAX! Cube Local App
 
-> Stand 27.11.2026. Version 0.6.9. Diese Datei beschreibt den **Ist-Zustand des Repositories**, nicht eine Wunscharchitektur. Aussagen mit `INFERENZ`/`UNBEKANNT` sind ausdrücklich gekennzeichnet; Belege stehen als `Datei:Zeile`.
+> Stand 27.11.2026. Version 0.7.0. Diese Datei beschreibt den **Ist-Zustand des Repositories**, nicht eine Wunscharchitektur. Aussagen mit `INFERENZ`/`UNBEKANNT` sind ausdrücklich gekennzeichnet; Belege stehen als `Datei:Zeile`.
 
 ## 1. Schnellstart für Entwickler
 
@@ -57,7 +57,7 @@ flowchart LR
 | `MaxCube.UI` | Avalonia-MVVM, Lokalisierung, Tagesleiste | Avalonia 11.3.23, CommunityToolkit.Mvvm 8.4.2 |
 | `MaxCube.UI.Desktop` | Prozess, DI, Tray, Instanzschutz, Selbsttest | Avalonia.Desktop/Themes 11.3.23, DI 10.0.0 |
 
-Zentrale Build-Properties: Version `0.6.9`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`).
+Zentrale Build-Properties: Version `0.7.0`, `LangVersion latest`, `Nullable enable`, `ImplicitUsings enable`, `InvariantGlobalization true`, `Deterministic true` (`Directory.Build.props:3-13`).
 
 ## 2. Kodierkonventionen
 
@@ -174,7 +174,7 @@ Neue Reiter folgen dem Muster `MainWindowViewModel.<Bereich>.cs` + `Strings`-Key
 
 Version kommt **nur** aus `Directory.Build.props:3-5`; `AppVersionProvider` liest das Assembly-Attribut (`AppVersionProvider.cs:13-24`). Fenstertitel und Status zeigen die Version; der Cache speichert `app.version` und `schema.version` zusätzlich (`SqliteStateStore.cs:31-37,108-115`).
 
-Bei Änderungen: Version nach Nutzerregel im SecondBrain automatisch/autark erhöhen (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Aktuell `0.6.9`; `schema.version` bleibt `1`, solange das Schema kompatibel bleibt.
+Bei Änderungen: Version nach Nutzerregel im SecondBrain automatisch/autark erhöhen (`SecondBrain/wiki/quellen/sitzung-2026-11-23-autobuild-bei-aenderungen`, `wiki/index.md:53`). Aktuell `0.7.0`; `schema.version` bleibt `1`, solange das Schema kompatibel bleibt.
 
 CI: Push/PR auf `main`/`master`/`develop` oder manuell; Matrix `ubuntu-latest` + `windows-latest`; Restore/Build/Test/Selbsttest, danach Publish `linux-x64`/`win-x64` mit Selbsttest und Artefakt-Upload (`ci.yml:3-7,13-37,39-69`). Artefakte sind **unsigniert**; Signatur/Hash sind Verbesserungsvorschlag (`ARCHITECTURE.md` §9.7).
 

@@ -67,7 +67,8 @@ public class CubeApplicationServiceTests
         store.Settings["cube.serial"].Should().Be("JEQ0001234");
         store.Snapshot.Should().NotBeNull();
         store.Snapshot!.Rooms.Should().ContainSingle();
-        store.Audit.Should().Contain(text => text.Contains("192.168.1.5:62910"));
+        store.Audit.Should().Contain(text =>
+            text.StartsWith("[session] ") && text.Contains("192.168.1.5:62910"));
         gateway.Calls.Should().Contain("connect:192.168.1.5:62910");
     }
 
@@ -242,7 +243,7 @@ public class CubeApplicationServiceTests
         await service.SetWeekDayProfileAsync(1, profile);
 
         gateway.LastProfile.Should().BeSameAs(profile);
-        store.Audit.Should().Contain(text => text.Contains("Wochenprofil 1/Saturday"));
+        store.Audit.Should().Contain(text => text.StartsWith("[user] ") && text.Contains("Wochenprofil 1/Saturday"));
     }
 
     [Fact]
@@ -339,6 +340,21 @@ public class CubeApplicationServiceTests
     }
 
     [Fact]
+    public async Task Diagnostic_report_lists_last_connection_unreachable_and_reconnect()
+    {
+        var gateway = new FakeGateway { CubeToReturn = BuildCube() };
+        var service = new CubeApplicationService(gateway, new FakeStore(), new FakeClock());
+        await service.ConnectAsync(new CubeEndpoint("cube", 62910));
+        gateway.RaiseSessionUnreachable();
+
+        var report = await service.BuildDiagnosticReportAsync("0.7.0");
+
+        report.Should().Contain("Letzte Verbindung: 2026-11-24 12:00:00 +00:00")
+            .And.Contain("Cube unerreichbar: 2026-11-24 12:00:00 +00:00")
+            .And.Contain("Reconnect erfolgreich: nicht belegt");
+    }
+
+    [Fact]
     public async Task Disposing_the_service_detaches_from_gateway_events()
     {
         var gateway = new FakeGateway { CubeToReturn = BuildCube() };
@@ -427,14 +443,24 @@ public class CubeApplicationServiceTests
                 return Task.CompletedTask;
             },
         };
-        var service = new CubeApplicationService(gateway, new FakeStore(), new FakeClock());
+        var store = new FakeStore();
+        var service = new CubeApplicationService(gateway, store, new FakeClock());
         await service.ConnectAsync(new CubeEndpoint("cube", 62910));
         reconnected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         gateway.RaiseSessionUnreachable();
 
         await reconnected.Task.WaitAsync(TimeSpan.FromSeconds(4));
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        while (service.LastReconnectedAt is null && !deadline.IsCancellationRequested)
+        {
+            await Task.Delay(10, deadline.Token);
+        }
+
         service.IsStale.Should().BeFalse();
+        service.LastReconnectedAt.Should().NotBeNull();
+        store.Audit.Should().Contain(text =>
+            text.StartsWith("[reconnect] ") && text.Contains("cube:62910"));
     }
 
     private sealed class FakeClock : IClock
@@ -557,11 +583,16 @@ public class CubeApplicationServiceTests
             return Task.CompletedTask;
         }
 
-        public Task AppendAuditAsync(string message, CancellationToken cancellationToken = default)
+        public Task AppendAuditAsync(
+            string message, AuditSource source = AuditSource.User, CancellationToken cancellationToken = default)
         {
-            Audit.Add(message);
+            Audit.Add($"[{source.ToString().ToLowerInvariant()}] {message}");
             return Task.CompletedTask;
         }
+
+        public Task<int> DeleteAuditOlderThanAsync(
+            DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
 
         public Task<IReadOnlyList<string>> ReadAuditAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>(Audit.ToArray());

@@ -15,7 +15,7 @@
 
 Lokale C#/.NET-10-Desktopanwendung für den eQ-3 MAX! Cube. Sie ersetzt die lokale Steuerung der ehemaligen MAX! Local Application – **ohne Java, Browser, Jetty, Cloud, HTTPS-Update-Check oder Administratorrechte**. Der Cube bleibt Source of Truth; SQLite ist nur Cache, Einstellungsspeicher und Audit-Log (`src/MaxCube.Infrastructure/Persistence/SqliteStateStore.cs:8-13`).
 
-Version **0.6.9** (`Directory.Build.props:3`), am **27.11.2026** als `v0.6.9` veröffentlicht (aktuellste Version; davor 0.6.8). Siehe [CHANGELOG.md](CHANGELOG.md).
+Version **0.7.0** (`Directory.Build.props:3`), am **27.11.2026** als `v0.7.0` veröffentlicht (aktuellste Version; davor 0.6.9). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 > **FAKT (Nutzerhinweis 25.11.2026, nicht extern verifiziert):** eQ-3 hat die MAX!-Cloud-Steuerung abgeschaltet und die Cloud-App aus den App-Stores entfernt. Fernzugriff, Produktkonto, Proxy und App-Update bleiben daher bewusst ausgeschlossen (`docs/features.md:34-36`).
 
@@ -202,7 +202,7 @@ Details: [Architektur](docs/ARCHITECTURE.md), [API](docs/API.md), [Datenbank](do
 | `S:`-Sendestatus | `FAKT`: `S:<dutyHex>,<discarded>,<freeHex>`; Airtime und freie Slots, keine Fehlercodes |
 | UDP-Adressreihenfolge | `FAKT`: IP, Gateway, Maske, DNS 1, DNS 2; durch Java-Code und echte `c`-Antwort belegt |
 | Drag-and-drop im Wochenprogramm | nicht umgesetzt; Tagesleiste und Schnellbearbeitung vorhanden |
-| Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
+| Linux-Oberfläche auf echtem Desktop, Tray-Verhalten | Optik vom Nutzer am 27.11.2026 als „augenscheinlich ok“ bestätigt; Tray-Verhalten weiterhin `UNBEKANNT` (CI prüft fensterlosen Selbsttest) |
 
 ## Roadmap und Ideen
 
