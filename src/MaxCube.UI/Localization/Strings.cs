@@ -310,6 +310,7 @@ internal static class Strings
         ["ErrMode"] = T("Modus {0} konnte nicht gesendet werden", "Mode {0} could not be sent", "Le mode {0} n'a pas pu être envoyé", "Impossibile inviare la modalità {0}", "Modus {0} kon niet worden verzonden", "Nie udało się wysłać trybu {0}"),
         ["OkMode"] = T("Modus {0} gesendet.", "Mode {0} sent.", "Mode {0} envoyé.", "Modalità {0} inviata.", "Modus {0} verzonden.", "Tryb {0} wysłany."),
         ["OkAction"] = T("Aktion abgeschlossen.", "Action completed.", "Action terminée.", "Azione completata.", "Actie voltooid.", "Akcja zakończona."),
+        ["ActionStarted"] = T("Aktion gestartet: {0}", "Action started: {0}", "Action démarrée : {0}", "Azione avviata: {0}", "Actie gestart: {0}", "Akcja rozpoczęta: {0}"),
         ["Cancelled"] = T("Abgebrochen.", "Cancelled.", "Annulé.", "Annullato.", "Geannuleerd.", "Anulowano."),
 
         // --- Herkunft und Alter der angezeigten Werte (Gremium 0.5.0) ---

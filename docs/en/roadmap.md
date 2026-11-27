@@ -479,10 +479,10 @@ app update in decision 1; a local app must work without the manufacturer's cloud
 | UI | Nine tabs, graphical day bar, quick editing, modal wait/error dialogs, six languages (`Localizer`, completeness test against XAML and code), multilingual help with context buttons, settings, tray, instance-protection notice window, wrapping layout. | `src/MaxCube.UI/Views/MainWindow.axaml`, `Localization/*`, `ViewModels/MainWindowViewModel.*.cs`, `tests/MaxCube.UI.Tests/AdminViewModelTests.cs` |
 | Platform | `Composition.cs`, `--selfcheck`, CI matrix Windows+Linux (including self-contained packages), `start.sh`, `.gitattributes`. Self-test findings: container must be disposed asynchronously; `InvariantGlobalization` makes .NET culture detection ineffective → own system language detection. | `.github/workflows/ci.yml`, `src/MaxCube.UI.Desktop/*`, `start.sh` |
 
-**Verification:** Build 0 warnings/0 errors; `dotnet test MaxCube.slnx` **554/554** green under
-Windows 10 and – in a Debian 13 WSL2 instance with Linux SDK 10.0.404 – also **554/554**
-(Domain 64, Application 90, Protocol 200, Infrastructure 69, UI 131); `--selfcheck` under
-both systems and in both self-contained publish packages `OK`; Windows GUI starts stably,
+**Verification:** Build 0 warnings/0 errors; `dotnet test MaxCube.slnx` **558/558** green under
+Windows 10 and – in a Debian 13 WSL2 instance with Linux SDK 10.0.404 – also **558/558**
+(Domain 64, Application 90, Protocol 200, Infrastructure 71, UI 133); `--selfcheck` under
+both systems and in both self-contained publish packages `OK` at 0.8.2; Windows GUI starts stably,
 and the user checked the Linux UI on 27.11.2026. **Not evidenced:** real hardware for the
 inferred write formats, real UDP response, tray behaviour.
 

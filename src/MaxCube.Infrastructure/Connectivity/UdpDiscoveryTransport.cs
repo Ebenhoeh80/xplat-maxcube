@@ -19,6 +19,13 @@ public sealed class UdpDiscoveryTransport : IDiscoveryTransport
     public async Task<IReadOnlyList<DiscoveryDatagram>> ProbeAsync(
         byte[] request, TimeSpan duration, CancellationToken cancellationToken = default)
     {
+        using var port = await UdpPortGate.EnterAsync(cancellationToken).ConfigureAwait(false);
+        return await ProbeCoreAsync(request, duration, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IReadOnlyList<DiscoveryDatagram>> ProbeCoreAsync(
+        byte[] request, TimeSpan duration, CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(request);
         // Der eQ-3 Cube antwortet auf den Absenderport 23272 (CubeFinder.java:40). Ein
         // ephemeraler lokaler Port lässt die Antwort unerreichbar – Hardwarebeleg 25.11.2026.

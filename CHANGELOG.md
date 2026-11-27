@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-11-27
+
+### Fixed / Behoben
+
+- **EN:** Explicit actions no longer run while the silent Cube-tab read is reloading the connection. `IsCubeAutoReading` disables admin commands and guards `RunAsync`, closing the short window in which `_current` is null during `ReloadAsync` (the logged `InvalidOperationException` pattern). The UDP port gate serialises discovery, network configuration and reboot on the fixed local port 23272; a bind error is now reported as `CubeCommunicationFailedException` instead of a raw `SocketException`.
+- **DE:** Explizite Aktionen laufen nicht mehr während des leisen Cube-Reiter-Reads. `IsCubeAutoReading` sperrt Admin-Befehle und schützt `RunAsync`, damit Aktionen nicht in das kurze Fenster laufen, in dem `ReloadAsync` `_current` temporär auf null setzt (Muster der gemeldeten `InvalidOperationException`). Das UDP-Port-Gate serialisiert Discovery, Netzwerkkonfiguration und Reboot auf dem festen lokalen Port 23272; ein Bind-Fehler erscheint jetzt als `CubeCommunicationFailedException` statt als rohe `SocketException`.
+- **EN:** Logs now record the start of each explicit action, the exception type plus detail (`SocketError`/native code for socket failures), and a warning for each failed section of the automatic read. Previously the customer log contained only the type name, which made the two 11:48 errors impossible to attribute.
+- **DE:** Das Protokoll enthält jetzt den Start jeder expliziten Aktion, Ausnahmetyp plus Detail (`SocketError`/nativer Code bei Socket-Fehlern) und eine Warnung je fehlgeschlagenem Abschnitt des Auto-Reads. Das Kundenprotokoll enthielt nur den Typnamen, wodurch die beiden Fehler um 11:48 nicht zuordenbar waren.
+
+### Verification / Verifikation
+
+- **EN:** Build with 0 warnings / 0 errors and 558/558 hardware-free tests green — Domain 64, Application 90, Protocol 200, Infrastructure 71, UI 133; `dotnet format --verify-no-changes` green on Windows and Debian 13 (WSL2); `--selfcheck` `OK` at 0.8.2 on both systems. New tests cover parallel UDP reads, a port conflict wrapped as `CubeCommunicationFailedException`, admin commands blocked during the silent read, and exception detail in the log. The exact user clicks remain `UNKNOWN` because the original log had no stack trace; the race itself is proven by code and regression tests. No hardware write test was performed.
+- **DE:** Build 0 Warnungen/0 Fehler und 558/558 hardwarefreie Tests grün — Domain 64, Application 90, Protocol 200, Infrastructure 71, UI 133; `dotnet format --verify-no-changes` unter Windows und Debian 13 (WSL2) grün; `--selfcheck` `OK` mit 0.8.2 auf beiden Systemen. Neue Tests decken parallele UDP-Lesungen, einen als `CubeCommunicationFailedException` gewrappten Portkonflikt, gesperrte Admin-Befehle während des leisen Reads und Exception-Details im Log ab. Die genutzten Klicks bleiben `UNBEKANNT`, weil das Originalprotokoll keinen Stacktrace enthielt; das Race ist jedoch durch Code und Regressionstests belegt. Es wurde kein Hardware-Schreibtest durchgeführt.
+
 ## [0.8.1] - 2026-11-27
 
 ### Fixed / Behoben
@@ -531,7 +545,8 @@ Gleichzeitig werden die gefährlichsten Erstnutzer-Fallen geschlossen.
   Seriennummern und Raumwerte enthalten und ist vor der Weitergabe zu prüfen;
   ein Hinweis steht direkt im Viewer. Keine Cloud, kein HTTP, keine Telemetrie.
 
-[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/Ebenhoeh80/xplat-maxcube/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.2
 [0.8.1]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.1
 [0.8.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.8.0
 [0.7.0]: https://github.com/Ebenhoeh80/xplat-maxcube/releases/tag/v0.7.0

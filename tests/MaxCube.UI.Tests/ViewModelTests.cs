@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using FluentAssertions;
 using MaxCube.Application.Abstractions;
 using MaxCube.Application.Models;
@@ -722,6 +723,22 @@ public class ViewModelTests
     }
 
     [Fact]
+    public async Task Failures_log_the_exception_detail_without_exposing_it_in_the_dialog()
+    {
+        using var viewModel = CreateViewModelWithLog(out _, out var log, out var gateway);
+        viewModel.LogEnabled = true;
+        gateway.ConnectHook = _ => throw new SocketException((int)SocketError.AddressAlreadyInUse);
+
+        await viewModel.ConnectCommand.ExecuteAsync(null);
+
+        log.Entries.Should().Contain(entry =>
+            entry.Contains("SocketException", StringComparison.Ordinal)
+            && entry.Contains("AddressAlreadyInUse", StringComparison.Ordinal));
+        viewModel.ErrorMessage.Should().Contain("Verbindung fehlgeschlagen");
+        viewModel.ErrorMessage.Should().NotContain("AddressAlreadyInUse");
+    }
+
+    [Fact]
     public async Task Switching_the_log_off_writes_a_final_entry()
     {
         using var viewModel = CreateViewModelWithLog(out _, out var log);
@@ -826,9 +843,13 @@ public class ViewModelTests
         => CreateViewModel(out cube, out _, out gateway);
 
     private static MainWindowViewModel CreateViewModelWithLog(out Cube cube, out NullLogStore log)
+        => CreateViewModelWithLog(out cube, out log, out _);
+
+    private static MainWindowViewModel CreateViewModelWithLog(
+        out Cube cube, out NullLogStore log, out FakeGateway gateway)
     {
         log = new NullLogStore();
-        return CreateViewModel(out cube, out _, out _, logStore: log);
+        return CreateViewModel(out cube, out _, out gateway, logStore: log);
     }
 
     private static MainWindowViewModel CreateViewModel(out Cube cube, out FakeStore store)

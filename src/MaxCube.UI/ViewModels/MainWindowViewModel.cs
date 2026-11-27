@@ -184,6 +184,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private bool _cubeTabReadPending;
 
     /// <summary>
+    /// Der leise Reiter-Read trennt und verbindet den Cube kurzzeitig (ReloadAsync).
+    /// Explizite Aktionen warten, bis er fertig ist, damit sie nicht in dieses Fenster
+    /// laufen und dort z. B. „kein Cube verbunden“ oder einen UDP-Portkonflikt melden.
+    /// </summary>
+    [ObservableProperty]
+    private bool isCubeAutoReading;
+
+    /// <summary>
     /// Parameterloser Konstruktor für die XAML-Designzeit-Vorschau. Erzeugt ausschließlich
     /// In-Memory-Fakes; die echte App nutzt den DI-Konstruktor darunter.
     /// </summary>
@@ -614,32 +622,41 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        await RunAsync(async token =>
+        OnUiThread(() => IsCubeAutoReading = true);
+        try
         {
-            _log.Write("INFO", "Cube-Reiter liest Zustand automatisch.");
-            await _service.ReloadAsync(token);
-            var at = DisplayTime;
-            var state = DisplayState;
-            RoomsStatus.Update(state, at);
-            DevicesStatus.Update(state, at);
-            ConfigStatus.Update(state, at);
-            CubeInfoStatus.Update(state, at);
-            IsConnected = true;
-
-            if (_service.SupportsAdministration)
+            await RunAsync(async token =>
             {
-                await TryReadAsync(TimeZoneStatus, ReadTimeZoneCoreAsync, token);
-                await TryReadAsync(NtpStatus, ReadNtpCoreAsync, token);
-                if (_service.SupportsNetworkConfiguration)
+                _log.Write("INFO", "Cube-Reiter liest Zustand automatisch.");
+                await _service.ReloadAsync(token);
+                var at = DisplayTime;
+                var state = DisplayState;
+                RoomsStatus.Update(state, at);
+                DevicesStatus.Update(state, at);
+                ConfigStatus.Update(state, at);
+                CubeInfoStatus.Update(state, at);
+                IsConnected = true;
+
+                if (_service.SupportsAdministration)
                 {
-                    await TryReadAsync(NetworkStatus, ReadNetworkCoreAsync, token);
+                    await TryReadAsync(TimeZoneStatus, ReadTimeZoneCoreAsync, token, "Zeitzone");
+                    await TryReadAsync(NtpStatus, ReadNtpCoreAsync, token, "NTP");
+                    if (_service.SupportsNetworkConfiguration)
+                    {
+                        await TryReadAsync(NetworkStatus, ReadNetworkCoreAsync, token, "Netzwerk");
+                    }
                 }
-            }
-        }, L("ErrReload"), quiet: true, status: CubeInfoStatus);
+            }, L("ErrReload"), quiet: true, status: CubeInfoStatus);
+        }
+        finally
+        {
+            OnUiThread(() => IsCubeAutoReading = false);
+        }
     }
 
     /// <summary>Ein Abschnitt darf einzeln scheitern, ohne die anderen zu blockieren.</summary>
-    private async Task TryReadAsync(DataStatusViewModel status, Func<CancellationToken, Task> read, CancellationToken token)
+    private async Task TryReadAsync(
+        DataStatusViewModel status, Func<CancellationToken, Task> read, CancellationToken token, string section)
     {
         OnUiThread(status.MarkLoading);
         try
@@ -648,9 +665,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
-            // Auch die Fehler_markierung gehört auf den UI-Thread; ein MarkFailed aus dem
+            // Auch die Fehlermarkierung gehört auf den UI-Thread; ein MarkFailed aus dem
             // Threadpool löste 0.6.0 „Call from invalid thread" aus (Kundenprotokoll 09:41).
-            OnUiThread(() => status.MarkFailed(exception.Message));
+            OnUiThread(() =>
+            {
+                status.MarkFailed(exception.Message);
+                _log.Write("WARN", $"{section}: {exception.GetType().Name}: {ExceptionDetail(exception)}");
+            });
         }
     }
 
@@ -1207,12 +1228,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// <paramref name="errorHint"/> liefert für bekannte Verbindungsfehler einen lokalisierten
     /// Dialogtext; ohne Treffer bleibt der bisherige Code-/Generic-Hinweis maßgeblich.
     /// </summary>
+    private static string ExceptionDetail(Exception exception)
+    {
+        var detail = exception is SocketException socket
+            ? $"{socket.SocketErrorCode}/{socket.NativeErrorCode}"
+            : exception.Message;
+        detail = string.IsNullOrWhiteSpace(detail) ? "ohne Detail" : detail.Replace('\r', ' ').Replace('\n', ' ');
+        return detail;
+    }
+
     private async Task RunAsync(
         Func<CancellationToken, Task> action, LocalizedValue errorPrefix, LocalizedValue? successText = null,
         bool quiet = false, DataStatusViewModel? status = null, LocalizedValue? previewText = null,
         LocalizedValue? contextText = null, Func<Exception, LocalizedValue?>? errorHint = null)
     {
-        if (IsBusy)
+        // Der Auto-Read des Cube-Reiters ist leise, setzt aber IsCubeAutoReading.
+        // Explizite Aktionen dürfen nicht in seinen Trenn-/Verbindungsspalt laufen.
+        if (IsBusy || (!quiet && IsCubeAutoReading))
         {
             return;
         }
@@ -1242,6 +1274,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 // Eine alte Warnung gehört zur vorherigen Aktion und darf nicht dauerhaft
                 // stehen bleiben (Sonnet N10).
                 SetWarning(null);
+                // Der Start fehlt im Kundenlog 27.11.; ohne ihn lässt sich nicht zuordnen,
+                // welche Aktion zu einem Fehler gehört (0.8.2).
+                _log.Write("INFO", L("ActionStarted", errorPrefix).Current);
             }
             else if (!string.IsNullOrWhiteSpace(contextText?.Current))
             {
@@ -1298,8 +1333,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     SetError(message);
                 }
 
-                // Der Ausnahmetyp hilft beim Support ohne Nutzdaten oder Zugangsdaten.
-                _log.Write(quiet ? "WARN" : "ERROR", $"{message} ({exception.GetType().Name})");
+                // Der Ausnahmetyp plus Ursache hilft beim Support. Der sichtbare Dialog
+                // bleibt bewusst lokal und generic; das Log enthält keine Zugangsdaten.
+                _log.Write(
+                    quiet ? "WARN" : "ERROR",
+                    $"{message} ({exception.GetType().Name}: {ExceptionDetail(exception)})");
                 status?.MarkFailed(exception.Message);
             });
         }
